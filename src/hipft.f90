@@ -37,36 +37,35 @@
 ! See the License for the specific language governing permissions and
 ! limitations under the License.
 !#######################################################################
+!
+!#######################################################################
 module ident
 !
 !-----------------------------------------------------------------------
-!
-      implicit none
-!
+! ****** Set the name, version, and date of code.
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.1.0'
-      character(*), parameter :: cdate='10/25/2021'
+      character(*), parameter :: cvers='0.1.1'
+      character(*), parameter :: cdate='11/01/2021'
 !
 end module
 !#######################################################################
 module number_types
 !
 !-----------------------------------------------------------------------
-! ****** Basic number types.
-! ****** This module is used to set the default precision for REALs.
+! ****** This module is used to set precisions for REALs.
 !-----------------------------------------------------------------------
 !
       use iso_fortran_env
 !
 !-----------------------------------------------------------------------
 !
-      implicit none
-!
       integer, parameter :: KIND_REAL_4=REAL32
       integer, parameter :: KIND_REAL_8=REAL64
       integer, parameter :: KIND_REAL_16=max(REAL128,REAL64)
+!
+! ****** Use double precision.
 !
       integer, parameter :: r_typ=KIND_REAL_8
 !
@@ -779,7 +778,7 @@ subroutine load_initial_condition
                        sqrt(14.0_r_typ/11.0_r_typ)*f_local2(:,:)
 !
 ! ****** Backup U0
-!  
+!
         f_local2(:,:) = f_local(:,:)
 
         fmin = minval(f_local)
@@ -806,7 +805,7 @@ subroutine load_initial_condition
                            ,n1,n2,f_local2,s1,s2,ierr)
 
         deallocate (f_local2)
-!        
+!
       end if
 !
 ! ****** Set resolution values.
@@ -1110,15 +1109,10 @@ subroutine update_flow
         timestep_flow_needs_updating = .true.
         timestep_needs_updating = .true.
 !
-!$omp parallel do collapse(2) default(shared)
-!$acc parallel loop collapse(2) default(present)
-        do j=1,nt
-          do k=1,np
-            vt(j,k) = 0.
-            vp(j,k) = 0.
-          end do
+        do concurrent (k=1:np,j=1:nt)
+          vt(j,k) = 0.
+          vp(j,k) = 0.
         end do
-!$omp end parallel do
 !
 ! ***** Add in flow from file.
 !
@@ -1139,14 +1133,9 @@ subroutine update_flow
 ! ***** Add in constant angular velocity (rigid rotation)
 !
         if (flow_vp_rigid_omega.gt.0.) then
-!$omp parallel do collapse(2) default(shared)
-!$acc parallel loop collapse(2) default(present)
-          do j=1,nt
-            do k=1,np
-              vp(j,k) = vp(j,k)+flow_vp_rigid_omega*km_s_to_rs_hr*sth(j)
-            end do
+          do concurrent (k=1:np,j=1:nt)
+            vp(j,k) = vp(j,k)+flow_vp_rigid_omega*km_s_to_rs_hr*sth(j)
           end do
-!$omp end parallel do
         endif
 !
       endif
@@ -1570,13 +1559,10 @@ subroutine set_periodic_bc_2d (a,n1,n2)
 !
 !-----------------------------------------------------------------------
 !
-!$omp parallel do default(shared)
-!$acc parallel loop default(present)
-      do j=1,n1
+      do concurrent (j=1:n1)
         a(j, 1) = a(j,n2-1)
         a(j,n2) = a(j,2)
       enddo
-!$omp end parallel do
 !
 end subroutine
 !#######################################################################
@@ -1613,23 +1599,18 @@ subroutine load_diffusion_matrix
 !
 ! ****** Set coef for internal points and phi boundary point at k=1.
 !
-!$omp parallel do collapse(2) default(shared)
-!$acc parallel loop collapse(2) default(present)
-      do k=2,npm-1
-        do j=2,ntm-1
-          coef(j,k,1)=diffusion_coef_p_fac*diffusion_coef(j,k) &
-                     *dph_i(k)*dp_i(k)*st_i(j)*st_i(j)
-          coef(j,k,2)=diffusion_coef_t_fac*diffusion_coef(j,k) &
-                     *dth_i(j)*dt_i(j)*st_i(j)*sth(j )
-          coef(j,k,4)=diffusion_coef_t_fac*diffusion_coef(j+1,k) &
-                     *dth_i(j+1)*dt_i(j)*st_i(j)*sth(j+1)
-          coef(j,k,5)=diffusion_coef_p_fac*diffusion_coef(j,k+1) &
-                     *dph_i(k+1)*dp_i(k)*st_i(j)*st_i(j )
+      do concurrent (j=2:ntm-1,k=2:npm-1)
+        coef(j,k,1)=diffusion_coef_p_fac*diffusion_coef(j,k) &
+                   *dph_i(k)*dp_i(k)*st_i(j)*st_i(j)
+        coef(j,k,2)=diffusion_coef_t_fac*diffusion_coef(j,k) &
+                   *dth_i(j)*dt_i(j)*st_i(j)*sth(j )
+        coef(j,k,4)=diffusion_coef_t_fac*diffusion_coef(j+1,k) &
+                   *dth_i(j+1)*dt_i(j)*st_i(j)*sth(j+1)
+        coef(j,k,5)=diffusion_coef_p_fac*diffusion_coef(j,k+1) &
+                   *dph_i(k+1)*dp_i(k)*st_i(j)*st_i(j )
 !
-          coef(j,k,3)=-(coef(j,k,1)+coef(j,k,2)+coef(j,k,4)+coef(j,k,5))
-        enddo
+        coef(j,k,3)=-(coef(j,k,1)+coef(j,k,2)+coef(j,k,4)+coef(j,k,5))
       enddo
-!$omp end parallel do
 !
 end subroutine
 !#######################################################################
@@ -1731,17 +1712,12 @@ subroutine diffusion_step_rkl2_cd (dtime_local)
 !
       call ax(f,tMy0)
 !
-!$omp parallel do collapse(2) default(shared) private(j,k)
-!$acc parallel loop collapse(2) default(present)
-      do k=1,npm
-        do j=1,ntm
-          y0(j,k) = f(j,k)
-          yjm2(j,k) = f(j,k)
-          tMy0(j,k) = dtime_local*tMy0(j,k)
-          yjm1(j,k) = f(j,k) + sts_ubj(1)*tMy0(j,k)
-        enddo
+      do concurrent (k=1:npm,j=1:ntm)
+        y0(j,k) = f(j,k)
+        yjm2(j,k) = f(j,k)
+        tMy0(j,k) = dtime_local*tMy0(j,k)
+        yjm1(j,k) = f(j,k) + sts_ubj(1)*tMy0(j,k)
       enddo
-!$omp end parallel do
 !
 ! ****** Inner s-step loop
 !
@@ -1749,18 +1725,14 @@ subroutine diffusion_step_rkl2_cd (dtime_local)
 !
         call ax(yjm1,Mym1)
 !
-!$omp parallel do collapse(2) default(shared) private(j,k)
-!$acc parallel loop collapse(2) default(present)
-        do k=1,npm
-          do j=1,ntm
-            f(j,k) = sts_uj(i)*yjm1(j,k) + sts_vj(i)*yjm2(j,k) +    &
-                  (one - sts_uj(i) - sts_vj(i))*y0(j,k) +           &
-                  sts_ubj(i)*dtime_local*Mym1(j,k) + sts_gj(i)*tMy0(j,k)
-            yjm2(j,k) = yjm1(j,k)
-            yjm1(j,k) = f(j,k)
-          enddo
+        do concurrent (k=1:npm,j=1:ntm)
+          f(j,k) = sts_uj(i)*yjm1(j,k) + sts_vj(i)*yjm2(j,k) +        &
+                  (one - sts_uj(i) - sts_vj(i))*y0(j,k) +             &
+                   sts_ubj(i)*dtime_local*Mym1(j,k) + sts_gj(i)*tMy0(j,k)
+          yjm2(j,k) = yjm1(j,k)
+          yjm1(j,k) = f(j,k)
         enddo
-!$omp end parallel do
+!
       enddo
 !
 !$acc exit data delete(sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
@@ -1813,17 +1785,12 @@ subroutine diffusion_step_rkg2_cd (dtime_local)
 !
       call ax(f,tMy0)
 !
-!$omp parallel do collapse(2) default(shared) private(j,k)
-!$acc parallel loop collapse(2) default(present)
-      do k=1,npm
-        do j=1,ntm
-          y0(j,k) = f(j,k)
-          yjm2(j,k) = f(j,k)
-          tMy0(j,k) = dtime_local*tMy0(j,k)
-          yjm1(j,k) = f(j,k) + sts_ubj(1)*tMy0(j,k)
-        enddo
+      do concurrent (k=1:npm,j=1:ntm)
+        y0(j,k) = f(j,k)
+        yjm2(j,k) = f(j,k)
+        tMy0(j,k) = dtime_local*tMy0(j,k)
+        yjm1(j,k) = f(j,k) + sts_ubj(1)*tMy0(j,k)
       enddo
-!$omp end parallel do
 !
 ! ****** Inner s-step loop
 !
@@ -1831,18 +1798,13 @@ subroutine diffusion_step_rkg2_cd (dtime_local)
 !
         call ax(yjm1,Mym1)
 !
-!$omp parallel do collapse(2) default(shared) private(j,k)
-!$acc parallel loop collapse(2) default(present)
-        do k=1,npm
-          do j=1,ntm
-            f(j,k) = sts_uj(i)*yjm1(j,k) + sts_vj(i)*yjm2(j,k) + &
-                  (one - sts_uj(i) - sts_vj(i))*y0(j,k) +        &
-                  sts_ubj(i)*dtime_local*Mym1(j,k) + sts_gj(i)*tMy0(j,k)
-            yjm2(j,k) = yjm1(j,k)
-            yjm1(j,k) = f(j,k)
-          enddo
+        do concurrent (k=1:npm,j=1:ntm)
+          f(j,k) = sts_uj(i)*yjm1(j,k) + sts_vj(i)*yjm2(j,k) + &
+                (one - sts_uj(i) - sts_vj(i))*y0(j,k) +        &
+                sts_ubj(i)*dtime_local*Mym1(j,k) + sts_gj(i)*tMy0(j,k)
+          yjm2(j,k) = yjm1(j,k)
+          yjm1(j,k) = f(j,k)
         enddo
-!$omp end parallel do
       enddo
 !
 !$acc exit data delete(sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
@@ -3282,15 +3244,10 @@ subroutine add_flow_differential_rotation_aft
 !
 !-----------------------------------------------------------------------
 !
-!$omp parallel do collapse(2) default(shared)
-!$acc parallel loop collapse(2) default(present)
-      do j=1,nt
-        do k=1,np
-          vp(j,k)=vp(j,k) + &
-                  m_s_to_rs_hr*sth(j)*(t0 + t2*cth(j)**2 + t4*cth(j)**4)
-        enddo
+      do concurrent (k=1:np,j=1:nt)
+        vp(j,k)=vp(j,k) + &
+                m_s_to_rs_hr*sth(j)*(t0 + t2*cth(j)**2 + t4*cth(j)**4)
       enddo
-!$omp end parallel do
 !
 end subroutine
 !#######################################################################
@@ -3325,15 +3282,10 @@ subroutine add_flow_meridianal_aft
 !
 !-----------------------------------------------------------------------
 !
-!$omp parallel do collapse(2) default(shared)
-!$acc parallel loop collapse(2) default(present)
-      do j=1,nt
-        do k=1,np
-          vt(j,k) = vt(j,k) - m_s_to_rs_hr*sth(j)*               &
-                   ( s1*cth(j) + s3*cth(j)**3 + s5*cth(j)**5 )
-        enddo
+      do concurrent (k=1:np,j=1:nt)
+        vt(j,k) = vt(j,k) - m_s_to_rs_hr*sth(j)*               &
+                 ( s1*cth(j) + s3*cth(j)**3 + s5*cth(j)**5 )
       enddo
-!$omp end parallel do
 !
 end subroutine
 !#######################################################################
@@ -3432,61 +3384,44 @@ subroutine diffusion_step_euler_cd (dtime_local)
         fn2_fn1 = 0.
         fs2_fs1 = 0.
 !
-!$omp parallel default(shared) private(j,k,d2t,d2p)
-!
 ! ****** Save current x to fe (old).
 !
-!$omp do collapse(2)
-!$acc parallel loop default(present) collapse(2)
-        do k=1,npm
-          do j=1,ntm
-            fe(j,k) = f(j,k)
-          enddo
+        do concurrent(k=1:npm,j=1:ntm)
+          fe(j,k) = f(j,k)
         enddo
-!$omp end do
 !
 ! ****** Compute y=Ax.
 !
 ! ****** Advance the poles.
 !
-!$omp do reduction(+:fn2_fn1,fs2_fs1)
+!$omp parallel do default(shared) reduction(+:fn2_fn1,fs2_fs1)
 !$acc parallel loop default(present) reduction(+:fn2_fn1,fs2_fs1)
         do k=2,npm-1
           fn2_fn1 = fn2_fn1 + (fe(2    ,k) - fe(1  ,k))*dp(k)
           fs2_fs1 = fs2_fs1 + (fe(ntm-1,k) - fe(ntm,k))*dp(k)
         enddo
-!$omp end do
+!$omp end parallel do
 !
-!$omp end parallel
-!
-!$omp parallel do default(shared) private(j,k,d2t,d2p)
-!$acc parallel loop default(present)
-        do k=1,npm
+        do concurrent (k=1:npm)
           f(  1,k) = fe(1  ,k) + dtime_stable*(   d2t_j1*fn2_fn1)
           f(ntm,k) = fe(ntm,k) + dtime_stable*(d2t_jntm1*fs2_fs1)
         enddo
-!$omp end parallel do
 !
 ! ****** Compute inner points.
 !
-!$omp parallel do default(shared) private(j,k,d2t,d2p)
-!$acc parallel loop collapse(2) default(present)
-        do k=2,npm-1
-          do j=2,ntm-1
-            d2p=( diffusion_coef(j,k+1)*(fe(j,k+1)-fe(j,k  ))*dph_i(k+1) &
-                 -diffusion_coef(j,k  )*(fe(j,k  )-fe(j,k-1))*dph_i(k  ) &
-                 )*dp_i(k)*st_i(j)*st_i(j)
-            d2t=( diffusion_coef(j+1,k)*sth(j+1) &
-                                  *(fe(j+1,k)-fe(j  ,k))*dth_i(j+1) &
-                 -diffusion_coef(j,k)*sth(j  ) &
-                                  *(fe(j  ,k)-fe(j-1,k))*dth_i(j  ) &
-                )*st_i(j)*dt_i(j)
+        do concurrent (k=2:npm-1,j=2:ntm-1)
+          d2p=( diffusion_coef(j,k+1)*(fe(j,k+1)-fe(j,k  ))*dph_i(k+1) &
+               -diffusion_coef(j,k  )*(fe(j,k  )-fe(j,k-1))*dph_i(k  ) &
+               )*dp_i(k)*st_i(j)*st_i(j)
+          d2t=( diffusion_coef(j+1,k)*sth(j+1) &
+                                *(fe(j+1,k)-fe(j  ,k))*dth_i(j+1) &
+               -diffusion_coef(j,k)*sth(j  ) &
+                                *(fe(j  ,k)-fe(j-1,k))*dth_i(j  ) &
+              )*st_i(j)*dt_i(j)
 !
-            f(j,k) = fe(j,k) + dtime_stable*(diffusion_coef_t_fac*d2t + &
-                                             diffusion_coef_p_fac*d2p)
-          enddo
+          f(j,k) = fe(j,k) + dtime_stable*(diffusion_coef_t_fac*d2t + &
+                                           diffusion_coef_p_fac*d2p)
         enddo
-!$omp end parallel do
 !
 ! ****** Set periodic boundary points.
 !
@@ -3538,34 +3473,21 @@ subroutine advection_step_upwind (dtime_local)
 !
       allocate (flux_t(nt,np))
       allocate (flux_p(nt,np))
-!
 !$acc enter data create(flux_t,flux_p)
 !
-!$omp parallel default(shared) private(j,k,cct,ccp)
-!$omp do collapse(2)
-!$acc parallel loop collapse(2) default(present)
-      do k=1,np
-        do j=1,nt
-          flux_t(j,k)=0.
-          flux_p(j,k)=0.
-        enddo
+      do concurrent (k=1:np,j=1:nt)
+        flux_t(j,k)=0.
+        flux_p(j,k)=0.
       enddo
-!$omp end do
 !
 ! ****** Compute the fluxes at the cell faces.
 !
-!$omp do collapse(2)
-!$acc parallel loop collapse(2) default(present)
-      do k=2,npm1
-        do j=2,ntm1
-          cct=sign(upwind,vt(j,k))
-          ccp=sign(upwind,vp(j,k))
-          flux_t(j,k)=vt(j,k)*half*((one-cct)*f(j,k)+(one+cct)*f(j-1,k))
-          flux_p(j,k)=vp(j,k)*half*((one-ccp)*f(j,k)+(one+ccp)*f(j,k-1))
-        enddo
+      do concurrent (k=2:npm1,j=2:ntm1)
+        cct=sign(upwind,vt(j,k))
+        ccp=sign(upwind,vp(j,k))
+        flux_t(j,k)=vt(j,k)*half*((one-cct)*f(j,k)+(one+cct)*f(j-1,k))
+        flux_p(j,k)=vp(j,k)*half*((one-ccp)*f(j,k)+(one+ccp)*f(j,k-1))
       enddo
-!$omp end do
-!$omp end parallel
 !
 ! ****** Set periodicity of the flux (seam).
 !
@@ -3574,40 +3496,30 @@ subroutine advection_step_upwind (dtime_local)
 !
 ! ****** Advect F by one time step.
 !
-!$omp parallel default(shared) private(j,k)
-!$omp do
-!$acc parallel loop collapse(2) default(present)
-      do k=2,npm-1
-        do j=2,ntm-1
-          f(j,k) = f(j,k) - dtime_local*(  (  sth(j+1)*flux_t(j+1,k) &
-                                            - sth(j  )*flux_t(j  ,k) &
-                                           )*st_i(j)*dt_i(j)         &
-                                         + (  flux_p(j,k+1)          &
-                                            - flux_p(j,k  )          &
-                                           )*st_i(j)*dp_i(k)         &
-                                        )
-        enddo
+      do concurrent (k=2:npm-1,j=2:ntm-1)
+        f(j,k) = f(j,k) - dtime_local*(  (  sth(j+1)*flux_t(j+1,k) &
+                                          - sth(j  )*flux_t(j  ,k) &
+                                         )*st_i(j)*dt_i(j)         &
+                                       + (  flux_p(j,k+1)          &
+                                          - flux_p(j,k  )          &
+                                         )*st_i(j)*dp_i(k)         &
+                                      )
       enddo
-!$omp end do
 !
 ! ****** Advect the values at the poles.
 !
-!$omp do reduction(+:fn,fs)
+!$omp parallel do default(shared) reduction(+:fn,fs)
 !$acc parallel loop default(present) reduction(+:fn,fs)
       do k=2,npm-1
         fn = fn + flux_t(   2,k)*dph(k)
         fs = fs + flux_t(ntm1,k)*dph(k)
       enddo
-!$omp end do
+!$omp end parallel do
 !
-!$omp do
-!$acc parallel loop default(present)
-      do k=2,npm-1
+      do concurrent (k=2:npm-1)
         f(  1,k) = f(  1,k) - fn*dtime_local*two*pi_i*dt_i(  1)
         f(ntm,k) = f(ntm,k) + fs*dtime_local*two*pi_i*dt_i(ntm)
       end do
-!$omp end do
-!$omp end parallel
 !
 ! ****** Set periodic boundary condition.
 !
@@ -3651,43 +3563,32 @@ subroutine ax (x,y)
       fn2_fn1 = zero
       fs2_fs1 = zero
 !
-!$omp parallel default(shared) private(j,k)
-!
 ! ****** Compute inner points.
 !
-!$omp do collapse(2)
-!$acc parallel loop collapse(2) default(present)
-      do k=2,npm-1
-        do j=2,ntm-1
-          y(j,k) =  coef(j,k,1)*x(j,  k-1) &
-                  + coef(j,k,2)*x(j-1,k  ) &
-                  + coef(j,k,3)*x(j  ,k  ) &
-                  + coef(j,k,4)*x(j+1,k  ) &
-                  + coef(j,k,5)*x(j,  k+1)
-        enddo
+      do concurrent (k=2:npm-1,j=2:ntm-1)
+        y(j,k) =  coef(j,k,1)*x(j,  k-1) &
+                + coef(j,k,2)*x(j-1,k  ) &
+                + coef(j,k,3)*x(j  ,k  ) &
+                + coef(j,k,4)*x(j+1,k  ) &
+                + coef(j,k,5)*x(j,  k+1)
       enddo
-!$omp end do
 !
 ! ****** Compute boundary points.
 !
 ! ****** Get the m=0 components near the poles.
 !
-!$omp do reduction(+:fn2_fn1,fs2_fs1)
+!$omp parallel do default(shared) reduction(+:fn2_fn1,fs2_fs1)
 !$acc parallel loop default(present) reduction(+:fn2_fn1,fs2_fs1)
       do k=2,npm-1
         fn2_fn1 = fn2_fn1 + (x(2    ,k) - x(1  ,k))*dp(k)
         fs2_fs1 = fs2_fs1 + (x(ntm-1,k) - x(ntm,k))*dp(k)
       enddo
-!$omp end do
+!$omp end parallel do
 !
-!$omp do
-!$acc parallel loop default(present)
-      do k=1,npm
+      do concurrent (k=1:npm)
         y(  1,k) = d2t_j1*fn2_fn1
         y(ntm,k) = d2t_jntm1*fs2_fs1
       enddo
-!$omp end do
-!$omp end parallel
 !
 ! ****** Set the periodic boundary conditions.
 !
@@ -4232,9 +4133,9 @@ subroutine read_input
 
       call fetcharg ('-flow',set,arg)
       if (set) advance_flow = .true.
-!      
+!
       call fetcharg ('-vrun',set,arg)
-      validation_run = set      
+      validation_run = set
 !
 ! ****** Dimensions along which to diffuse.
 !
@@ -4253,9 +4154,16 @@ end subroutine
 ! ****** Update log:
 !
 !        05/24/2021, RC, Version 0.1.0:
-!
 !         - Original version of the program.
 !           Derived from DIFFUSE_ADVECT version 2.0.0 of 05/24/2021.
 !
+!        11/01/2021, RC, Version 0.1.1:
+!         - Replaced all non-reduction OpenACC/MP loops with
+!           `do concurrent`.  This required alteranative compiler
+!           flags to properly parallelize.  See build.sh for 
+!           examples.
+!         - Merged sds and number_types modules/routines into main code.
+!
 !-----------------------------------------------------------------------
 !
+!#######################################################################
