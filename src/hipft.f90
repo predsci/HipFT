@@ -15,7 +15,9 @@
 ! ****** HipFT: High Performance Flux Transport.
 !
 !        Authors:  Ronald M. Caplan
-!                  Jon A. Linker
+!
+!        HipFT incorporates code from multiple tools developed by
+!        Zoran Mikic, and Jon A. Linker.
 !
 !        Predictive Science Inc.
 !        www.predsci.com
@@ -46,8 +48,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.1.1'
-      character(*), parameter :: cdate='11/01/2021'
+      character(*), parameter :: cvers='0.2.0'
+      character(*), parameter :: cdate='11/05/2021'
 !
 end module
 !#######################################################################
@@ -100,7 +102,7 @@ module constants
       real(r_typ), parameter :: ten=10._r_typ
       real(r_typ), parameter :: sixteen=16._r_typ
       real(r_typ), parameter :: half=0.5_r_typ
-      real(r_typ), parameter :: quarter=0.5_r_typ
+      real(r_typ), parameter :: quarter=0.25_r_typ
       real(r_typ), parameter :: twentyfive=25.0_r_typ
       real(r_typ), parameter :: twentyfour=24.0_r_typ
 !
@@ -109,7 +111,7 @@ module constants
       real(r_typ), parameter :: twopi=6.2831853071795864_r_typ
       real(r_typ), parameter :: twopi_i=0.15915494309189535_r_typ
 !
-      real(r_typ), parameter :: rsun_m=6.96e8_r_typ
+      real(r_typ), parameter :: rsun_cm=6.96e10_r_typ
 !
       real(r_typ), parameter :: &
                          diff_km2_s_to_rs2_s=2.0643413925221e-12_r_typ
@@ -121,8 +123,10 @@ module constants
                          m_s_to_rs_hr=5.172413793103448e-06_r_typ
       real(r_typ), parameter :: &
                          km_s_to_rs_s=1.4367816091954023e-06_r_typ
+      real(r_typ), parameter :: output_flux_fac=1.0e-21_r_typ
 !
       real(r_typ), parameter :: small_value=tiny(one)
+      real(r_typ), parameter :: large_value=huge(one)
       real(r_typ), parameter :: safety=0.95_r_typ
 !
 end module
@@ -169,7 +173,7 @@ module input_parameters
       real(r_typ)    :: dt_max = huge(one)
 !
 ! ****** Algorithm options.
-!  [RMC] This should be an int...   ADA vs DAD vs ADRDA vs DARAD etc.
+!  [RMC] This should be an int?  ADA vs DAD vs ADRDA vs DARAD etc?
       logical :: strang_splitting = .false.
 !
 !-----------------------------------------------------------------------
@@ -190,14 +194,13 @@ module input_parameters
       real(r_typ)    :: flow_vp_rigid_omega = 0.
 !
 ! ****** Built-in differential roation and meridianal flow models.
-! ****** For each, setting "1" sets the model used in the AFT code.
-! ****** Setting "2" sets the model used in the MAS code?
+! ****** For each, setting "1" sets the model/params used in the AFT code.
 !
       integer :: flow_dr_model = 0
       integer :: flow_mf_model = 0
 !
 ! ****** Algorithm options.
-! ****** 1: Upwind. Can set to central differencing with upwind=0?
+! ****** 1: Upwind. Can set to central differencing with upwind=0.
 !
       integer :: flow_num_method = 1
 !
@@ -228,8 +231,8 @@ module input_parameters
       integer :: diffusion_num_method = 3
 !
 ! ****** Set number of diffusion subcycles per flow step.
-! ****** For diffusion-only runs, this should be ~50.
-! ****** For flow+diffusion runs, this can be ~1.
+! ****** For diffusion-only runs, this should be ~30.
+! ****** For flow+diffusion runs, this usually can be ~1.
 !
       integer :: diffusion_subcycles = 30
 !
@@ -245,6 +248,23 @@ module input_parameters
 ! ****** DATA ASSIMILATION ********
 !
       logical :: assimilate_data = .false.
+!
+end module
+!#######################################################################
+module output
+!
+!-----------------------------------------------------------------------
+! ****** Output.
+!-----------------------------------------------------------------------
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      integer, parameter :: IO_HIST_NUM=20
+      integer, parameter :: IO_HIST_SOL=21
 !
 end module
 !#######################################################################
@@ -266,13 +286,24 @@ module globals
 !
       real(r_typ) :: time = 0.
 !
+! ****** Current step.
+!
+      integer*8 :: ntime = 0
+!
 ! ****** Current time-step.
 !
-      real(r_typ) :: dtime_global = huge(1.0_r_typ)
+      real(r_typ) :: dtime_global = 0.
 !
-! ****** Current explicit Euler diffusion stable time-step.
+! ****** Explicit Euler diffusion stable time-step and number of cycles.
 !
-      real(r_typ) :: dtime_diff_euler
+      real(r_typ) :: dtime_diffusion_euler = 0.
+      integer*8 :: n_stable_diffusion_cycles = 1
+      real(r_typ) :: dtime_diffusion_used = 0.
+!
+! ****** Explicit Euler advection stable time-step.
+!
+      real(r_typ) :: dtmax_flow = 0.
+      real(r_typ) :: dtime_advection_used = 0.
 !
 ! ****** Current output file sequence number.
 !
@@ -293,7 +324,13 @@ module globals
 ! ****** Flag to indicate the diffusion time step needs updating.
 !
       logical :: timestep_diff_needs_updating = .true.
-
+!
+! ****** History analysis variables.
+!
+      real(r_typ) :: h_minbr, h_maxbr, h_minabsbr, &
+                     h_fluxp, h_fluxm, h_valerr
+!
+      real(r_typ) :: u0max,u0min
 !
 end module
 !#######################################################################
@@ -326,6 +363,7 @@ module fields
 !  [RMC] Make f->br fe->br_old?
       real(r_typ), dimension(:,:), allocatable :: f
       real(r_typ), dimension(:,:), allocatable :: fout
+      real(r_typ), dimension(:,:), allocatable :: fval_u0
       real(r_typ), dimension(:), allocatable :: pout
       real(r_typ), dimension(:,:), allocatable :: fe
       real(r_typ), dimension(:,:), allocatable :: diffusion_coef
@@ -342,6 +380,8 @@ module sts
       implicit none
 !
       integer*8 :: sts_s
+!
+      logical :: need_to_load_sts = .true.
 !
       real(r_typ), dimension(:), allocatable :: sts_uj
       real(r_typ), dimension(:), allocatable :: sts_vj
@@ -483,7 +523,6 @@ program HIPFT
 !-----------------------------------------------------------------------
 !
       real(r_typ) :: t1,wtime
-      integer*8 :: ntime = 0
       integer :: ierr
 !
 !-----------------------------------------------------------------------
@@ -491,12 +530,6 @@ program HIPFT
       t1 = wtime()
 !
       call setup
-!
-! ****** Need to call analysis and output steps here so that we get
-! ****** initial condition analysis and file output.
-!
-!      call analysis_step
-!      call output_step
 !
 ! ----- MAIN LOOP-------------------------------------
 !
@@ -507,6 +540,8 @@ program HIPFT
 !
       do
 !
+! ****** Update step number we are about to start. (ntime=0 initially)
+!
         ntime = ntime + 1
 !
 ! ****** Update prescribed quantities including data assimilation and/or
@@ -516,8 +551,8 @@ program HIPFT
 !
         if (verbose) then
           write(*,'(a,i8,a,f12.6,a,f12.6,a,f12.6)')    &
-                  'Step: ',ntime,'  Time:',time,' /',    &
-                  time_end,'  dt:',dtime_global
+                    'Step: ',ntime,'  Time:',time,' /',    &
+                    time_end,'  dt to use:',dtime_global
           flush(OUTPUT_UNIT)
         endif
 !
@@ -526,24 +561,15 @@ program HIPFT
         call flux_transport_step
 !
         time = time + dtime_global
-
-        if (verbose) then
-          write(*,'(a,i8,a,f12.6,a,f12.6,a,f12.6)')    &
-                  'Completed Step: ',ntime,'  Time:',time,' /',    &
-                  time_end,'  dt:',dtime_global
-          flush(OUTPUT_UNIT)
-        endif
 !
-!       call analysis_step         ->  Histories, etc.
-!           analyze_flux (+,-,total,balance for all realizations)
-!           analyze_br (min,max,mean,minabs,maxabs,meanabs)
+        call analysis_step
 !
-!       call output_step           ->  Map output in h5.
-!           output_map  [META DATA!!]
-!           output_flow?
-!           output_histories
-!           output_restart (special file or can this be
-!                           done with any map output?)
+        call output_step
+!
+        write(*,'(a,i8,a,f12.6,a,f12.6,a,f12.6)')    &
+                'Completed Step: ',ntime,'  Time:',time,' /',    &
+                time_end,'  dt used:',dtime_global
+        flush(OUTPUT_UNIT)
 !
 !       call is_the_run_over
 !           check_tmax
@@ -590,14 +616,14 @@ program HIPFT
       wtime_total = wtime() - t1
 !
       write(*,*) "Wall clock time (seconds): ",wtime_total
-      write(*,*) "--> Setup time:",wtime_setup
-      write(*,*) "--> Update time:",wtime_update
-      write(*,*) "--> Flux transport time:",wtime_flux_transport
-      write(*,*) "    --> Advecton time:",wtime_flux_transport_advection
-      write(*,*) "    --> Diffusion time:",wtime_flux_transport_diffusion
-      write(*,*) "    --> Source time:",wtime_source
-      write(*,*) "--> Analysis time:",wtime_analysis
-      write(*,*) "--> I/O time:",wtime_io
+      write(*,*) "--> Setup time:            ",wtime_setup
+      write(*,*) "--> Update time:           ",wtime_update
+      write(*,*) "--> Flux transport time:   ",wtime_flux_transport
+      write(*,*) "    --> Advecton time:     ",wtime_flux_transport_advection
+      write(*,*) "    --> Diffusion time:    ",wtime_flux_transport_diffusion
+      write(*,*) "    --> Source time:       ",wtime_source
+      write(*,*) "--> Analysis time:         ",wtime_analysis
+      write(*,*) "--> I/O time:              ",wtime_io
       write(*,*)
 !
 !-----------------------------------------------------------------------
@@ -670,11 +696,56 @@ subroutine setup
 !
       call set_unchanging_quantities
 !
-!     call create_and_open_output_log_files
+      call create_and_open_output_log_files
+!
+      call analysis_step
+!
+      call output_step
 !
       call write_welcome_message
 !
       wtime_setup = wtime() - wtime_tmp
+!
+end subroutine
+!#######################################################################
+subroutine create_and_open_output_log_files
+!
+!-----------------------------------------------------------------------
+!
+! ****** Create and open output log files
+!
+!-----------------------------------------------------------------------
+!
+      use input_parameters
+      use output
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      integer :: ierr
+!
+!-----------------------------------------------------------------------
+!
+      call FFOPEN (IO_HIST_NUM,'history_num.dat','rw',ierr)
+!
+      write (IO_HIST_NUM,'(a10,a,6(a22,a),a10)')                      &
+      'STEP',' ','TIME',' ','DTIME',' ','DTIME_ADV_STB',' ',          &
+      'DTIME_ADV_USED',' ','DTIME_DIFF_STB',' ','DTIME_DIFF_USED',    &
+      ' ','N_DIFF_PER_STEP'
+!
+      close(IO_HIST_NUM)
+!
+      call FFOPEN (IO_HIST_SOL,'history_sol.dat','rw',ierr)
+!
+      write (IO_HIST_SOL,'(a10,a,7(a22,a))')                          &
+      'STEP',' ','TIME',' ','BR_MIN',' ','BR_MAX',' ','BR_ABS_MIN',   &
+      ' ','FLUX_POSITIVE',' ','FLUX_NEGATIVE',' ',                    &
+      'VALIDATION_ERR_CVRMSD'
+!
+      close(IO_HIST_SOL)
 !
 end subroutine
 !#######################################################################
@@ -742,6 +813,7 @@ subroutine load_initial_condition
       use input_parameters
       use mesh
       use fields
+      use globals
       use read_2d_file_interface
       use write_2d_file_interface
 !
@@ -751,8 +823,8 @@ subroutine load_initial_condition
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ) :: fn1,fs1,fn2,fs2,fmax,fmin,C1,C2
-      real(r_typ), dimension(:,:), allocatable :: f_local,f_local2
+      real(r_typ) :: fn1,fs1,fn2,fs2
+      real(r_typ), dimension(:,:), allocatable :: f_local
       real(r_typ), dimension(:), allocatable :: s1,s2
       integer :: n1,n2,ierr
 !
@@ -769,42 +841,35 @@ subroutine load_initial_condition
 !
       if (validation_run) then
 !
-        allocate (f_local2(n1,n2))
+        allocate (fval_u0(n1,n2))
+!
+! ****** Make initial solution f and output.
 !
         call tesseral_spherical_harmonic (0,6,s1,s2,n1,n2,f_local)
-        call tesseral_spherical_harmonic (5,6,s1,s2,n1,n2,f_local2)
+        call tesseral_spherical_harmonic (5,6,s1,s2,n1,n2,fval_u0)
 !
-        f_local(:,:) = f_local(:,:) + &
-                       sqrt(14.0_r_typ/11.0_r_typ)*f_local2(:,:)
+        fval_u0(:,:) = 1000.0_r_typ*(f_local(:,:) +                  &
+                              sqrt(14.0_r_typ/11.0_r_typ)*fval_u0(:,:))
 !
-! ****** Backup U0
-!
-        f_local2(:,:) = f_local(:,:)
+        call write_2d_file(                                           &
+            (trim(output_field_root_filename)//'_initial_0.h5')       &
+                           ,n1,n2,fval_u0,s1,s2,ierr)
 
-        fmin = minval(f_local)
-        fmax = maxval(f_local)
-
-        C1 = -1000.0_r_typ - 2000.0_r_typ*fmin/(fmax - fmin)
-        C2 = 2000.0_r_typ/(fmax - fmin)
+        f_local(:,:) = fval_u0(:,:)
 !
-        f_local(:,:) = C1 + C2*f_local(:,:)
+! ****** Caculate final analytic solution and output.
 !
-        call write_2d_file((trim(output_field_root_filename)//'_initial_0.h5') &
-                           ,n1,n2,f_local,s1,s2,ierr)
+        allocate (fout(n1,n2))
+        fout(:,:) = fval_u0(:,:)*exp(-42.0_r_typ*diffusion_coef_constant* &
+                                     diffusion_coef_factor*time_end)
 !
-! ****** Caculate analytic solution and output:
+        call write_2d_file(                                           &
+             (trim(output_field_root_filename)//'_final_analytic.h5') &
+                          ,n1,n2,fout,s1,s2,ierr)
 !
-        f_local2(:,:) = C1 + &
-                        C2*exp(-42._r_typ*diffusion_coef_constant* &
-                        diffusion_coef_factor*time_end)*f_local2(:,:)
-
-        f_local2(:,:) = exp(-42._r_typ*diffusion_coef_constant* &
-                        diffusion_coef_factor*time_end)*f_local2(:,:)
+        deallocate (fout)
 !
-        call write_2d_file((trim(output_field_root_filename)//'_final_analytic.h5') &
-                           ,n1,n2,f_local2,s1,s2,ierr)
-
-        deallocate (f_local2)
+!$acc enter data copyin(fval_u0)
 !
       end if
 !
@@ -1042,6 +1107,353 @@ subroutine set_unchanging_quantities
 !
 end subroutine
 !#######################################################################
+subroutine output_step
+!
+!-----------------------------------------------------------------------
+!
+! ****** Output.
+!
+!-----------------------------------------------------------------------
+!
+      use input_parameters
+      use timing
+      use globals
+      use mesh
+      use fields
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      real(r_typ) :: t1,wtime
+!
+!-----------------------------------------------------------------------
+!
+      t1 = wtime()
+!
+      call output_histories
+!
+!     call output_map
+!
+!     call output_flow(?)
+!
+!     call output_restart
+!
+      wtime_io = wtime_io + (wtime() - t1)
+!
+end subroutine
+!#######################################################################
+subroutine output_histories
+!
+!-----------------------------------------------------------------------
+!
+! ****** Write out histories.
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use input_parameters
+      use output
+      use globals
+      use sts
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      real(r_typ) :: dunno
+      integer :: ierr
+      integer*8 :: niters
+      character(*), parameter :: FMT='(i10,a,6(1pe22.15,a),i10)'
+      character(*), parameter :: FMT2='(i10,a,7(1pe22.15,a))'
+!
+!-----------------------------------------------------------------------
+!
+      call FFOPEN (IO_HIST_NUM,'history_num.dat','a',ierr)
+!
+      if (diffusion_num_method.eq.1) then
+        niters = n_stable_diffusion_cycles
+      else
+        niters = sts_s
+      end if
+!
+      write(IO_HIST_NUM,FMT) ntime,' ',                               &
+                             time,' ',dtime_global,' ',               &
+                             dtmax_flow,' ',dtime_advection_used, ' ',&
+                             dtime_diffusion_euler,' ',               &
+                             dtime_diffusion_used, ' ',niters
+!
+      close(IO_HIST_NUM)
+!
+      call FFOPEN (IO_HIST_SOL,'history_sol.dat','a',ierr)
+
+      write(IO_HIST_SOL,FMT2) ntime,' ',                              &
+                             time,' ',h_minbr,' ',h_maxbr,' ',        &
+                             h_minabsbr, ' ',h_fluxp,' ',h_fluxm,     &
+                             ' ',h_valerr
+!
+      close(IO_HIST_SOL)
+!
+end subroutine
+!#######################################################################
+subroutine analysis_step
+!
+!-----------------------------------------------------------------------
+!
+! ****** Compute analysis of run.
+!
+!-----------------------------------------------------------------------
+!
+      use input_parameters
+      use timing
+      use globals
+      use mesh
+      use fields
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      real(r_typ) :: t1,wtime
+      real(r_typ) :: sumfval2,fv,fv2
+      real(r_typ), dimension(:,:), allocatable :: fval
+      integer :: i,j
+!
+!-----------------------------------------------------------------------
+!
+      t1 = wtime()
+!
+! ****** If running validation, compute current exact solution.
+!
+      if (validation_run) then
+        allocate (fval(npm-1,ntm))
+!$acc enter data create (fval)
+!
+        do concurrent (i=1:npm-1,j=1:ntm)
+          fval(i,j) = fval_u0(i,j)*exp(-42.0_r_typ*diffusion_coef_constant* &
+                                       diffusion_coef_factor*time)
+        enddo
+!
+      end if
+!
+! ***** Get metrics of the current field.
+!
+      h_fluxp = 0.
+      h_fluxm = 0.
+      h_minbr = large_value
+      h_maxbr = small_value
+      h_minabsbr = large_value
+      h_valerr = 0.
+      sumfval2 = 0.
+!
+!$omp parallel do collapse(2) default(shared) &
+!$omp         reduction(+:sumfval2,h_valerr) &
+!$omp         reduction(max:h_maxbr) reduction(min:h_minbr,h_minabsbr)
+!$acc parallel loop collapse(2) default(present) &
+!$acc         reduction(+:sumfval2,h_valerr) &
+!$acc         reduction(max:h_maxbr) reduction(min:h_minbr,h_minabsbr)
+      do j=1,npm-2
+        do i=1,ntm
+          h_minbr = min(f(i,j),h_minbr)
+          h_maxbr = max(f(i,j),h_maxbr)
+          h_minabsbr = min(abs(f(i,j)),h_minabsbr)
+          if (validation_run) then
+            fv = (f(i,j) - fval(j,i))**2
+            fv2 = fval(j,i)**2
+          else
+            fv = 0.
+            fv2 = 0.
+          end if
+          h_valerr = h_valerr + fv
+          sumfval2 = sumfval2 + fv2
+        enddo
+      enddo
+!$omp end parallel do
+!
+      if (validation_run) then
+        h_valerr = sqrt(h_valerr/sumfval2)
+!$acc exit data delete (fval)
+      end if
+!
+! ****** Get flux in units of 1e21 Mx
+!
+      call get_flux (h_fluxp,h_fluxm)
+      h_fluxp = output_flux_fac*h_fluxp*rsun_cm**2
+      h_fluxm = output_flux_fac*h_fluxm*rsun_cm**2
+!
+      wtime_analysis = wtime_analysis + (wtime() - t1)
+!
+end subroutine
+!#######################################################################
+subroutine get_flux (fluxp,fluxm)
+!
+!-----------------------------------------------------------------------
+!
+! ****** Calculate the total positive and negative flux.
+!
+!-----------------------------------------------------------------------
+!
+      use input_parameters
+      use globals
+      use mesh
+      use fields
+      use constants
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      real(r_typ) :: fluxp,fluxm
+!
+!-----------------------------------------------------------------------
+!
+      integer :: i,j
+      real(r_typ) :: dttmp,tav,da_t,da_p
+      real(r_typ) :: fv,area_check
+!
+!-----------------------------------------------------------------------
+!
+      fluxp = 0.
+      fluxm = 0.
+      area_check = 0.
+!
+!$omp parallel do collapse(2) default(shared) &
+!$omp         reduction(+:fluxp,fluxm,area_check)
+!$acc parallel loop collapse(2) default(present) &
+!$acc         reduction(+:fluxp,fluxm,area_check)
+      do i=1,npm-1
+        do j=1,ntm
+          if (j.eq.1) then
+            tav=half*(t(1)+t(2))
+            da_t=quarter*sin(tav)*dth(2)
+          else if (j.eq.ntm) then
+            tav=half*(t(ntm)+t(ntm-1))
+            da_t=quarter*sin(tav)*dth(ntm)
+          else
+            da_t=sin(t(j))*dt(j)
+          end if
+!
+          if (i.eq.1) then
+            da_p=half*dph(1)
+          else if (i.eq.npm-1) then
+            da_p=half*dph(npm-1)
+          else
+            da_p=dp(i)
+          end if
+!
+          fv = f(j,i)*da_t*da_p
+!
+          if (fv.gt.0.) then
+            fluxp = fluxp + fv
+          else
+            fluxm = fluxm + fv
+          end if
+!
+          area_check = area_check + da_t*da_p
+        enddo
+      enddo
+!$omp end parallel do
+!
+!      print*,'ZMFLUX:'
+!      print*,'Area int:   ', area_check*1.0e-21_r_typ*rsun_cm**2
+!      print*,'Area exact: ', 1.0e-21_r_typ*four*pi*rsun_cm**2
+!      print*,'Flux+: ',fluxp
+!      print*,'Flux-: ',fluxm
+!
+end subroutine
+!#######################################################################
+subroutine get_flux_trap (fluxp,fluxm)
+!
+!-----------------------------------------------------------------------
+!
+! ****** Calculate the total positive and negative flux.
+!
+!-----------------------------------------------------------------------
+!
+      use input_parameters
+      use globals
+      use mesh
+      use fields
+      use constants
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      real(r_typ) :: fluxp,fluxm
+!
+!-----------------------------------------------------------------------
+!
+      integer :: j,k
+      real(r_typ) :: dttmp,tav,da_t,da_p
+      real(r_typ) :: fav,favp,favm,area_check
+      real(r_typ), dimension(:), allocatable :: int_tmp_p, int_tmp_m, area_chk
+!
+!-----------------------------------------------------------------------
+!
+      fluxp = 0.
+      fluxm = 0.
+      area_check = 0.
+!
+!$acc update self(f)
+!
+      allocate (int_tmp_p(npm-1))
+      allocate (int_tmp_m(npm-1))
+      allocate (area_chk(npm-1))
+      int_tmp_p(:)=0.
+      int_tmp_m(:)=0
+      area_chk(:)=0.
+!
+! ****** First, do integration along theta direction.
+!
+      do j=1,ntm-1
+        do k=1,npm-1
+          fav = half*(f(j+1,k) + f(j,k))
+          if (fav.gt.0.) then
+            int_tmp_p(k) = int_tmp_p(k) + fav*dth(j+1)*sth(j+1)
+          else
+            int_tmp_m(k) = int_tmp_m(k) + fav*dth(j+1)*sth(j+1)
+          end if
+          area_chk(k) = area_chk(k) + dth(j+1)*sth(j+1)
+        enddo
+      enddo
+!
+! ****** Now, do integration along phi direction.
+!
+      do k=1,npm-2
+        favp = half*(int_tmp_p(k+1) + int_tmp_p(k))
+        favm = half*(int_tmp_m(k+1) + int_tmp_m(k))
+        fluxp = fluxp + favp*dph(k+1)
+        fluxm = fluxm + favm*dph(k+1)
+        area_check = area_check + area_chk(k)*dph(k+1)
+      enddo
+!
+      fluxp = 1.0e-21_r_typ*fluxp*rsun_cm**2
+      fluxm = 1.0e-21_r_typ*fluxm*rsun_cm**2
+      area_check = area_check*1.0e-21_r_typ*rsun_cm**2
+!
+      deallocate (int_tmp_p)
+      deallocate (int_tmp_m)
+      deallocate (area_chk)
+
+      print*,'TRAPZ:'
+      print*,'Area int:   ', area_check
+      print*,'Area exact: ', 1.0e-21_r_typ*four*pi*rsun_cm**2
+      print*,'Flux+: ',fluxp
+      print*,'Flux-: ',fluxm
+!
+end subroutine
+!#######################################################################
 subroutine update_step
 !
 !-----------------------------------------------------------------------
@@ -1221,17 +1633,17 @@ subroutine update_timestep
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ) :: dtime_old, dt_mxup, dtmax_flow
+      real(r_typ) :: dtime_old, dt_mxup
 !
 !-----------------------------------------------------------------------
-!
-! ****** Save previous timestep.
-!
-      dtime_old = dtime_global
 !
 ! ****** Check:  Does the timestep need updating?
 !
       if (timestep_needs_updating) then
+!
+! ****** Save previous timestep.
+!
+        dtime_old = dtime_global
 !
 ! ****** Default timestep is one giant step for remaining time.
 !
@@ -1247,7 +1659,7 @@ subroutine update_timestep
 !
 ! ****** Check to make sure dtime_global doesnt go up too fast.
 !
-        if (dt_max_increase_fac.gt.0) then
+        if (dt_max_increase_fac.gt.0.and.dtime_old.gt.0.) then
           dt_mxup = (one + dt_max_increase_fac)*dtime_old
         else
           dt_mxup = huge(one)
@@ -1270,7 +1682,7 @@ subroutine update_timestep
       end if
 !
       if (advance_diffusion.and.timestep_diff_needs_updating) then
-        call get_dtime_diff_euler (dtime_diff_euler)
+        call get_dtime_diffusion_euler (dtime_diffusion_euler)
         timestep_diff_needs_updating = .false.
       end if
 !
@@ -1324,6 +1736,7 @@ subroutine advection_step (dtime_local)
       use number_types
       use input_parameters
       use timing
+      use globals
 !
 !-----------------------------------------------------------------------
 !
@@ -1336,6 +1749,8 @@ subroutine advection_step (dtime_local)
 !-----------------------------------------------------------------------
 !
       t1 = wtime()
+!
+      dtime_advection_used = dtime_local
 !
       if (flow_num_method.eq.1) call advection_step_upwind (dtime_local)
 !
@@ -1355,6 +1770,7 @@ subroutine diffusion_step (dtime_local)
       use number_types
       use input_parameters
       use timing
+      use globals, ONLY : dtime_diffusion_used,time
 !
 !-----------------------------------------------------------------------
 !
@@ -1363,16 +1779,17 @@ subroutine diffusion_step (dtime_local)
 !-----------------------------------------------------------------------
 !
       real(r_typ) :: dtime_local, dtime_local2, dtime_subcycle, t1, wtime
-      real(r_typ) :: time_stepped
+      real(r_typ) :: time_stepped,timetmp
       integer :: i
 !
 !-----------------------------------------------------------------------
 !
       t1 = wtime()
 !
-      time_stepped=0.
-
+      time_stepped = 0.
+!
       dtime_local2 = dtime_local/diffusion_subcycles
+      dtime_diffusion_used = dtime_local2
 !
       do i=1,diffusion_subcycles
 
@@ -1391,8 +1808,14 @@ subroutine diffusion_step (dtime_local)
         end if
         time_stepped = time_stepped + dtime_local2
         if (verbose.and.MOD(i,1).eq.0) then
-          write(*,*) '-->Diff subcycle #',i,' of ',diffusion_subcycles, 'time:',time_stepped
+          write(*,*) '-->Diff subcycle #',i,' of ', &
+                     diffusion_subcycles, 'time:',time_stepped
           flush(OUTPUT_UNIT)
+          timetmp = time
+          time = time + time_stepped
+          call analysis_step
+          call output_histories
+          time = timetmp
         end if
 !
       enddo
@@ -1614,7 +2037,7 @@ subroutine load_diffusion_matrix
 !
 end subroutine
 !#######################################################################
-subroutine get_dtime_diff_euler (dtime_exp)
+subroutine get_dtime_diffusion_euler (dtime_exp)
 !
 !-----------------------------------------------------------------------
 !
@@ -1698,8 +2121,10 @@ subroutine diffusion_step_rkl2_cd (dtime_local)
 !
 !     This only needs to happen more than once if dtime_local changes...
 !
-      call load_sts_rkl2 (dtime_local)
-!$acc enter data copyin(sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
+      if (need_to_load_sts) then
+        call load_sts_rkl2 (dtime_local)
+        need_to_load_sts = .false.
+      end if
 !
 ! ****** Allocate scratch arrays.
 !
@@ -1735,9 +2160,7 @@ subroutine diffusion_step_rkl2_cd (dtime_local)
 !
       enddo
 !
-!$acc exit data delete(sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
 !$acc exit data delete(y0,tMy0,Mym1,yjm1,yjm2)
-      deallocate (sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
       deallocate (y0,tMy0,Mym1,yjm1,yjm2)
 !
 end subroutine
@@ -1771,8 +2194,10 @@ subroutine diffusion_step_rkg2_cd (dtime_local)
 !
 !     This only needs to happen more than once if dtime_local changes...
 !
-      call load_sts_rkg2 (dtime_local)
-!$acc enter data copyin(sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
+      if (need_to_load_sts) then
+        call load_sts_rkg2 (dtime_local)
+        need_to_load_sts = .false.
+      end if
 !
 ! ****** Allocate scratch arrays.
 !
@@ -1807,9 +2232,7 @@ subroutine diffusion_step_rkg2_cd (dtime_local)
         enddo
       enddo
 !
-!$acc exit data delete(sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
 !$acc exit data delete(y0,tMy0,Mym1,yjm1,yjm2)
-      deallocate (sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
       deallocate (y0,tMy0,Mym1,yjm1,yjm2)
 !
 end subroutine
@@ -1822,7 +2245,7 @@ subroutine load_sts_rkl2 (dtime_local)
 ! ****** This uses the RKL2 2nd-order STS as given in
 ! ****** Meyer, et. al. J. Comp. Phys. 257 (2014) 594-626
 !
-! ****** The Euler stable dt (dtime_diff_euler) must be already be set.
+! ****** The Euler stable dt (dtime_diffusion_euler) must be already be set.
 !
 !-----------------------------------------------------------------------
 !
@@ -1845,13 +2268,14 @@ subroutine load_sts_rkl2 (dtime_local)
 !
       real(r_typ) :: sts_s_real,bj_bjm2,bj_bjm1
       integer*8 :: j
+      logical, save :: first = .true.
 !
 !-----------------------------------------------------------------------
 !
 ! ****** Compute number of iterations per super-step.
 !
       sts_s_real = &
-        half*(sqrt(nine + sixteen*(dtime_local/dtime_diff_euler)) - one)
+        half*(sqrt(nine + sixteen*(dtime_local/dtime_diffusion_euler)) - one)
 !
       sts_s = CEILING(sts_s_real)
 !
@@ -1869,11 +2293,20 @@ subroutine load_sts_rkl2 (dtime_local)
 !
 ! ****** Allocate super-time-step coefficent arrays.
 !
-      allocate (sts_uj(sts_s))
-      allocate (sts_vj(sts_s))
-      allocate (sts_ubj(sts_s))
-      allocate (sts_gj(sts_s))
-      allocate (sts_b(sts_s))
+      if (need_to_load_sts.and..not.first) then
+!$acc exit data delete(sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
+        deallocate (sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
+      end if
+!
+      if (need_to_load_sts) then
+        allocate (sts_uj(sts_s))
+        allocate (sts_vj(sts_s))
+        allocate (sts_ubj(sts_s))
+        allocate (sts_gj(sts_s))
+        allocate (sts_b(sts_s))
+!$acc enter data create(sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
+        if (first) first=.false.
+      end if
 !
 ! ****** Compute super-time-step coefficents.
 !
@@ -1901,6 +2334,8 @@ subroutine load_sts_rkl2 (dtime_local)
         sts_gj(j) = -(one - sts_b(j - 1))*sts_ubj(j)
       enddo
 !
+!$acc update device(sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
+!
 end subroutine
 !#######################################################################
 subroutine load_sts_rkg2 (dtime_local)
@@ -1911,7 +2346,7 @@ subroutine load_sts_rkg2 (dtime_local)
 ! ****** This uses the RKG2 2nd-order STS as given in
 ! ****** Skaras, et. al. J. Comp. Phys. 425 (2021) 109879
 !
-! ****** The Euler stable dt (dtime_diff_euler) must be already be set.
+! ****** The Euler stable dt (dtime_diffusion_euler) must be already be set.
 !
 !-----------------------------------------------------------------------
 !
@@ -1934,13 +2369,14 @@ subroutine load_sts_rkg2 (dtime_local)
 !
       real(r_typ) :: sts_s_real,bj_bjm2,bj_bjm1,w1
       integer*8 :: j
+      logical, save :: first = .true.
 !
 !-----------------------------------------------------------------------
 !
 ! ****** Compute number of iterations per super-step.
 !
       sts_s_real = half*(sqrt(twentyfive + &
-                         twentyfour*(dtime_local/dtime_diff_euler)) &
+                         twentyfour*(dtime_local/dtime_diffusion_euler)) &
                          - three)
 !
       sts_s = CEILING(sts_s_real)
@@ -1959,11 +2395,20 @@ subroutine load_sts_rkg2 (dtime_local)
 !
 ! ****** Allocate super-time-step coefficent arrays.
 !
-      allocate (sts_uj(sts_s))
-      allocate (sts_vj(sts_s))
-      allocate (sts_ubj(sts_s))
-      allocate (sts_gj(sts_s))
-      allocate (sts_b(sts_s))
+      if (need_to_load_sts.and..not.first) then
+!$acc exit data delete(sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
+        deallocate (sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
+      end if
+!
+      if (need_to_load_sts) then
+        allocate (sts_uj(sts_s))
+        allocate (sts_vj(sts_s))
+        allocate (sts_ubj(sts_s))
+        allocate (sts_gj(sts_s))
+        allocate (sts_b(sts_s))
+!$acc enter data create(sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
+        if (first) first=.false.
+      end if
 !
 ! ****** Compute super-time-step coefficents.
 !
@@ -1993,6 +2438,8 @@ subroutine load_sts_rkg2 (dtime_local)
         sts_ubj(j)=sts_uj(j)*w1
         sts_gj(j)=-(one - half*j*(j + one)*sts_b(j-1))*sts_ubj(j)
       enddo
+!
+!$acc update device(sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
 !
 end subroutine
 !#######################################################################
@@ -2774,7 +3221,8 @@ subroutine set_mesh
       dth_i(:) = one/dth(:)
 !
       do i=1,ntm
-        dt(i) = th(i+1) - th(i)
+        dt(i) = th(i+1) - th(i) !   half*(t(i+1) + t(i)) - half*(t(i) + t(i-1))
+                                ! = half*(t(i+1) - t(i-1))
         dt_i(i) = one/dt(i)
       enddo
 !
@@ -3363,9 +3811,8 @@ subroutine diffusion_step_euler_cd (dtime_local)
 !-----------------------------------------------------------------------
 !
       integer :: j,k
-      integer*8 :: i,n_stable_cycles
-      real(r_typ) :: fn2_fn1,fs2_fs1
-      real(r_typ) :: d2t,d2p,dtime_stable
+      integer*8 :: i
+      real(r_typ) :: dtime_euler_used
 !
 !-----------------------------------------------------------------------
 !
@@ -3376,56 +3823,16 @@ subroutine diffusion_step_euler_cd (dtime_local)
 !
 ! ****** Subcycle at a stable time-step.
 !
-      n_stable_cycles = CEILING(dtime_local/dtime_diff_euler,8)
-      dtime_stable = dtime_local/n_stable_cycles
+      n_stable_diffusion_cycles = CEILING(dtime_local/dtime_diffusion_euler,8)
+      dtime_euler_used = dtime_local/n_stable_diffusion_cycles
 !
-      do i=1,n_stable_cycles
+      do i=1,n_stable_diffusion_cycles
 !
-        fn2_fn1 = 0.
-        fs2_fs1 = 0.
+        call ax (f,fe)
 !
-! ****** Save current x to fe (old).
-!
-        do concurrent(k=1:npm,j=1:ntm)
-          fe(j,k) = f(j,k)
+        do concurrent (k=1:npm,j=1:ntm)
+          f(j,k) = f(j,k) + dtime_euler_used*fe(j,k)
         enddo
-!
-! ****** Compute y=Ax.
-!
-! ****** Advance the poles.
-!
-!$omp parallel do default(shared) reduction(+:fn2_fn1,fs2_fs1)
-!$acc parallel loop default(present) reduction(+:fn2_fn1,fs2_fs1)
-        do k=2,npm-1
-          fn2_fn1 = fn2_fn1 + (fe(2    ,k) - fe(1  ,k))*dp(k)
-          fs2_fs1 = fs2_fs1 + (fe(ntm-1,k) - fe(ntm,k))*dp(k)
-        enddo
-!$omp end parallel do
-!
-        do concurrent (k=1:npm)
-          f(  1,k) = fe(1  ,k) + dtime_stable*(   d2t_j1*fn2_fn1)
-          f(ntm,k) = fe(ntm,k) + dtime_stable*(d2t_jntm1*fs2_fs1)
-        enddo
-!
-! ****** Compute inner points.
-!
-        do concurrent (k=2:npm-1,j=2:ntm-1)
-          d2p=( diffusion_coef(j,k+1)*(fe(j,k+1)-fe(j,k  ))*dph_i(k+1) &
-               -diffusion_coef(j,k  )*(fe(j,k  )-fe(j,k-1))*dph_i(k  ) &
-               )*dp_i(k)*st_i(j)*st_i(j)
-          d2t=( diffusion_coef(j+1,k)*sth(j+1) &
-                                *(fe(j+1,k)-fe(j  ,k))*dth_i(j+1) &
-               -diffusion_coef(j,k)*sth(j  ) &
-                                *(fe(j  ,k)-fe(j-1,k))*dth_i(j  ) &
-              )*st_i(j)*dt_i(j)
-!
-          f(j,k) = fe(j,k) + dtime_stable*(diffusion_coef_t_fac*d2t + &
-                                           diffusion_coef_p_fac*d2p)
-        enddo
-!
-! ****** Set periodic boundary points.
-!
-        call set_periodic_bc_2d (f,ntm,npm)
 !
       enddo
 !
@@ -3947,7 +4354,8 @@ subroutine read_input
       call defarg (GROUP_K,'-diffusion_coef_grid',' ',' ')
       call defarg (GROUP_KA,'-diffusion_coef_factor','1.','<val>')
       call defarg (GROUP_KA,'-s','<none>','<file>')
-      call defarg (GROUP_KA,'-time','1.','<val>')
+      call defarg (GROUP_KA,'-time','1.0','<val>')
+      call defarg (GROUP_KA,'-dtmax','1.0e16','<val>')
       call defarg (GROUP_KA,'-dm','2','<val>')
       call defarg (GROUP_KA,'-diffusion_subcycles','30',' ')
       call defarg (GROUP_A ,'output_field_root_filename',' ',' ')
@@ -4114,6 +4522,11 @@ subroutine read_input
       call fetcharg ('-time',set,arg)
       time_end=fpval(arg,'-time')
 !
+! ****** Maximum allowed timestep.
+!
+      call fetcharg ('-dtmax',set,arg)
+      dt_max=fpval(arg,'-dtmax')
+!
 ! ****** Use original explicit algorithm.
 !
       call fetcharg ('-dm',set,arg)
@@ -4160,9 +4573,17 @@ end subroutine
 !        11/01/2021, RC, Version 0.1.1:
 !         - Replaced all non-reduction OpenACC/MP loops with
 !           `do concurrent`.  This required alteranative compiler
-!           flags to properly parallelize.  See build.sh for 
+!           flags to properly parallelize.  See build.sh for
 !           examples.
 !         - Merged sds and number_types modules/routines into main code.
+!
+!        11/05/2021, RC, Version 0.2.0:
+!         - Added dtmax input parameter to specify maximum allowed dt.
+!         - Added history files:
+!           history_num.dat contains numerical diagnostics while
+!           history_sol.dat contains diagnostics of the solution
+!                           including flux, and validation comparison.
+!         - Updated explicit Euler diffusion to use matrix coefs.
 !
 !-----------------------------------------------------------------------
 !
