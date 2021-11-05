@@ -30,16 +30,20 @@ FFLAGS="-O3 -march=native -acc=multicore -stdpar=multicore"
 
 HIPFT_HOME=$PWD
 
-cd ${HIPFT_HOME}/src
-cp Makefile.template Makefile
-sed -i "s#<FFLAGS>#${FFLAGS}#g" Makefile
-sed -i "s#<HDF5_INCLUDE_DIR>#${HDF5_INCLUDE_DIR}#g" Makefile
-sed -i "s#<HDF5_LIB_DIR>#${HDF5_LIB_DIR}#g" Makefile
-sed -i "s#<HDF5_LIB_FLAGS>#${HDF5_LIB_FLAGS}#g" Makefile
+pushd ${HIPFT_HOME}/src >> /dev/null
+if [ -e Makefile ]; then
+  \rm Makefile
+fi 
+sed \
+  -e "s#<FFLAGS>#${FFLAGS}#g" \
+  -e "s#<HDF5_INCLUDE_DIR>#${HDF5_INCLUDE_DIR}#g" \
+  -e "s#<HDF5_LIB_DIR>#${HDF5_LIB_DIR}#g" \
+  -e "s#<HDF5_LIB_FLAGS>#${HDF5_LIB_FLAGS}#g" \
+  Makefile.template > Makefile
 echo "make 1>build.log 2>build.err"
 make clean
 make 1>build.log 2>build.err
 
 echo "cp ${HIPFT_HOME}/src/hipft ${HIPFT_HOME}/bin/hipft"
-cp ${HIPFT_HOME}/src/hipft ${HIPFT_HOME}/bin/hipft
+\cp ${HIPFT_HOME}/src/hipft ${HIPFT_HOME}/bin/hipft
 

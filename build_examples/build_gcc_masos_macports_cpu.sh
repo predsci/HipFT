@@ -11,14 +11,14 @@
 
 # NOTE: you must first install the hdf5 packages from the package manager.
 
-HDF5_INCLUDE_DIR="/usr/include/hdf5/serial"
-HDF5_LIB_DIR="/usr/lib/x86_64-linux-gnu"
+HDF5_INCLUDE_DIR="${PS_EXT_DEPS_HOME}/hdf5/include"
+HDF5_LIB_DIR="${PS_EXT_DEPS_HOME}/hdf5/lib"
 
 ##################################################################
 # Please set the HDF5 linker flags to match the installed version.
 ##################################################################
 
-HDF5_LIB_FLAGS="-lhdf5_serial_fortran -lhdf5_serialhl_fortran -lhdf5_serial -lhdf5_serial_hl"
+HDF5_LIB_FLAGS="-lhdf5_fortran -lhdf5hl_fortran -lhdf5 -lhdf5_hl"
 
 ###########################################################################
 # Please set the compile flags based on your compiler and hardware setup.
