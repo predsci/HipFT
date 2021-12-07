@@ -48,8 +48,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.2.0'
-      character(*), parameter :: cdate='11/05/2021'
+      character(*), parameter :: cvers='0.2.1'
+      character(*), parameter :: cdate='11/24/2021'
 !
 end module
 !#######################################################################
@@ -100,11 +100,12 @@ module constants
       real(r_typ), parameter :: six=6._r_typ
       real(r_typ), parameter :: nine=9._r_typ
       real(r_typ), parameter :: ten=10._r_typ
+      real(r_typ), parameter :: fifteen=15._r_typ
       real(r_typ), parameter :: sixteen=16._r_typ
       real(r_typ), parameter :: half=0.5_r_typ
       real(r_typ), parameter :: quarter=0.25_r_typ
-      real(r_typ), parameter :: twentyfive=25.0_r_typ
       real(r_typ), parameter :: twentyfour=24.0_r_typ
+      real(r_typ), parameter :: twentyfive=25.0_r_typ
 !
       real(r_typ), parameter :: pi=3.1415926535897932_r_typ
       real(r_typ), parameter :: pi_i=0.3183098861837907_r_typ
@@ -388,11 +389,12 @@ module sts
       real(r_typ), dimension(:), allocatable :: sts_ubj
       real(r_typ), dimension(:), allocatable :: sts_gj
       real(r_typ), dimension(:), allocatable :: sts_b
-      real(r_typ), dimension(:,:), allocatable :: y0
-      real(r_typ), dimension(:,:), allocatable :: tMy0
-      real(r_typ), dimension(:,:), allocatable :: Mym1
-      real(r_typ), dimension(:,:), allocatable :: yjm1
-      real(r_typ), dimension(:,:), allocatable :: yjm2
+!
+      real(r_typ), dimension(:,:), allocatable :: u0
+      real(r_typ), dimension(:,:), allocatable :: dty0
+      real(r_typ), dimension(:,:), allocatable :: ykm1
+      real(r_typ), dimension(:,:), allocatable :: ukm1
+      real(r_typ), dimension(:,:), allocatable :: ukm2
 !
 end module
 !#######################################################################
@@ -1797,13 +1799,10 @@ subroutine diffusion_step (dtime_local)
 !
           call diffusion_step_euler_cd (dtime_local2)
 !
-        else if (diffusion_num_method.eq.2) then
+        else if (diffusion_num_method.eq.2.or.   &
+                 diffusion_num_method.eq.3) then
 !
-          call diffusion_step_rkl2_cd (dtime_local2)
-!
-        else if (diffusion_num_method.eq.3) then
-!
-          call diffusion_step_rkg2_cd (dtime_local2)
+          call diffusion_step_sts_cd (dtime_local2)
 !
         end if
         time_stepped = time_stepped + dtime_local2
@@ -2092,84 +2091,11 @@ subroutine get_dtime_diffusion_euler (dtime_exp)
 !
 end subroutine
 !#######################################################################
-subroutine diffusion_step_rkl2_cd (dtime_local)
+subroutine diffusion_step_sts_cd (dtime_local)
 !
 !-----------------------------------------------------------------------
 !
-! ****** Diffuse the field by one time step using RKL2 STS.
-!
-!-----------------------------------------------------------------------
-!
-      use number_types
-      use mesh
-      use fields
-      use input_parameters
-      use sts
-      use constants
-!
-!-----------------------------------------------------------------------
-!
-      implicit none
-!
-!-----------------------------------------------------------------------
-!
-      integer :: j,k
-      integer*8 :: i
-      real(r_typ) :: dtime_local
-!
-!-----------------------------------------------------------------------
-!
-!     This only needs to happen more than once if dtime_local changes...
-!
-      if (need_to_load_sts) then
-        call load_sts_rkl2 (dtime_local)
-        need_to_load_sts = .false.
-      end if
-!
-! ****** Allocate scratch arrays.
-!
-      allocate (y0(ntm,npm))
-      allocate (tMy0(ntm,npm))
-      allocate (Mym1(ntm,npm))
-      allocate (yjm1(ntm,npm))
-      allocate (yjm2(ntm,npm))
-!$acc enter data create(y0,tMy0,Mym1,yjm1,yjm2)
-!
-      call ax(f,tMy0)
-!
-      do concurrent (k=1:npm,j=1:ntm)
-        y0(j,k) = f(j,k)
-        yjm2(j,k) = f(j,k)
-        tMy0(j,k) = dtime_local*tMy0(j,k)
-        yjm1(j,k) = f(j,k) + sts_ubj(1)*tMy0(j,k)
-      enddo
-!
-! ****** Inner s-step loop
-!
-      do i=2,sts_s
-!
-        call ax(yjm1,Mym1)
-!
-        do concurrent (k=1:npm,j=1:ntm)
-          f(j,k) = sts_uj(i)*yjm1(j,k) + sts_vj(i)*yjm2(j,k) +        &
-                  (one - sts_uj(i) - sts_vj(i))*y0(j,k) +             &
-                   sts_ubj(i)*dtime_local*Mym1(j,k) + sts_gj(i)*tMy0(j,k)
-          yjm2(j,k) = yjm1(j,k)
-          yjm1(j,k) = f(j,k)
-        enddo
-!
-      enddo
-!
-!$acc exit data delete(y0,tMy0,Mym1,yjm1,yjm2)
-      deallocate (y0,tMy0,Mym1,yjm1,yjm2)
-!
-end subroutine
-!#######################################################################
-subroutine diffusion_step_rkg2_cd (dtime_local)
-!
-!-----------------------------------------------------------------------
-!
-! ****** Diffuse the field by one time step using RKG2 STS.
+! ****** Diffuse the field by one time step using super time-stepping.
 !
 !-----------------------------------------------------------------------
 !
@@ -2186,8 +2112,8 @@ subroutine diffusion_step_rkg2_cd (dtime_local)
 !
 !-----------------------------------------------------------------------
 !
-      integer :: j,k
-      integer*8 :: i
+      integer :: i,j
+      integer*8 :: k
       real(r_typ) :: dtime_local
 !
 !-----------------------------------------------------------------------
@@ -2195,45 +2121,53 @@ subroutine diffusion_step_rkg2_cd (dtime_local)
 !     This only needs to happen more than once if dtime_local changes...
 !
       if (need_to_load_sts) then
-        call load_sts_rkg2 (dtime_local)
+        if (diffusion_num_method.eq.2) then
+          call load_sts_rkl2 (dtime_local)
+        elseif(diffusion_num_method.eq.3) then
+          call load_sts_rkg2 (dtime_local)
+        endif
         need_to_load_sts = .false.
       end if
 !
 ! ****** Allocate scratch arrays.
 !
-      allocate (y0(ntm,npm))
-      allocate (tMy0(ntm,npm))
-      allocate (Mym1(ntm,npm))
-      allocate (yjm1(ntm,npm))
-      allocate (yjm2(ntm,npm))
-!$acc enter data create(y0,tMy0,Mym1,yjm1,yjm2)
+      allocate (u0(ntm,npm))
+      allocate (dty0(ntm,npm))
+      allocate (ykm1(ntm,npm))
+      allocate (ukm1(ntm,npm))
+      allocate (ukm2(ntm,npm))
+!$acc enter data create(u0,dty0,ykm1,ukm1,ukm2)
 !
-      call ax(f,tMy0)
+      call ax(f,dty0)
 !
-      do concurrent (k=1:npm,j=1:ntm)
-        y0(j,k) = f(j,k)
-        yjm2(j,k) = f(j,k)
-        tMy0(j,k) = dtime_local*tMy0(j,k)
-        yjm1(j,k) = f(j,k) + sts_ubj(1)*tMy0(j,k)
+      do concurrent (j=1:npm,i=1:ntm)
+        u0(i,j) = f(i,j)
+        ukm2(i,j) = f(i,j)
+        dty0(i,j) = dtime_local*dty0(i,j)
+        ukm1(i,j) = f(i,j) + sts_ubj(1)*dty0(i,j)
       enddo
 !
 ! ****** Inner s-step loop
 !
-      do i=2,sts_s
+      do k=2,sts_s
 !
-        call ax(yjm1,Mym1)
+        call ax(ukm1,ykm1)
 !
-        do concurrent (k=1:npm,j=1:ntm)
-          f(j,k) = sts_uj(i)*yjm1(j,k) + sts_vj(i)*yjm2(j,k) + &
-                (one - sts_uj(i) - sts_vj(i))*y0(j,k) +        &
-                sts_ubj(i)*dtime_local*Mym1(j,k) + sts_gj(i)*tMy0(j,k)
-          yjm2(j,k) = yjm1(j,k)
-          yjm1(j,k) = f(j,k)
+        do concurrent (j=1:npm,i=1:ntm)
+          f(i,j) =               sts_uj(k)*ukm1(i,j) + &
+                                 sts_vj(k)*ukm2(i,j) + &
+                   (one-sts_uj(k)-sts_vj(k))*u0(i,j) + &
+                    sts_ubj(k)*dtime_local*ykm1(i,j) + &
+                                 sts_gj(k)*dty0(i,j)
+!
+          ukm2(i,j) = ukm1(i,j)
+          ukm1(i,j) = f(i,j)
         enddo
+!
       enddo
 !
-!$acc exit data delete(y0,tMy0,Mym1,yjm1,yjm2)
-      deallocate (y0,tMy0,Mym1,yjm1,yjm2)
+!$acc exit data delete(u0,dty0,ykm1,ukm1,ukm2)
+      deallocate (u0,dty0,ykm1,ukm1,ukm2)
 !
 end subroutine
 !#######################################################################
@@ -2266,7 +2200,7 @@ subroutine load_sts_rkl2 (dtime_local)
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ) :: sts_s_real,bj_bjm2,bj_bjm1
+      real(r_typ) :: sts_s_real,bj_bjm2,bj_bjm1,w
       integer*8 :: j
       logical, save :: first = .true.
 !
@@ -2275,7 +2209,8 @@ subroutine load_sts_rkl2 (dtime_local)
 ! ****** Compute number of iterations per super-step.
 !
       sts_s_real = &
-        half*(sqrt(nine + sixteen*(dtime_local/dtime_diffusion_euler)) - one)
+        half*(sqrt(nine + sixteen*(dtime_local/dtime_diffusion_euler)) &
+              - one)
 !
       sts_s = CEILING(sts_s_real)
 !
@@ -2310,6 +2245,9 @@ subroutine load_sts_rkl2 (dtime_local)
 !
 ! ****** Compute super-time-step coefficents.
 !
+      w = four/(sts_s*sts_s + sts_s - two_int)
+!
+      !b0 = one/three
       sts_b(1) = one/three
       sts_b(2) = one/three
 !
@@ -2319,19 +2257,19 @@ subroutine load_sts_rkl2 (dtime_local)
       sts_gj(1) = -9999._r_typ
 !
       sts_uj(2) = three/two
-      sts_vj(2) = -one/two
-      sts_ubj(2) = six/(sts_s*sts_s + sts_s - two_int)
-      sts_gj(2) = -four/(sts_s*sts_s + sts_s - two_int)
+      sts_vj(2) = -half
+      sts_ubj(2) = sts_uj(2)*w
+      sts_gj(2) = -w
 !
       do j=3,sts_s
-        sts_b(j) = (j*j + j - two)/(two*j*(j + 1))
-        bj_bjm1 = sts_b(j)/sts_b(j - 1)
-        bj_bjm2 = sts_b(j)/sts_b(j - 2)
+        sts_b(j) = (j*j + j - two)/(two*j*(j+1))
+        bj_bjm1 = sts_b(j)/sts_b(j-1)
+        bj_bjm2 = sts_b(j)/sts_b(j-2)
 !
         sts_uj(j) = bj_bjm1*(two - one/j)
-        sts_vj(j) = -bj_bjm2*(one - one/j)
-        sts_ubj(j) = sts_uj(j)*four/(sts_s*sts_s + sts_s - two_int)
-        sts_gj(j) = -(one - sts_b(j - 1))*sts_ubj(j)
+        sts_vj(j) = bj_bjm2*(one/j - one)
+        sts_ubj(j) = sts_uj(j)*w
+        sts_gj(j) = (sts_b(j-1) - one)*sts_ubj(j)
       enddo
 !
 !$acc update device(sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
@@ -2367,7 +2305,7 @@ subroutine load_sts_rkg2 (dtime_local)
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ) :: sts_s_real,bj_bjm2,bj_bjm1,w1
+      real(r_typ) :: sts_s_real,bj_bjm2,bj_bjm1,w
       integer*8 :: j
       logical, save :: first = .true.
 !
@@ -2412,31 +2350,31 @@ subroutine load_sts_rkg2 (dtime_local)
 !
 ! ****** Compute super-time-step coefficents.
 !
-      w1 = six/((sts_s + four_int)*(sts_s - one_int))
+      w = six/((sts_s + four_int)*(sts_s - one_int))
 !
       !b0 = one
       sts_b(1)=one/three
-      sts_b(2)=one/15.0_r_typ
+      sts_b(2)=one/fifteen
 !
-      sts_uj(1) = 1.0_r_typ
+      sts_uj(1) = one
       sts_vj(1) = -9999._r_typ
-      sts_ubj(1) = w1
+      sts_ubj(1) = w
       sts_gj(1) = -9999._r_typ
 !
       sts_uj(2) = one/two
       sts_vj(2) = -one/ten
-      sts_ubj(2) = sts_uj(2)*w1
+      sts_ubj(2) = sts_uj(2)*w
       sts_gj(2) = zero
 !
       do j=3,sts_s
-        sts_b(j)=(four*(j-1)*(j+4))/(three*j*(j+1)*(j+2)*(j+3))
-        bj_bjm1=sts_b(j)/sts_b(j-1)
-        bj_bjm2=sts_b(j)/sts_b(j-2)
+        sts_b(j) = (four*(j-1)*(j+4))/(three*j*(j+1)*(j+2)*(j+3))
+        bj_bjm1 = sts_b(j)/sts_b(j-1)
+        bj_bjm2 = sts_b(j)/sts_b(j-2)
 !
-        sts_uj(j)=bj_bjm1*((two*j + one)/j)
-        sts_vj(j)=-bj_bjm2*((j + one)/j)
-        sts_ubj(j)=sts_uj(j)*w1
-        sts_gj(j)=-(one - half*j*(j + one)*sts_b(j-1))*sts_ubj(j)
+        sts_uj(j) = bj_bjm1*(two + one/j)
+        sts_vj(j) = -bj_bjm2*(one/j + one)
+        sts_ubj(j) = sts_uj(j)*w
+        sts_gj(j) = (half*j*(j + one)*sts_b(j-1) - one)*sts_ubj(j)
       enddo
 !
 !$acc update device(sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
@@ -3780,7 +3718,7 @@ subroutine get_flow_dtmax (dtmax)
       enddo
 !$omp end parallel do
 !
-      dtmax = safety*dtmax
+      dtmax = half*safety*dtmax
 !
 end subroutine
 !#######################################################################
@@ -3913,7 +3851,7 @@ subroutine advection_step_upwind (dtime_local)
                                       )
       enddo
 !
-! ****** Advect the values at the poles.
+! ****** Advect the values at the poles. [maybe change this to naive mode?]
 !
 !$omp parallel do default(shared) reduction(+:fn,fs)
 !$acc parallel loop default(present) reduction(+:fn,fs)
@@ -4356,7 +4294,7 @@ subroutine read_input
       call defarg (GROUP_KA,'-s','<none>','<file>')
       call defarg (GROUP_KA,'-time','1.0','<val>')
       call defarg (GROUP_KA,'-dtmax','1.0e16','<val>')
-      call defarg (GROUP_KA,'-dm','2','<val>')
+      call defarg (GROUP_KA,'-dm','3','<val>')
       call defarg (GROUP_KA,'-diffusion_subcycles','30',' ')
       call defarg (GROUP_A ,'output_field_root_filename',' ',' ')
       call defarg (GROUP_KA,'-uw','1.','<val>')
@@ -4584,6 +4522,10 @@ end subroutine
 !           history_sol.dat contains diagnostics of the solution
 !                           including flux, and validation comparison.
 !         - Updated explicit Euler diffusion to use matrix coefs.
+!
+!        11/24/2021, RC, Version 0.2.1:
+!         - Some simplifications to STS method.
+!         - Updated stable flow time-step to be more robust.
 !
 !-----------------------------------------------------------------------
 !
