@@ -1,5 +1,10 @@
-# HipFT
-High-performance Flux Transport  
+![HipFT](hipft_logo.png)
+
+# HipFT: High-performance Flux Transport 
+Predictive Science Inc.  
+www.predsci.com
+
+## OVERVIEW ##
   
 HipFT is the computational core of the Open-source Flux Transport (OFT) software suite, which is a data-assimilation flux transport model used to generate an ensemble of synchronic radial magnetic field maps for use as boundary conditions for the coronal field models.   
   
