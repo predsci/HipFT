@@ -1,30 +1,27 @@
 !#######################################################################
 !
-!    ▄         ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄
-!   ▐░▌       ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-!   ▐░▌       ▐░▌ ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀  ▀▀▀▀█░█▀▀▀▀
-!   ▐░▌       ▐░▌     ▐░▌     ▐░▌       ▐░▌▐░▌               ▐░▌
-!   ▐░█▄▄▄▄▄▄▄█░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄▄▄      ▐░▌
-!   ▐░░░░░░░░░░░▌     ▐░▌     ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌     ▐░▌
-!   ▐░█▀▀▀▀▀▀▀█░▌     ▐░▌     ▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀      ▐░▌
-!   ▐░▌       ▐░▌     ▐░▌     ▐░▌          ▐░▌               ▐░▌
-!   ▐░▌       ▐░▌ ▄▄▄▄█░█▄▄▄▄ ▐░▌          ▐░▌               ▐░▌
-!   ▐░▌       ▐░▌▐░░░░░░░░░░░▌▐░▌          ▐░▌               ▐░▌
-!    ▀         ▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀            ▀                 ▀
+!      _    _ _       ______ _______
+!     | |  | (_)     |  ____|__   __|
+!     | |__| |_ _ __ | |__     | |
+!     |  __  | | '_ \|  __|    | |
+!     | |  | | | |_) | |       | |
+!     |_|  |_|_| .__/|_|       |_|
+!              | |
+!              |_|
 !
 ! ****** HipFT: High Performance Flux Transport.
 !
-!        Authors:  Ronald M. Caplan
+!     Authors:  Ronald M. Caplan
 !
-!        HipFT incorporates code from multiple tools developed by
-!        Zoran Mikic, and Jon A. Linker.
+!     HipFT incorporates code from multiple tools developed by
+!     Zoran Mikic, and Jon A. Linker.
 !
-!        Predictive Science Inc.
-!        www.predsci.com
-!        San Diego, California, USA 92121
+!     Predictive Science Inc.
+!     www.predsci.com
+!     San Diego, California, USA 92121
 !
 !#######################################################################
-! Copyright 2021 Predictive Science Inc.
+! Copyright 2022 Predictive Science Inc.
 !
 ! Licensed under the Apache License, Version 2.0 (the "License");
 ! you may not use this file except in compliance with the License.
@@ -48,8 +45,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.2.1'
-      character(*), parameter :: cdate='11/24/2021'
+      character(*), parameter :: cvers='0.3.0'
+      character(*), parameter :: cdate='02/17/2022'
 !
 end module
 !#######################################################################
@@ -106,6 +103,7 @@ module constants
       real(r_typ), parameter :: quarter=0.25_r_typ
       real(r_typ), parameter :: twentyfour=24.0_r_typ
       real(r_typ), parameter :: twentyfive=25.0_r_typ
+      real(r_typ), parameter :: fivehundred_i=0.002_r_typ
 !
       real(r_typ), parameter :: pi=3.1415926535897932_r_typ
       real(r_typ), parameter :: pi_i=0.3183098861837907_r_typ
@@ -193,6 +191,11 @@ module input_parameters
 ! ****** Add a rigid rotation vp velocity (km/s) of omega*sin(theta).
 !
       real(r_typ)    :: flow_vp_rigid_omega = 0.
+!
+! ****** Attenuate the veolcity based on the value of Br.
+! ****** This causes flow to be updated each step.
+!
+      logical    :: flow_attenuate = .false.
 !
 ! ****** Built-in differential roation and meridianal flow models.
 ! ****** For each, setting "1" sets the model/params used in the AFT code.
@@ -770,7 +773,16 @@ subroutine write_welcome_message
 !
 !-----------------------------------------------------------------------
 !
-      write (*,*)
+      write (*,*) ''
+      write (*,*) ''
+      write (*,*) '      _    _ _       ______ _______ '
+      write (*,*) '     | |  | (_)     |  ____|__   __|'
+      write (*,*) '     | |__| |_ _ __ | |__     | |'
+      write (*,*) '     |  __  | | ''_ \|  __|    | |'
+      write (*,*) '     | |  | | | |_) | |       | |'
+      write (*,*) '     |_|  |_|_| .__/|_|       |_|'
+      write (*,*) '              | |'
+      write (*,*) '              |_|'
       write (*,*) ''
       write (*,*) ' ****** HipFT: High Performance Flux Transport.'
       write (*,*) ''
@@ -801,6 +813,7 @@ subroutine write_welcome_message
       write(*,*) "Run started at: "
       call timestamp
       flush(OUTPUT_UNIT)
+!
 end subroutine
 !#######################################################################
 subroutine load_initial_condition
@@ -1501,6 +1514,7 @@ subroutine update_flow
       use mesh
       use fields
       use globals
+      use constants
 !
 !-----------------------------------------------------------------------
 !
@@ -1509,6 +1523,8 @@ subroutine update_flow
 !-----------------------------------------------------------------------
 !
       integer :: j,k
+      real(r_typ) :: br_avg
+      real(r_typ) :: vt_npole,vt_spole,vp_npole,vp_spole
 !
 !-----------------------------------------------------------------------
 !
@@ -1528,7 +1544,8 @@ subroutine update_flow
           vp(j,k) = 0.
         end do
 !
-! ***** Add in flow from file.
+! ***** Add in flow from file (this should save current state and check
+!       if a new one is needed/interp to avoid tons of I/O.
 !
         call add_flow_from_file
 !
@@ -1552,6 +1569,76 @@ subroutine update_flow
           end do
         endif
 !
+! ***** Attenuate velocity based on Br.
+!
+        if (flow_attenuate) then
+!
+          do concurrent (k=2:np-1,j=2:nt-1)
+!
+! ****** Interpolate f at half-half (vel) mesh point.
+!
+            br_avg = quarter*(f(j-1,k) + f(j,k-1) + f(j,k) + f(j-1,k-1))
+!
+            vt(j,k) = vt(j,k)*(one - tanh(abs(br_avg)*fivehundred_i))
+            vp(j,k) = vp(j,k)*(one - tanh(abs(br_avg)*fivehundred_i))
+!
+          end do
+!
+! ****** Set poles. Maybe not needed since field is weak at pole?
+!
+          vt_npole = 0.
+          vt_spole = 0.
+          vp_npole = 0.
+          vp_spole = 0.
+!
+!$acc parallel loop present(vt,vp) &
+!$acc                  reduction(+:vt_npole,vt_spole,vp_npole,vp_spole)
+          do k=2,npm1
+            vt_npole = vt_npole + vt(   2,k)*dph(k)
+            vt_spole = vt_spole + vt(ntm1,k)*dph(k)
+            vp_npole = vp_npole + vp(   2,k)*dph(k)
+            vp_spole = vp_spole + vp(ntm1,k)*dph(k)
+          enddo
+!
+          vt_npole = vt_npole*twopi_i
+          vt_spole = vt_spole*twopi_i
+          vp_npole = vp_npole*twopi_i
+          vp_spole = vp_spole*twopi_i
+
+! ****** Attenuate pole value to set new v bc
+!        (f should have same value for all polar points so can use 1)
+
+!$acc update host(f(1,1),f(ntm,1))
+          vt_npole = vt_npole*(one - tanh(f(1,1)*fivehundred_i))
+          vt_spole = vt_spole*(one - tanh(f(ntm,1)*fivehundred_i))
+          vp_npole = vp_npole*(one - tanh(f(1,1)*fivehundred_i))
+          vp_spole = vp_spole*(one - tanh(f(ntm,1)*fivehundred_i))
+!
+!$acc kernels default(present)
+!
+! ****** Now set the pole:
+!
+          vt( 1,:) = two*vt_spole-vt(   2,:)
+          vt(nt,:) = two*vt_spole-vt(ntm1,:)
+          vp( 1,:) = two*vp_spole-vp(   2,:)
+          vp(nt,:) = two*vp_spole-vp(ntm1,:)
+!
+! ****** Set periodicity
+!
+          vt(:, 1) = vt(:,npm1)
+          vt(:,np) = vt(:,   2)
+          vp(:, 1) = vp(:,npm1)
+          vp(:,np) = vp(:,   2)
+!$acc end kernels
+
+! ****** Since this needs to be done each timestep as Br changes,
+! ****** the full velocity profile needs to be reloaded and
+! ****** re-attenuated.
+!
+          flow_needs_updating = .true.
+!
+        end if
+!
       endif
 !
 end subroutine
@@ -1572,6 +1659,8 @@ subroutine add_flow_from_file
 !
 !-----------------------------------------------------------------------
 !
+  ! [] THESE DO NOT WORK WITH GPU AND SHOULD BE ADDING TO FLOW
+  ! [] NEED TO FIX THIS!
       if (flow_vt_filename.ne.' ') call load_vt
 !
       if (flow_vp_filename.ne.' ') call load_vp
@@ -1676,7 +1765,11 @@ subroutine update_timestep
         timestep_needs_updating = .false.
 !
       end if
-!       Check for next output, cut time to match exactly [ADD THIS]
+!
+! ****** Check for next output, cut time to match exactly.
+!
+      ! if (time + dtime_global mod?
+      ! if ntime mod?
 !
 !       Check for end time.
       if (time + dtime_global .gt. time_end) then
@@ -1794,7 +1887,7 @@ subroutine diffusion_step (dtime_local)
       dtime_diffusion_used = dtime_local2
 !
       do i=1,diffusion_subcycles
-
+!
         if (diffusion_num_method.eq.1) then
 !
           call diffusion_step_euler_cd (dtime_local2)
@@ -1805,7 +1898,9 @@ subroutine diffusion_step (dtime_local)
           call diffusion_step_sts_cd (dtime_local2)
 !
         end if
+!
         time_stepped = time_stepped + dtime_local2
+!
         if (verbose.and.MOD(i,1).eq.0) then
           write(*,*) '-->Diff subcycle #',i,' of ', &
                      diffusion_subcycles, 'time:',time_stepped
@@ -3279,8 +3374,8 @@ subroutine load_diffusion
           fn1 = fn1 + diffusion_coef_file(2,k)*dph(k)
           fs1 = fs1 + diffusion_coef_file(ntm1,k)*dph(k)
         enddo
-        fn1 = fn1/twopi
-        fs1 = fs1/twopi
+        fn1 = fn1*twopi_i
+        fs1 = fs1*twopi_i
 !
         diffusion_coef_file( 1,:) = two*fn1 &
                                     - diffusion_coef_file(   2,:)
@@ -3409,8 +3504,8 @@ subroutine load_source
           fn1=fn1+source(  1,k)*dp(k)
           fs1=fs1+source(ntm,k)*dp(k)
         enddo
-        fn1=fn1/twopi
-        fs1=fs1/twopi
+        fn1=fn1*twopi_i
+        fs1=fs1*twopi_i
 !
         source(  1,:)=fn1
         source(ntm,:)=fs1
@@ -3495,8 +3590,8 @@ subroutine load_vt
           fn1=fn1+vt(   2,k)*dph(k)
           fs1=fs1+vt(ntm1,k)*dph(k)
         enddo
-        fn1=fn1/twopi
-        fs1=fs1/twopi
+        fn1=fn1*twopi_i
+        fs1=fs1*twopi_i
 !
         vt( 1,:)=two*fn1-vt(   2,:)
         vt(nt,:)=two*fs1-vt(ntm1,:)
@@ -3579,8 +3674,8 @@ subroutine load_vp
           fn1=fn1+vp(   2,k)*dph(k)
           fs1=fs1+vp(ntm1,k)*dph(k)
         enddo
-        fn1=fn1/twopi
-        fs1=fs1/twopi
+        fn1=fn1*twopi_i
+        fs1=fs1*twopi_i
 !
         vp( 1,:)=two*fn1-vp(   2,:)
         vp(nt,:)=two*fs1-vp(ntm1,:)
@@ -4301,6 +4396,7 @@ subroutine read_input
       call defarg (GROUP_KA,'-vtfile','<none>','<file>')
       call defarg (GROUP_KA,'-vpfile','<none>','<file>')
       call defarg (GROUP_KA,'-vpomega','0.','<val>')
+      call defarg (GROUP_K,'-va',' ',' ')
       call defarg (GROUP_KA,'-dr','0','<val>')
       call defarg (GROUP_KA,'-mf','0','<val>')
       call defarg (GROUP_K,'-diff',' ',' ')
@@ -4370,6 +4466,7 @@ subroutine read_input
 !
         write (*,*) '-exp (Use old explicit algorithm for visc).'
         write (*,*) '-vrun (Activate validation run, more details to follow)'
+        write (*,*) '-va (attenuate the velocity)'
         call exit (1)
 !
       end if
@@ -4450,8 +4547,12 @@ subroutine read_input
       call fetcharg ('-vpomega',set,arg)
       flow_vp_rigid_omega = fpval(arg,'-vpomega')
 !
+      call fetcharg ('-va',set,arg)
+      if (set) flow_attenuate = .true.
+!
       call fetcharg ('-dr',set,arg)
       flow_dr_model = intval(arg,'-dr')
+!
       call fetcharg ('-mf',set,arg)
       flow_mf_model = intval(arg,'-mf')
 !
@@ -4526,6 +4627,9 @@ end subroutine
 !        11/24/2021, RC, Version 0.2.1:
 !         - Some simplifications to STS method.
 !         - Updated stable flow time-step to be more robust.
+!
+!        02/17/2022, RC, Version 0.3.0:
+!         - Added velocity attenuation.  Activate with the flag "-va".
 !
 !-----------------------------------------------------------------------
 !
