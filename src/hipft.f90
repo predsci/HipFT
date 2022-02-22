@@ -45,8 +45,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.3.0'
-      character(*), parameter :: cdate='02/17/2022'
+      character(*), parameter :: cvers='0.4.0'
+      character(*), parameter :: cdate='02/21/2022'
 !
 end module
 !#######################################################################
@@ -147,12 +147,17 @@ module input_parameters
 !
       logical        :: verbose = .false.
 !
-      character(512) :: initial_field_filename = 'br_input.h5'
-      character(512) :: output_field_root_filename = 'br'
+      character(512) :: initial_map_filename = 'br_input.h5'
+      character(512) :: output_map_root_filename = 'hipft_brmap'
+      character(512) :: output_map_subdirectory = 'output_maps'
 !
 ! ****** Validation Mode ********
 !
       logical        :: validation_run=.false.
+!
+! ****** Output map cadence ********
+!
+      integer        :: output_map_idx_cadence = 0
 !
 ! ****** Restarts ********
 !
@@ -261,14 +266,26 @@ module output
 ! ****** Output.
 !-----------------------------------------------------------------------
 !
+      use number_types
+!
 !-----------------------------------------------------------------------
 !
       implicit none
 !
 !-----------------------------------------------------------------------
 !
-      integer, parameter :: IO_HIST_NUM=20
-      integer, parameter :: IO_HIST_SOL=21
+      logical :: output_current_map = .false.
+!
+      integer, parameter :: IO_HIST_NUM = 20
+      integer, parameter :: IO_HIST_SOL = 21
+      integer, parameter :: IO_MAP_OUT_LIST = 22
+!
+      character(15) :: io_hist_num_filename = 'history_num.dat'
+      character(15) :: io_hist_sol_filename = 'history_sol.dat'
+      character(19) :: io_map_output_list_filename = 'map_output_list.txt'
+!
+      real(r_typ), dimension(:,:), allocatable :: fout
+      real(r_typ), dimension(:), allocatable :: pout
 !
 end module
 !#######################################################################
@@ -364,12 +381,10 @@ module fields
 !
       implicit none
 !
-!  [RMC] Make f->br fe->br_old?
+!  [RMC] Make f->br??
       real(r_typ), dimension(:,:), allocatable :: f
-      real(r_typ), dimension(:,:), allocatable :: fout
+      real(r_typ), dimension(:,:), allocatable :: fold
       real(r_typ), dimension(:,:), allocatable :: fval_u0
-      real(r_typ), dimension(:), allocatable :: pout
-      real(r_typ), dimension(:,:), allocatable :: fe
       real(r_typ), dimension(:,:), allocatable :: diffusion_coef
       real(r_typ), dimension(:,:), allocatable :: source
       real(r_typ), dimension(:,:), allocatable :: vt
@@ -520,6 +535,7 @@ program HIPFT
       use fields
       use mesh
       use write_2d_file_interface
+      use output
 !
 !-----------------------------------------------------------------------
 !
@@ -529,6 +545,7 @@ program HIPFT
 !
       real(r_typ) :: t1,wtime
       integer :: ierr
+      character(*), parameter :: FMT = '(a20,f20.2)'
 !
 !-----------------------------------------------------------------------
 !
@@ -556,7 +573,7 @@ program HIPFT
 !
         if (verbose) then
           write(*,'(a,i8,a,f12.6,a,f12.6,a,f12.6)')    &
-                    'Step: ',ntime,'  Time:',time,' /',    &
+                    'Starting step: ',ntime,'  Time:',time,' /',    &
                     time_end,'  dt to use:',dtime_global
           flush(OUTPUT_UNIT)
         endif
@@ -565,14 +582,20 @@ program HIPFT
 !
         call flux_transport_step
 !
+! ****** Update the time now that we have taken the step.
+!
         time = time + dtime_global
 !
+! ****** Perform analysis.
+!
         call analysis_step
+!
+! ****** Output.
 !
         call output_step
 !
         write(*,'(a,i8,a,f12.6,a,f12.6,a,f12.6)')    &
-                'Completed Step: ',ntime,'  Time:',time,' /',    &
+                'Completed step: ',ntime,'  Time:',time,' /',    &
                 time_end,'  dt used:',dtime_global
         flush(OUTPUT_UNIT)
 !
@@ -588,29 +611,10 @@ program HIPFT
 !
 ! ****** Write the final Br map.
 !
-!$acc update self(f)
-!
-      allocate (fout(npm-1,ntm))
-      allocate (pout(npm-1))
-      fout(:,:) = transpose(f(:,1:npm-1))
-      pout(:) = p(1:npm-1)
-      call write_2d_file((trim(output_field_root_filename)//'_final.h5') &
-                         ,npm-1,ntm,fout,pout,t,ierr)
-      deallocate (fout,pout)
-!
-      if (ierr.ne.0) then
-        write (*,*)
-        write (*,*) '### ERROR in ',cname,':'
-        write (*,*) '### Could not write the output data set.'
-        write (*,*) 'IERR (from WRHDF) = ',ierr
-        write (*,*) 'File name: ', &
-                     trim(output_field_root_filename)//'_final.h5'
-        call exit (1)
-      else
-        write(*,*) ' '
-        write(*,*) 'Final 2D data written out to ', &
-                   trim(output_field_root_filename)//'_final.h5'
-      endif
+      call write_map (trim(output_map_root_filename)//'_final.h5')
+      write(*,*) ' '
+      write(*,*) 'Final 2D data written out to ', &
+                   trim(output_map_root_filename)//'_final.h5'
 !
 !     call finalize
       write(*,*)
@@ -620,16 +624,21 @@ program HIPFT
 !
       wtime_total = wtime() - t1
 !
-      write(*,*) "Wall clock time (seconds): ",wtime_total
-      write(*,*) "--> Setup time:            ",wtime_setup
-      write(*,*) "--> Update time:           ",wtime_update
-      write(*,*) "--> Flux transport time:   ",wtime_flux_transport
-      write(*,*) "    --> Advecton time:     ",wtime_flux_transport_advection
-      write(*,*) "    --> Diffusion time:    ",wtime_flux_transport_diffusion
-      write(*,*) "    --> Source time:       ",wtime_source
-      write(*,*) "--> Analysis time:         ",wtime_analysis
-      write(*,*) "--> I/O time:              ",wtime_io
+      write(*,"(a40)") repeat("-", 40)
+      write(*,FMT) "Wall clock time:   ",wtime_total
+      write(*,"(a40)") repeat("-", 40)
+      write(*,FMT) "--> Setup:         ",wtime_setup
+      write(*,FMT) "--> Update:        ",wtime_update
+      write(*,FMT) "--> Flux transport:",wtime_flux_transport
+      write(*,FMT) "    --> Advecton:  ",wtime_flux_transport_advection
+      write(*,FMT) "    --> Diffusion  ",wtime_flux_transport_diffusion
+      write(*,FMT) "    --> Source:    ",wtime_source
+      write(*,FMT) "--> Analysis:      ",wtime_analysis
+      write(*,FMT) "--> I/O:           ",wtime_io
+      write(*,"(a40)") repeat("-", 40)
+!
       write(*,*)
+      flush(OUTPUT_UNIT)
 !
 !-----------------------------------------------------------------------
 !
@@ -674,12 +683,25 @@ subroutine setup
 !-----------------------------------------------------------------------
 !
       real(r_typ) :: wtime
+      integer :: ierr
+      character(512) :: cmd
 !
 !-----------------------------------------------------------------------
 !
       wtime_tmp = wtime()
 !
       call read_input
+!
+! ****** Set up output directory.
+!
+      if (output_map_idx_cadence.gt.0) then
+        cmd = 'mkdir -p '//trim(output_map_subdirectory)
+        call EXECUTE_COMMAND_LINE (cmd,exitstat=ierr)
+        if (ierr.ne.0) then
+          write (*,*) '### Could not make output subdirectory, using ./'
+          output_map_subdirectory = '.'
+        end if
+      end if
 !
       if (restart_run) then
 !        call load_restart
@@ -734,7 +756,7 @@ subroutine create_and_open_output_log_files
 !
 !-----------------------------------------------------------------------
 !
-      call FFOPEN (IO_HIST_NUM,'history_num.dat','rw',ierr)
+      call FFOPEN (IO_HIST_NUM,io_hist_num_filename,'rw',ierr)
 !
       write (IO_HIST_NUM,'(a10,a,6(a22,a),a10)')                      &
       'STEP',' ','TIME',' ','DTIME',' ','DTIME_ADV_STB',' ',          &
@@ -743,14 +765,22 @@ subroutine create_and_open_output_log_files
 !
       close(IO_HIST_NUM)
 !
-      call FFOPEN (IO_HIST_SOL,'history_sol.dat','rw',ierr)
+      call FFOPEN (IO_HIST_SOL,io_hist_sol_filename,'rw',ierr)
 !
       write (IO_HIST_SOL,'(a10,a,7(a22,a))')                          &
       'STEP',' ','TIME',' ','BR_MIN',' ','BR_MAX',' ','BR_ABS_MIN',   &
       ' ','FLUX_POSITIVE',' ','FLUX_NEGATIVE',' ',                    &
       'VALIDATION_ERR_CVRMSD'
 !
-      close(IO_HIST_SOL)
+      close(IO_MAP_OUT_LIST)
+!
+      if (output_map_idx_cadence.gt.0) then
+        call FFOPEN (IO_MAP_OUT_LIST,io_map_output_list_filename,'rw',ierr)
+!
+        write (IO_MAP_OUT_LIST,'(a10,a,a25,a,a)') 'IDX',' ','TIME',' ','FILENAME'
+!
+        close(IO_MAP_OUT_LIST)
+      end if
 !
 end subroutine
 !#######################################################################
@@ -831,6 +861,7 @@ subroutine load_initial_condition
       use globals
       use read_2d_file_interface
       use write_2d_file_interface
+      use output
 !
 !-----------------------------------------------------------------------
 !
@@ -852,7 +883,7 @@ subroutine load_initial_condition
 !
 ! ****** Read the initial magnetic map.
 !
-      call read_2d_file (initial_field_filename,n1,n2,f_local,s1,s2,ierr)
+      call read_2d_file (initial_map_filename,n1,n2,f_local,s1,s2,ierr)
 !
       if (validation_run) then
 !
@@ -867,7 +898,7 @@ subroutine load_initial_condition
                               sqrt(14.0_r_typ/11.0_r_typ)*fval_u0(:,:))
 !
         call write_2d_file(                                           &
-            (trim(output_field_root_filename)//'_initial_0.h5')       &
+            (trim(output_map_root_filename)//'_initial_0.h5')       &
                            ,n1,n2,fval_u0,s1,s2,ierr)
 
         f_local(:,:) = fval_u0(:,:)
@@ -879,7 +910,7 @@ subroutine load_initial_condition
                                      diffusion_coef_factor*time_end)
 !
         call write_2d_file(                                           &
-             (trim(output_field_root_filename)//'_final_analytic.h5') &
+             (trim(output_map_root_filename)//'_final_analytic.h5') &
                           ,n1,n2,fout,s1,s2,ierr)
 !
         deallocate (fout)
@@ -938,15 +969,8 @@ subroutine load_initial_condition
 !
 ! ****** Write out initial condition.
 !
-      allocate (fout(npm-1,ntm))
-      allocate (pout(npm-1))
-      fout(:,:) = transpose(f(:,1:npm-1))
-      pout(:) = p(1:npm-1)
-      call write_2d_file(                                              &
-                     (trim(output_field_root_filename)//'_initial.h5') &
-                                          ,npm-1,ntm,fout,pout,t,ierr)
-      deallocate (fout,pout)
-
+      call write_map (trim(output_map_root_filename)//'_initial.h5')
+!
 end subroutine
 !#######################################################################
 subroutine tesseral_spherical_harmonic (m, l, pvec, tvec, np, nt, Y)
@@ -1150,7 +1174,7 @@ subroutine output_step
 !
       call output_histories
 !
-!     call output_map
+      call output_map
 !
 !     call output_flow(?)
 !
@@ -1188,7 +1212,7 @@ subroutine output_histories
 !
 !-----------------------------------------------------------------------
 !
-      call FFOPEN (IO_HIST_NUM,'history_num.dat','a',ierr)
+      call FFOPEN (IO_HIST_NUM,io_hist_num_filename,'a',ierr)
 !
       if (diffusion_num_method.eq.1) then
         niters = n_stable_diffusion_cycles
@@ -1204,7 +1228,7 @@ subroutine output_histories
 !
       close(IO_HIST_NUM)
 !
-      call FFOPEN (IO_HIST_SOL,'history_sol.dat','a',ierr)
+      call FFOPEN (IO_HIST_SOL,io_hist_sol_filename,'a',ierr)
 
       write(IO_HIST_SOL,FMT2) ntime,' ',                              &
                              time,' ',h_minbr,' ',h_maxbr,' ',        &
@@ -1212,6 +1236,137 @@ subroutine output_histories
                              ' ',h_valerr
 !
       close(IO_HIST_SOL)
+!
+end subroutine
+!#######################################################################
+subroutine output_map
+!
+!-----------------------------------------------------------------------
+!
+! ****** Output map to disk if it is time to do so.
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use input_parameters
+      use output
+      use globals
+      use fields, ONLY : f
+      use mesh, ONLY : t,p,npm,ntm
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      integer :: ierr = 0
+!
+! ****** File sequence number.
+!
+      integer*8, save :: idx = 0
+!
+! ****** File name.
+!
+      character(6) :: idx_str
+      character(256) :: full_filename = ' '
+      character(256) :: base_filename = ' '
+      character(*), parameter :: FMT='(i10,a,1pe25.15,a,a)'
+!
+!-----------------------------------------------------------------------
+!
+      ! Check if time to output in time-step?
+!
+      if (output_map_idx_cadence.gt.0) then
+        if (MODULO(ntime,output_map_idx_cadence).eq.0) then
+          output_current_map = .true.
+        end if
+      end if
+!
+      if (output_current_map) then
+!
+        idx = idx + 1
+!
+! ****** Formulate file name.
+!
+        write (idx_str,'(i6.6)') idx
+!
+        full_filename = trim(output_map_subdirectory)//'/'// &
+                   trim(output_map_root_filename)// &
+                   '_idx'//idx_str//'.h5'
+!
+        base_filename = trim(output_map_root_filename)// &
+                   '_idx'//idx_str//'.h5'
+!
+! ****** Write out the map.
+!
+        call write_map (full_filename)
+!
+! ****** Reset output flag.
+!
+        output_current_map = .false.
+!
+! ****** Record output in output text file log.
+!
+        call FFOPEN (IO_MAP_OUT_LIST, &
+                     io_map_output_list_filename,'a',ierr)
+!
+        write (IO_MAP_OUT_LIST,FMT) idx,'   ',time,'    ', &
+                                    trim(base_filename)
+!
+        close(IO_MAP_OUT_LIST)
+!
+      end if
+!
+end subroutine
+!#######################################################################
+subroutine write_map (fname)
+!
+!-----------------------------------------------------------------------
+!
+! ****** Write out current map "f" to disk.
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use write_2d_file_interface
+      use output
+      use fields, ONLY : f
+      use mesh, ONLY : t,p,npm,ntm
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      character(*) :: fname
+      integer :: ierr = 0
+!
+!-----------------------------------------------------------------------
+!
+!$acc update self(f)
+!
+! ****** Write out file in pt format with single point overlap in phi.
+!
+      allocate (fout(npm-1,ntm))
+!
+!   CAREFUL!  -stdpar may eventually GPU-ize TRANSPOSE!!!
+!
+      fout(:,:) = TRANSPOSE(f(:,1:npm-1))
+!
+      call write_2d_file (fname,npm-1,ntm,fout,pout,t,ierr)
+!
+      if (ierr.ne.0) then
+        write (*,*)
+        write (*,*) '### ERROR in WRITE_MAP:'
+        write (*,*) '### Could not write the output data set!'
+        write (*,*) 'IERR: ',ierr
+        write (*,*) 'File name: ', fname
+        call exit (1)
+      end if
+!
+      deallocate (fout)
 !
 end subroutine
 !#######################################################################
@@ -1614,23 +1769,20 @@ subroutine update_flow
           vp_npole = vp_npole*(one - tanh(f(1,1)*fivehundred_i))
           vp_spole = vp_spole*(one - tanh(f(ntm,1)*fivehundred_i))
 !
-!$acc kernels default(present)
-!
 ! ****** Now set the pole:
 !
-          vt( 1,:) = two*vt_spole-vt(   2,:)
-          vt(nt,:) = two*vt_spole-vt(ntm1,:)
-          vp( 1,:) = two*vp_spole-vp(   2,:)
-          vp(nt,:) = two*vp_spole-vp(ntm1,:)
+          do concurrent (k=1:np)
+            vt( 1,k) = two*vt_spole-vt(   2,k)
+            vt(nt,k) = two*vt_spole-vt(ntm1,k)
+            vp( 1,k) = two*vp_spole-vp(   2,k)
+            vp(nt,k) = two*vp_spole-vp(ntm1,k)
+          end do
 !
 ! ****** Set periodicity
 !
-          vt(:, 1) = vt(:,npm1)
-          vt(:,np) = vt(:,   2)
-          vp(:, 1) = vp(:,npm1)
-          vp(:,np) = vp(:,   2)
-!$acc end kernels
-
+          call set_periodic_bc_2d (vt,nt,np)
+          call set_periodic_bc_2d (vp,nt,np)
+!
 ! ****** Since this needs to be done each timestep as Br changes,
 ! ****** the full velocity profile needs to be reloaded and
 ! ****** re-attenuated.
@@ -3120,6 +3272,7 @@ subroutine write_2d_file (fname,ln1,ln2,f,s1,s2,ierr)
       s%dims(2) = ln2
       s%dims(3) = 1
       s%scale = .true.
+      !RMC[] Add input option to write out 32-bit data!
       s%hdf32 = .false.
 !
       allocate (s%scales(1)%f(ln1))
@@ -3164,6 +3317,7 @@ subroutine set_mesh
       use number_types
       use mesh
       use constants
+      use output, ONLY : pout
 !
 !-----------------------------------------------------------------------
 !
@@ -3290,6 +3444,11 @@ subroutine set_mesh
       dp(npm) = dp(2)
 !
       dp_i(:) = one/dp(:)
+!
+  ! ****** Set up output scale for phi (single point overlap)
+      allocate (pout(npm-1))
+      pout(:) = p(1:npm-1)
+!
 !$acc enter data copyin (t,p,dt,dt_i,st,st_i,ct,dp,dp_i,th,ph, &
 !$acc                    dth,dth_i,sth,cth,dph,dph_i)
 !
@@ -3851,8 +4010,8 @@ subroutine diffusion_step_euler_cd (dtime_local)
 !
 ! ****** Allocate temporary field.
 !
-      allocate (fe(ntm,npm))
-!$acc enter data create(fe)
+      allocate (fold(ntm,npm))
+!$acc enter data create(fold)
 !
 ! ****** Subcycle at a stable time-step.
 !
@@ -3861,16 +4020,16 @@ subroutine diffusion_step_euler_cd (dtime_local)
 !
       do i=1,n_stable_diffusion_cycles
 !
-        call ax (f,fe)
+        call ax (f,fold)
 !
         do concurrent (k=1:npm,j=1:ntm)
-          f(j,k) = f(j,k) + dtime_euler_used*fe(j,k)
+          f(j,k) = f(j,k) + dtime_euler_used*fold(j,k)
         enddo
 !
       enddo
 !
-!$acc exit data delete(fe)
-      deallocate (fe)
+!$acc exit data delete(fold)
+      deallocate (fold)
 !
 end subroutine
 !#######################################################################
@@ -4381,7 +4540,8 @@ subroutine read_input
 ! ****** Define the syntax.
 !
       call defarg (GROUP_K ,'-v',' ',' ')
-      call defarg (GROUP_A ,'initial_field_filename',' ',' ')
+      call defarg (GROUP_A ,'initial_map_filename',' ',' ')
+      call defarg (GROUP_A ,'output_map_root_filename',' ',' ')
       call defarg (GROUP_KA,'-visc','0.','<val>')
       call defarg (GROUP_KA,'-diffusion_coef_filename','<none>','<file>')
       call defarg (GROUP_K,'-diffusion_coef_grid',' ',' ')
@@ -4391,7 +4551,7 @@ subroutine read_input
       call defarg (GROUP_KA,'-dtmax','1.0e16','<val>')
       call defarg (GROUP_KA,'-dm','3','<val>')
       call defarg (GROUP_KA,'-diffusion_subcycles','30',' ')
-      call defarg (GROUP_A ,'output_field_root_filename',' ',' ')
+      call defarg (GROUP_KA,'-omci','0','<val>')
       call defarg (GROUP_KA,'-uw','1.','<val>')
       call defarg (GROUP_KA,'-vtfile','<none>','<file>')
       call defarg (GROUP_KA,'-vpfile','<none>','<file>')
@@ -4480,13 +4640,16 @@ subroutine read_input
 !
 ! ****** Input file.
 !
-      call fetcharg ('initial_field_filename',set,arg)
-      initial_field_filename = trim(arg)
+      call fetcharg ('initial_map_filename',set,arg)
+      initial_map_filename = trim(arg)
 !
 ! ****** Output file.
 !
-      call fetcharg ('output_field_root_filename',set,arg)
-      output_field_root_filename = trim(arg)
+      call fetcharg ('output_map_root_filename',set,arg)
+      output_map_root_filename = trim(arg)
+!
+      call fetcharg ('-omci',set,arg)
+      output_map_idx_cadence = intval(arg,'-omci')
 !
 ! ****** Viscosity file.
 !
@@ -4605,31 +4768,43 @@ end subroutine
 !
 ! ****** Update log:
 !
-!        05/24/2021, RC, Version 0.1.0:
-!         - Original version of the program.
-!           Derived from DIFFUSE_ADVECT version 2.0.0 of 05/24/2021.
+! 05/24/2021, RC, Version 0.1.0:
+!   - Original version of the program.
+!     Derived from DIFFUSE_ADVECT version 2.0.0 of 05/24/2021.
 !
-!        11/01/2021, RC, Version 0.1.1:
-!         - Replaced all non-reduction OpenACC/MP loops with
-!           `do concurrent`.  This required alteranative compiler
-!           flags to properly parallelize.  See build.sh for
-!           examples.
-!         - Merged sds and number_types modules/routines into main code.
+! 11/01/2021, RC, Version 0.1.1:
+!   - Replaced all non-reduction OpenACC/MP loops with
+!     `do concurrent`.  This required alternative compiler
+!     flags to properly parallelize.  See build.sh for
+!     examples.
+!   - Merged sds and number_types modules/routines into main code.
 !
-!        11/05/2021, RC, Version 0.2.0:
-!         - Added dtmax input parameter to specify maximum allowed dt.
-!         - Added history files:
-!           history_num.dat contains numerical diagnostics while
-!           history_sol.dat contains diagnostics of the solution
-!                           including flux, and validation comparison.
-!         - Updated explicit Euler diffusion to use matrix coefs.
+! 11/05/2021, RC, Version 0.2.0:
+!   - Added dtmax input parameter to specify maximum allowed dt.
+!   - Added history files:
+!     history_num.dat contains numerical diagnostics while
+!     history_sol.dat contains diagnostics of the solution
+!     including flux, and validation comparison.
+!   - Updated explicit Euler diffusion to use matrix coefs.
 !
-!        11/24/2021, RC, Version 0.2.1:
-!         - Some simplifications to STS method.
-!         - Updated stable flow time-step to be more robust.
+! 11/24/2021, RC, Version 0.2.1:
+!   - Some simplifications to STS method.
+!   - Updated stable flow time-step to be more robust.
 !
-!        02/17/2022, RC, Version 0.3.0:
-!         - Added velocity attenuation.  Activate with the flag "-va".
+! 02/17/2022, RC, Version 0.3.0:
+!   - Added velocity attenuation.  Activate with the flag "-va".
+!
+! 02/21/2022, RC, Version 0.4.0:
+!   - Added ability to output maps at a specified iteration cadence.
+!     Use the new flag "-omci" to set the Output Map Cadence Index.
+!     A list of all output is stored in an output text file
+!     called "map_output_list.txt".
+!     The output maps are stored in a subdirecotry named "output_maps".
+!     If omci is set to 0 or not set, the subdirectory and text file are
+!     not created.
+!     The initial and final map files are still always output in the
+!     run directory as before.
+!   - Some internal updates and simplifications.
 !
 !-----------------------------------------------------------------------
 !
