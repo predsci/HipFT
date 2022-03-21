@@ -22,7 +22,7 @@ HDF5_LIB_FLAGS="-lhdf5_fortran -lhdf5hl_fortran -lhdf5 -lhdf5_hl"
 # Please set the compile flags based on your compiler and hardware setup.
 ###########################################################################
 
-FFLAGS="-O3 -march=native -acc=gpu -gpu=cc61,cc75,cuda11.4,nomanaged -stdpar=gpu -Minfo=accel"
+FFLAGS="-O3 -march=native -acc=gpu -gpu=cc60,cc70,cc75,cc80,cc86,cuda11.6,nomanaged -stdpar=gpu -Minfo=accel"
 
 ###########################################################################
 ###########################################################################

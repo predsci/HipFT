@@ -14,7 +14,7 @@
 !     Authors:  Ronald M. Caplan
 !
 !     HipFT incorporates code from multiple tools developed by
-!     Zoran Mikic, and Jon A. Linker.
+!     Zoran Mikic and Jon A. Linker.
 !
 !     Predictive Science Inc.
 !     www.predsci.com
@@ -45,28 +45,22 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.4.0'
-      character(*), parameter :: cdate='02/21/2022'
+      character(*), parameter :: cvers='0.5.0'
+      character(*), parameter :: cdate='03/21/2022'
 !
 end module
 !#######################################################################
 module number_types
 !
 !-----------------------------------------------------------------------
-! ****** This module is used to set precisions for REALs.
+! ****** Set precisions for REALs.
 !-----------------------------------------------------------------------
 !
       use iso_fortran_env
 !
-!-----------------------------------------------------------------------
-!
-      integer, parameter :: KIND_REAL_4=REAL32
-      integer, parameter :: KIND_REAL_8=REAL64
-      integer, parameter :: KIND_REAL_16=max(REAL128,REAL64)
-!
 ! ****** Use double precision.
 !
-      integer, parameter :: r_typ=KIND_REAL_8
+      integer, parameter :: r_typ = REAL64
 !
 end module
 !#######################################################################
@@ -158,6 +152,7 @@ module input_parameters
 ! ****** Output map cadence ********
 !
       integer        :: output_map_idx_cadence = 0
+      real(r_typ)    :: output_map_time_cadence = 0.0
 !
 ! ****** Restarts ********
 !
@@ -172,7 +167,7 @@ module input_parameters
 !
 ! ****** Timestep ********
 !
-      real(r_typ)    :: dt_max_increase_fac = 0.1_r_typ
+      real(r_typ)    :: dt_max_increase_fac = 0.0_r_typ
       real(r_typ)    :: dt_min = 1.0e-16_r_typ
       real(r_typ)    :: dt_max = huge(one)
 !
@@ -240,7 +235,7 @@ module input_parameters
       integer :: diffusion_num_method = 3
 !
 ! ****** Set number of diffusion subcycles per flow step.
-! ****** For diffusion-only runs, this should be ~30.
+! ****** For diffusion-only runs with RKG2/(RKL2), set to ~30/(60).
 ! ****** For flow+diffusion runs, this usually can be ~1.
 !
       integer :: diffusion_subcycles = 30
@@ -257,6 +252,9 @@ module input_parameters
 ! ****** DATA ASSIMILATION ********
 !
       logical :: assimilate_data = .false.
+      character(512) :: assimilate_data_map_list_filename = ' '
+!
+      integer, parameter :: IO_DATA_IN = 8
 !
 end module
 !#######################################################################
@@ -275,6 +273,10 @@ module output
 !-----------------------------------------------------------------------
 !
       logical :: output_current_map = .false.
+!
+! ****** File sequence number.
+!
+      integer*8 :: idx_out = 0
 !
       integer, parameter :: IO_HIST_NUM = 20
       integer, parameter :: IO_HIST_SOL = 21
@@ -392,6 +394,28 @@ module fields
 !
 end module
 !#######################################################################
+module data_assimilation
+!
+      use number_types
+!
+      implicit none
+!
+      integer :: num_maps_in_list = 0
+      integer :: current_map_input_idx = 1
+      real(r_typ) :: time_of_next_input_map = 0.
+!
+      real(r_typ) :: map_time_initial_hr
+!
+      real(r_typ), dimension(:), allocatable :: &
+                     map_times_requested_ut_jd, map_times_actual_ut_jd
+!
+      character(19), dimension(:), allocatable :: &
+                     map_times_requested_ut_str, map_times_actual_ut_str
+!
+      character(512), dimension(:), allocatable :: map_files_rel_path
+!
+end module
+!#######################################################################
 module sts
 !
       use number_types
@@ -458,15 +482,15 @@ module rp1d_def
       implicit none
 !
       type :: rp1d
-        real(r_typ), dimension(:), pointer :: f
+        real(r_typ), dimension(:), pointer, contiguous :: f
       end type
 !
 end module
 !#######################################################################
-module sds_def
+module ds_def
 !
 !-----------------------------------------------------------------------
-! ****** Definition of the SDS data structure.
+! ****** Definition of the IO data structure.
 !-----------------------------------------------------------------------
 !
       use number_types
@@ -474,49 +498,61 @@ module sds_def
 !
       implicit none
 !
-      integer, parameter, private :: mxdim=3
+      integer, parameter, private :: mxdim = 3
 !
-      type :: sds
+      type :: ds
         integer :: ndim
         integer, dimension(mxdim) :: dims
         logical :: scale
         logical :: hdf32
         type(rp1d), dimension(mxdim) :: scales
-        real(r_typ), dimension(:,:,:), pointer :: f
+        real(r_typ), dimension(:,:,:), pointer, contiguous :: f
       end type
 !
 end module
 !#######################################################################
 module read_2d_file_interface
       interface
-        subroutine read_2d_file (fname,ln1,ln2,f,s1,s2,ierr)
+        subroutine read_2d_file (fname,ln1,ln2,fin,s1,s2,ierr)
         use number_types
-        use ident
-        use sds_def
+        use ds_def
         use timing
         implicit none
         character(*) :: fname
-        real(r_typ), dimension(:,:), allocatable :: f
+        real(r_typ), dimension(:,:), allocatable :: fin
         real(r_typ), dimension(:), allocatable :: s1,s2
         integer :: ln1,ln2,ierr
-        real(r_typ) :: t1
         end subroutine
       end interface
 end module
 !#######################################################################
-module write_2d_file_interface
+module read_3d_file_interface
       interface
-        subroutine write_2d_file (fname,ln1,ln2,f,s1,s2,ierr)
+        subroutine read_3d_file (fname,ln1,ln2,ln3,fin,s1,s2,s3,ierr)
         use number_types
-        use ident
-        use sds_def
+        use ds_def
         use timing
         implicit none
         character(*) :: fname
-        real(r_typ), dimension(:,:), allocatable :: f
-        real(r_typ), dimension(:), allocatable :: s1,s2
-        integer :: ln1,ln2,ierr
-        real(r_typ) :: t1
+        real(r_typ), dimension(:,:,:), allocatable :: fin
+        real(r_typ), dimension(:), allocatable :: s1,s2,s3
+        integer :: ln1,ln2,ln3,ierr
+        end subroutine
+      end interface
+end module
+!#######################################################################
+module assimilate_new_data_interface
+      interface
+        subroutine assimilate_new_data (new_data)
+        use number_types
+        use input_parameters
+        use globals
+        use constants
+        use fields
+        use mesh
+        use data_assimilation
+        implicit none
+        real(r_typ), dimension(:,:,:), allocatable :: new_data
         end subroutine
       end interface
 end module
@@ -525,17 +561,10 @@ program HIPFT
 !
 !-----------------------------------------------------------------------
 !
-      use iso_fortran_env
       use number_types
-      use ident
       use input_parameters
-      use constants
       use globals
       use timing
-      use fields
-      use mesh
-      use write_2d_file_interface
-      use output
 !
 !-----------------------------------------------------------------------
 !
@@ -543,17 +572,21 @@ program HIPFT
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ) :: t1,wtime
-      integer :: ierr
-      character(*), parameter :: FMT = '(a20,f20.2)'
+      logical :: the_run_is_done
+      real(r_typ) :: wtime
+      character(*), parameter :: FMT = '(a,i8,a,f12.6,a,f12.6,a,f12.6)'
 !
 !-----------------------------------------------------------------------
 !
-      t1 = wtime()
+! ****** Start wall clock timer.
+!
+      wtime_tmp = wtime()
+!
+! ****** Set up and initialize the run.
 !
       call setup
 !
-! ----- MAIN LOOP-------------------------------------
+! ****** START MAIN LOOP ********************************************
 !
       write (*,*)
       write (*,*) '>running'
@@ -567,14 +600,13 @@ program HIPFT
         ntime = ntime + 1
 !
 ! ****** Update prescribed quantities including data assimilation and/or
-! ****** flows and timestep.
+! ****** flows and set/check the timestep.
 !
         call update_step
 !
         if (verbose) then
-          write(*,'(a,i8,a,f12.6,a,f12.6,a,f12.6)')    &
-                    'Starting step: ',ntime,'  Time:',time,' /',    &
-                    time_end,'  dt to use:',dtime_global
+          write(*,FMT) 'Starting step: ',ntime,'  Time:',time,' /', &
+                        time_end,'  dt to use:',dtime_global
           flush(OUTPUT_UNIT)
         endif
 !
@@ -594,73 +626,31 @@ program HIPFT
 !
         call output_step
 !
-        write(*,'(a,i8,a,f12.6,a,f12.6,a,f12.6)')    &
-                'Completed step: ',ntime,'  Time:',time,' /',    &
-                time_end,'  dt used:',dtime_global
+        write(*,FMT) 'Completed step: ',ntime,'  Time:',time,' /', &
+                      time_end,'  dt used:',dtime_global
         flush(OUTPUT_UNIT)
 !
-!       call is_the_run_over
-!           check_tmax
-        if (time .ge. time_end) exit
-!           check_stoprun
-!           check_wallclock
-!           output_final_restart?
+! ****** Check if the run is done.
+!
+        if (the_run_is_done()) exit
+!
       enddo
 !
-! ----- END MAIN LOOP----------------------------------
+! ****** END MAIN LOOP **********************************************
 !
-! ****** Write the final Br map.
+! ****** Perform end-of-run tasks.
 !
-      call write_map (trim(output_map_root_filename)//'_final.h5')
-      write(*,*) ' '
-      write(*,*) 'Final 2D data written out to ', &
-                   trim(output_map_root_filename)//'_final.h5'
+      call wrap_it_up
 !
-!     call finalize
-      write(*,*)
-      write(*,*) "Run completed at:"
-      call timestamp
-      write(*,*)
+! ****** Get wall-clock time.
 !
-      wtime_total = wtime() - t1
+      wtime_total = wtime() - wtime_tmp
 !
-      write(*,"(a40)") repeat("-", 40)
-      write(*,FMT) "Wall clock time:   ",wtime_total
-      write(*,"(a40)") repeat("-", 40)
-      write(*,FMT) "--> Setup:         ",wtime_setup
-      write(*,FMT) "--> Update:        ",wtime_update
-      write(*,FMT) "--> Flux transport:",wtime_flux_transport
-      write(*,FMT) "    --> Advecton:  ",wtime_flux_transport_advection
-      write(*,FMT) "    --> Diffusion  ",wtime_flux_transport_diffusion
-      write(*,FMT) "    --> Source:    ",wtime_source
-      write(*,FMT) "--> Analysis:      ",wtime_analysis
-      write(*,FMT) "--> I/O:           ",wtime_io
-      write(*,"(a40)") repeat("-", 40)
+! ****** Write out time profiling.
 !
-      write(*,*)
-      flush(OUTPUT_UNIT)
-!
-!-----------------------------------------------------------------------
+      call write_timing
 !
 end program HIPFT
-!#######################################################################
-!          write (*,*) '*** Flow:      1st-order Euler ***'
-!                        '*** Diffusion: 1st-order Euler ***'
-!          write (*,*) 'Time-step (for stability)   = ',dtime_global
-!          write (*,*) 'Number of time steps needed = ',ntime
-!               write (*,*) '*** Flow:      1st-order Euler ***'
-!                       '*** Diffusion: 2nd-order RKL2  ***'
-!          write (*,*) 'Super-time-step used      (dt_sts) = '
-!          write (*,*) 'Euler time-step           (dt_exp) = ',dtime_diff
-!          write (*,*) 'STS factor         (dt_sts/dt_exp) = ',
-!          write (*,*) 'Number of iterations/superstep (s) = ',sts_s
-!          write (*,*) 'Number of super-steps       (Nsts) = ',ntime_sts
-!          write (*,*) 'Total STS iterations per flow step (Niter) = ', &
-!                                                      ntime_sts*sts_s
-!          write (*,*) 'Euler iterations needed per flow step (Nexp) = ' &
-!                                                          ,ntime_diff
-!          write (*,*) 'Potential max speedup of visc due to STS   = ', &
-!                                ntime_diff/(one*ntime_sts*sts_s),'X'
 !#######################################################################
 subroutine setup
 !
@@ -675,6 +665,7 @@ subroutine setup
       use timing
       use fields
       use mesh
+      use output
 !
 !-----------------------------------------------------------------------
 !
@@ -694,7 +685,8 @@ subroutine setup
 !
 ! ****** Set up output directory.
 !
-      if (output_map_idx_cadence.gt.0) then
+      if (output_map_idx_cadence.gt.0 .or.     &
+          output_map_time_cadence.gt.0.0) then
         cmd = 'mkdir -p '//trim(output_map_subdirectory)
         call EXECUTE_COMMAND_LINE (cmd,exitstat=ierr)
         if (ierr.ne.0) then
@@ -723,15 +715,128 @@ subroutine setup
 !
       call set_unchanging_quantities
 !
+      if (assimilate_data) call load_data_assimilation
+
       call create_and_open_output_log_files
 !
       call analysis_step
 !
+      output_current_map = .true.
       call output_step
 !
       call write_welcome_message
 !
       wtime_setup = wtime() - wtime_tmp
+!
+end subroutine
+!#######################################################################
+function the_run_is_done ()
+!
+!-----------------------------------------------------------------------
+!
+! ****** Check if the run is done.
+!
+!-----------------------------------------------------------------------
+!
+      use globals, ONLY : time
+      use input_parameters, ONLY : time_end
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      logical :: the_run_is_done
+!
+!-----------------------------------------------------------------------
+!
+      the_run_is_done = .false.
+!
+! ****** Check if the simulation time has reached the end time.
+!
+      if (time .ge. time_end) the_run_is_done = .true.
+!
+! ****** Check if a STOPRUN file has been created.
+!
+!        check_stoprun
+!
+! ****** Check if the maximum wall clock time has been reached.
+!
+!        check_wallclock
+!
+      return
+end function
+!#######################################################################
+subroutine wrap_it_up
+!
+!-----------------------------------------------------------------------
+!
+! ****** Perform end-of-run tasks.
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use input_parameters
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+! ****** Write the final Br map.
+!
+      call write_map (trim(output_map_root_filename)//'_final.h5')
+      write(*,*) ' '
+      write(*,*) 'Final 2D data written out to ', &
+                   trim(output_map_root_filename)//'_final.h5'
+!
+!     output_final_restart?
+!
+      write(*,*)
+      write(*,*) "Run completed at:"
+      call timestamp
+      write(*,*)
+      flush(OUTPUT_UNIT)
+!
+end subroutine
+!#######################################################################
+subroutine write_timing
+!
+!-----------------------------------------------------------------------
+!
+! ****** Write out timing.
+!
+!-----------------------------------------------------------------------
+!
+      use timing
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      character(*), parameter :: FMT = '(a20,f20.2)'
+!
+!-----------------------------------------------------------------------
+!
+      write(*,"(a40)") repeat("-", 40)
+      write(*,FMT) "Wall clock time:   ",wtime_total
+      write(*,"(a40)") repeat("-", 40)
+      write(*,FMT) "--> Setup:         ",wtime_setup
+      write(*,FMT) "--> Update:        ",wtime_update
+      write(*,FMT) "--> Flux transport:",wtime_flux_transport
+      write(*,FMT) "    --> Advecton:  ",wtime_flux_transport_advection
+      write(*,FMT) "    --> Diffusion  ",wtime_flux_transport_diffusion
+      write(*,FMT) "    --> Source:    ",wtime_source
+      write(*,FMT) "--> Analysis:      ",wtime_analysis
+      write(*,FMT) "--> I/O:           ",wtime_io
+      write(*,"(a40)") repeat("-", 40)
+!
+      write(*,*)
+      flush(OUTPUT_UNIT)
 !
 end subroutine
 !#######################################################################
@@ -758,7 +863,7 @@ subroutine create_and_open_output_log_files
 !
       call FFOPEN (IO_HIST_NUM,io_hist_num_filename,'rw',ierr)
 !
-      write (IO_HIST_NUM,'(a10,a,6(a22,a),a10)')                      &
+      write (IO_HIST_NUM,'(a10,a,6(a22,a),a15)')                      &
       'STEP',' ','TIME',' ','DTIME',' ','DTIME_ADV_STB',' ',          &
       'DTIME_ADV_USED',' ','DTIME_DIFF_STB',' ','DTIME_DIFF_USED',    &
       ' ','N_DIFF_PER_STEP'
@@ -774,7 +879,9 @@ subroutine create_and_open_output_log_files
 !
       close(IO_MAP_OUT_LIST)
 !
-      if (output_map_idx_cadence.gt.0) then
+      if (output_map_idx_cadence.gt.0 .or.     &
+          output_map_time_cadence.gt.0.0) then
+!
         call FFOPEN (IO_MAP_OUT_LIST,io_map_output_list_filename,'rw',ierr)
 !
         write (IO_MAP_OUT_LIST,'(a10,a,a25,a,a)') 'IDX',' ','TIME',' ','FILENAME'
@@ -792,6 +899,7 @@ subroutine write_welcome_message
 !
 !-----------------------------------------------------------------------
 !
+      use ident
       use input_parameters
       use mesh
       use globals
@@ -813,6 +921,8 @@ subroutine write_welcome_message
       write (*,*) '     |_|  |_|_| .__/|_|       |_|'
       write (*,*) '              | |'
       write (*,*) '              |_|'
+      write (*,*) ''
+      write (*,*) '     Version: ',cvers,' of ',cdate
       write (*,*) ''
       write (*,*) ' ****** HipFT: High Performance Flux Transport.'
       write (*,*) ''
@@ -860,7 +970,6 @@ subroutine load_initial_condition
       use fields
       use globals
       use read_2d_file_interface
-      use write_2d_file_interface
       use output
 !
 !-----------------------------------------------------------------------
@@ -999,15 +1108,11 @@ subroutine tesseral_spherical_harmonic (m, l, pvec, tvec, np, nt, Y)
 !
 !-----------------------------------------------------------------------
 !
-      use iso_fortran_env
+      use number_types
 !
 !-----------------------------------------------------------------------
 !
       implicit none
-!
-!-----------------------------------------------------------------------
-!
-      integer, parameter :: r_typ = REAL64
 !
 !-----------------------------------------------------------------------
 !
@@ -1204,10 +1309,9 @@ subroutine output_histories
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ) :: dunno
       integer :: ierr
       integer*8 :: niters
-      character(*), parameter :: FMT='(i10,a,6(1pe22.15,a),i10)'
+      character(*), parameter :: FMT='(i10,a,6(1pe22.15,a),i15)'
       character(*), parameter :: FMT2='(i10,a,7(1pe22.15,a))'
 !
 !-----------------------------------------------------------------------
@@ -1251,8 +1355,6 @@ subroutine output_map
       use input_parameters
       use output
       use globals
-      use fields, ONLY : f
-      use mesh, ONLY : t,p,npm,ntm
 !
 !-----------------------------------------------------------------------
 !
@@ -1275,21 +1377,25 @@ subroutine output_map
 !
 !-----------------------------------------------------------------------
 !
-      ! Check if time to output in time-step?
-!
-      if (output_map_idx_cadence.gt.0) then
+      if (output_map_idx_cadence .gt. 0) then
         if (MODULO(ntime,output_map_idx_cadence).eq.0) then
+          output_current_map = .true.
+        end if
+      end if
+!
+      if (output_map_time_cadence .gt. 0.0) then
+        if (time .ge. idx_out*output_map_time_cadence) then
           output_current_map = .true.
         end if
       end if
 !
       if (output_current_map) then
 !
-        idx = idx + 1
+        idx_out = idx_out + 1
 !
 ! ****** Formulate file name.
 !
-        write (idx_str,'(i6.6)') idx
+        write (idx_str,'(i6.6)') idx_out
 !
         full_filename = trim(output_map_subdirectory)//'/'// &
                    trim(output_map_root_filename)// &
@@ -1311,7 +1417,7 @@ subroutine output_map
         call FFOPEN (IO_MAP_OUT_LIST, &
                      io_map_output_list_filename,'a',ierr)
 !
-        write (IO_MAP_OUT_LIST,FMT) idx,'   ',time,'    ', &
+        write (IO_MAP_OUT_LIST,FMT) idx_out,'   ',time,'    ', &
                                     trim(base_filename)
 !
         close(IO_MAP_OUT_LIST)
@@ -1329,10 +1435,9 @@ subroutine write_map (fname)
 !-----------------------------------------------------------------------
 !
       use number_types
-      use write_2d_file_interface
       use output
       use fields, ONLY : f
-      use mesh, ONLY : t,p,npm,ntm
+      use mesh, ONLY : t,npm,ntm
 !
 !-----------------------------------------------------------------------
 !
@@ -1351,7 +1456,10 @@ subroutine write_map (fname)
 !
       allocate (fout(npm-1,ntm))
 !
-!   CAREFUL!  -stdpar may eventually GPU-ize TRANSPOSE!!!
+!   WARNING: -stdpar may eventually GPU-ize TRANSPOSE.
+!   For now, it probably in-lines so OK, and/or requires
+!   the tensor module to be explicitly used.
+!   For now, this should be computed on the CPU no matter what...
 !
       fout(:,:) = TRANSPOSE(f(:,1:npm-1))
 !
@@ -1486,7 +1594,7 @@ subroutine get_flux (fluxp,fluxm)
 !-----------------------------------------------------------------------
 !
       integer :: i,j
-      real(r_typ) :: dttmp,tav,da_t,da_p
+      real(r_typ) :: tav,da_t,da_p
       real(r_typ) :: fv,area_check
 !
 !-----------------------------------------------------------------------
@@ -1565,7 +1673,6 @@ subroutine get_flux_trap (fluxp,fluxm)
 !-----------------------------------------------------------------------
 !
       integer :: j,k
-      real(r_typ) :: dttmp,tav,da_t,da_p
       real(r_typ) :: fav,favp,favm,area_check
       real(r_typ), dimension(:), allocatable :: int_tmp_p, int_tmp_m, area_chk
 !
@@ -1791,7 +1898,7 @@ subroutine update_flow
 !
         end if
 !
-      endif
+      end if
 !
 end subroutine
 !#######################################################################
@@ -1812,7 +1919,7 @@ subroutine add_flow_from_file
 !-----------------------------------------------------------------------
 !
   ! [] THESE DO NOT WORK WITH GPU AND SHOULD BE ADDING TO FLOW
-  ! [] NEED TO FIX THIS!
+  ! [] (NOT OVERWRITE)  NEED TO FIX THIS!
       if (flow_vt_filename.ne.' ') call load_vt
 !
       if (flow_vp_filename.ne.' ') call load_vp
@@ -1837,7 +1944,133 @@ subroutine update_source
 !
 !     - FILE
 !     - Random flux
-!     - Artificial AR emrergence
+!     - Artificial AR emerge
+!
+end subroutine
+!#######################################################################
+subroutine load_data_assimilation
+!
+!-----------------------------------------------------------------------
+!
+! ****** Load data assimilation.
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use input_parameters
+      use globals
+      use output
+      use data_assimilation
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      integer :: io = 0
+      integer :: i
+      character(*), parameter :: &
+                             FMT = '(F11.5,1X,F11.5,1X,A19,1X,A19,1X,A)'
+!
+!-----------------------------------------------------------------------
+!
+! ****** Open file list of input maps.
+!
+      OPEN (unit=IO_DATA_IN,file=assimilate_data_map_list_filename, &
+            form="FORMATTED",status='old')
+!
+! ****** Get the number of entries in the list (skip first row)
+!
+      num_maps_in_list = -1
+      do
+        READ (IO_DATA_IN,'(a)',iostat=io)
+        if (io/=0) exit
+        num_maps_in_list = num_maps_in_list + 1
+      end do
+      REWIND (IO_DATA_IN)
+!
+! ****** Allocate space to store the list.
+!
+      allocate(map_times_requested_ut_jd  (num_maps_in_list))
+      allocate(map_times_actual_ut_jd     (num_maps_in_list))
+      allocate(map_times_requested_ut_str (num_maps_in_list))
+      allocate(map_times_actual_ut_str    (num_maps_in_list))
+      allocate(map_files_rel_path         (num_maps_in_list))
+!
+! ****** Read the list (skip first row).
+!
+      READ (IO_DATA_IN,*)
+      do i=1,num_maps_in_list
+        READ (IO_DATA_IN,FMT) map_times_requested_ut_jd(i),  &
+                              map_times_actual_ut_jd(i),     &
+                              map_times_requested_ut_str(i), &
+                              map_times_actual_ut_str(i),    &
+                              map_files_rel_path(i)
+      enddo
+      CLOSE (IO_DATA_IN)
+!
+! ******* Initialize assimilation time.
+!
+      map_time_initial_hr = twentyfour*map_times_requested_ut_jd(1)
+!
+      current_map_input_idx = 1
+!
+      time_of_next_input_map = 0.
+!
+! ******* Print some diagnostics.
+!
+      if (verbose) then
+        write (*,*)
+        write (*,*) 'DATA ASSIMILATION'
+        write (*,*) 'Number of maps in map list: ', &
+                     num_maps_in_list
+        write (*,*) 'Start date (actual):     ', &
+                     trim(map_times_actual_ut_str(1))
+        write (*,*) 'End   date (actual):     ', &
+                     trim(map_times_actual_ut_str(num_maps_in_list))
+        write (*,*) 'File name of first map:     ', &
+                     trim(map_files_rel_path(1))
+      end if
+!
+end subroutine
+!#######################################################################
+subroutine assimilate_new_data (new_data)
+!
+!-----------------------------------------------------------------------
+!
+! ****** Assimilate data.
+! ****** This assumes the uncertainty is in the second slice
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use input_parameters
+      use globals
+      use constants, ONLY : one,half
+      use fields, ONLY : f
+      use mesh
+      use data_assimilation
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      integer :: j,k
+      real(r_typ), dimension(:,:,:), allocatable :: new_data
+!
+!-----------------------------------------------------------------------
+!
+      do concurrent (k=1:npm1,j=1:ntm)
+         f(j,k) = (one - new_data(k,j,2))*       f(j,k) +       &
+                  (      new_data(k,j,2))*new_data(k,j,1)
+      enddo
+!
+! ****** Set periodicity (since k=np (npm) not set above).
+!
+      call set_periodic_bc_2d (f,ntm,npm)
 !
 end subroutine
 !#######################################################################
@@ -1849,12 +2082,67 @@ subroutine update_field
 !
 !-----------------------------------------------------------------------
 !
+      use number_types
+      use input_parameters
+      use globals
+      use output
+      use read_3d_file_interface
+      use assimilate_new_data_interface
+      use data_assimilation
+!
+!-----------------------------------------------------------------------
+!
       implicit none
 !
 !-----------------------------------------------------------------------
 !
-!     - Simple
-!     - MagDat
+      integer :: ierr = 0
+      real(r_typ), dimension(:,:,:), allocatable :: new_data
+      real(r_typ), dimension(:), allocatable :: s1,s2,s3
+      integer :: ln1,ln2,nslices
+!
+!-----------------------------------------------------------------------
+!
+     if (time .ge. time_of_next_input_map) then
+!
+! ****** Read the map data.
+!
+       call read_3d_file (map_files_rel_path(current_map_input_idx), &
+                          ln1,ln2,nslices,new_data,s1,s2,s3,ierr)
+!
+! ******  TODO:  Add error checking here (make sure scales match run
+!                until interp is added)
+!
+!$acc enter data copyin(new_data)
+!
+! ****** Assimilate the data.
+!
+       call assimilate_new_data (new_data)
+!
+! ****** Clean up.
+!
+!$acc exit data delete(new_data)
+       deallocate(new_data)
+       deallocate(s1)
+       deallocate(s2)
+       deallocate(s3)
+!
+! ****** Update position in map list and next map time.
+!
+       current_map_input_idx = current_map_input_idx + 1
+!
+! ****** If there are no more data files to assimilate, don't
+! ****** assimilate anymore.
+!
+       if (current_map_input_idx .gt. num_maps_in_list) then
+         assimilate_data=.false.
+       else
+         time_of_next_input_map =                                     &
+          twentyfour*map_times_requested_ut_jd(current_map_input_idx) &
+          - map_time_initial_hr
+       end if
+!
+     end if
 !
 end subroutine
 !#######################################################################
@@ -1869,6 +2157,8 @@ subroutine update_timestep
       use number_types
       use input_parameters
       use globals
+      use output
+      use data_assimilation
 !
 !-----------------------------------------------------------------------
 !
@@ -1914,19 +2204,37 @@ subroutine update_timestep
           write (*,*) 'Warning! Time step is smaller than DTMIN!'
         end if
 !
+        if (verbose) write (*,*) 'Stable timestep: ',dtime_global
         timestep_needs_updating = .false.
 !
       end if
 !
-! ****** Check for next output, cut time to match exactly.
+! ****** Check for next output time, cut dt to match exactly.
 !
-      ! if (time + dtime_global mod?
-      ! if ntime mod?
-!
-!       Check for end time.
-      if (time + dtime_global .gt. time_end) then
-        dtime_global = time_end - time
+      if (output_map_time_cadence .gt. 0.0) then
+        if (time + dtime_global .ge. idx_out*output_map_time_cadence) then
+          dtime_global = idx_out*output_map_time_cadence - time
+          timestep_needs_updating = .true.
+        end if
       end if
+!
+! ****** Check for next map assimilation time, cut dt to match exactly.
+!
+      if (assimilate_data) then
+        if (time + dtime_global .ge. time_of_next_input_map) then
+          dtime_global = time_of_next_input_map - time
+          timestep_needs_updating = .true.
+        end if
+      end if
+!
+! ****** Check for end time.
+!
+      if (time + dtime_global .ge. time_end) then
+        dtime_global = time_end - time
+        timestep_needs_updating = .false.
+      end if
+!
+! ****** Re-compute Euler diffusion time-step if needed.
 !
       if (advance_diffusion.and.timestep_diff_needs_updating) then
         call get_dtime_diffusion_euler (dtime_diffusion_euler)
@@ -2025,7 +2333,7 @@ subroutine diffusion_step (dtime_local)
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ) :: dtime_local, dtime_local2, dtime_subcycle, t1, wtime
+      real(r_typ) :: dtime_local,dtime_local2,t1,wtime
       real(r_typ) :: time_stepped,timetmp
       integer :: i
 !
@@ -2091,9 +2399,11 @@ subroutine source_step (dtime_local)
 !
       real(r_typ) :: dtime_local,t1,wtime
 !
+!-----------------------------------------------------------------------
+!
       t1 = wtime()
 !
-! ---> Adding random flux, ARs, etc.
+! ---> Add random flux, ARs, etc.
 !
       wtime_source = wtime_source + (wtime() - t1)
 !
@@ -2521,6 +2831,16 @@ subroutine load_sts_rkl2 (dtime_local)
 !
 !$acc update device(sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
 !
+      if (verbose) then
+        write (*,*) '*** Diffusion: 2nd-order RKL2  ***'
+        write (*,*) 'Super-time-step used              = ',dtime_local
+        write (*,*) 'Euler time-step                   = ',dtime_diffusion_euler
+        write (*,*) 'Number of STS iterations needed   = ',sts_s
+        write (*,*) 'Number of Euler iterations needed = ',dtime_local/dtime_diffusion_euler
+        write (*,*) 'Potential max speedup of STS      = ', &
+                          (dtime_local/dtime_diffusion_euler)/sts_s,'X'
+      end if
+!
 end subroutine
 !#######################################################################
 subroutine load_sts_rkg2 (dtime_local)
@@ -2623,8 +2943,17 @@ subroutine load_sts_rkg2 (dtime_local)
         sts_ubj(j) = sts_uj(j)*w
         sts_gj(j) = (half*j*(j + one)*sts_b(j-1) - one)*sts_ubj(j)
       enddo
-!
 !$acc update device(sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
+!
+      if (verbose) then
+        write (*,*) '*** Diffusion: 2nd-order RKG2  ***'
+        write (*,*) 'Super-time-step used              = ',dtime_local
+        write (*,*) 'Euler time-step                   = ',dtime_diffusion_euler
+        write (*,*) 'Number of STS iterations needed   = ',sts_s
+        write (*,*) 'Number of Euler iterations needed = ',dtime_local/dtime_diffusion_euler
+        write (*,*) 'Potential max speedup of STS      = ', &
+                          (dtime_local/dtime_diffusion_euler)/sts_s,'X'
+      end if
 !
 end subroutine
 !#######################################################################
@@ -2633,13 +2962,12 @@ subroutine read_2d_file (fname,ln1,ln2,fin,s1,s2,ierr)
 !-----------------------------------------------------------------------
 !
 ! ****** Read 2D data from H5 file FNAME.
-! ****** This allocates arrays "f", "x", and "y".
+! ****** This allocates arrays "fin", "s1" and "s2"
 !
 !-----------------------------------------------------------------------
 !
       use number_types
-      use ident
-      use sds_def
+      use ds_def
       use timing
 !
 !-----------------------------------------------------------------------
@@ -2655,7 +2983,7 @@ subroutine read_2d_file (fname,ln1,ln2,fin,s1,s2,ierr)
 !
 !-----------------------------------------------------------------------
 !
-      type(sds) :: s
+      type(ds) :: s
       integer :: ierr
       real(r_typ) :: t1,wtime
 !
@@ -2669,29 +2997,29 @@ subroutine read_2d_file (fname,ln1,ln2,fin,s1,s2,ierr)
 !
       if (ierr.ne.0) then
         write (*,*)
-        write (*,*) '### ERROR in ',cname,':'
+        write (*,*) '### ERROR in READ_2D_FILE:'
         write (*,*) '### Could not read the requested data set.'
         write (*,*) 'IERR (from RDHDF) = ',ierr
         write (*,*) 'File name: ',trim(fname)
         call exit (1)
       end if
 !
-! ****** Check that it is a 2D SDS.
+! ****** Check that it is a 2D dataset.
 !
       if (s%ndim.ne.2) then
         write (*,*)
-        write (*,*) '### ERROR in ',cname,':'
+        write (*,*) '### ERROR in READ_2D_FILE:'
         write (*,*) '### The file does not contain a 2D field.'
         write (*,*) '### Number of dimensions = ',s%ndim
         write (*,*) 'File name: ',trim(fname)
         call exit (1)
       end if
 !
-! ****** Check that the HDF/H5 has scales.
+! ****** Check that the their are scales.
 !
       if (.not.s%scale) then
         write (*,*)
-        write (*,*) '### ERROR in ',cname,':'
+        write (*,*) '### ERROR in READ_2D_FILE:'
         write (*,*) '### The data set does not contain scales.'
         write (*,*) 'File name: ',trim(fname)
         call exit (1)
@@ -2704,7 +3032,6 @@ subroutine read_2d_file (fname,ln1,ln2,fin,s1,s2,ierr)
       ln2 = s%dims(2)
 !
 ! ****** Allocate and load the scales and data.
-! ****** Include a two-point overlap in phi.
 !
       allocate (s1(ln1))
       allocate (s2(ln2))
@@ -2727,13 +3054,114 @@ subroutine read_2d_file (fname,ln1,ln2,fin,s1,s2,ierr)
 !
 end subroutine
 !#######################################################################
+subroutine read_3d_file (fname,ln1,ln2,ln3,fin,s1,s2,s3,ierr)
+!
+!-----------------------------------------------------------------------
+!
+! ****** Read 3D data from H5 file FNAME.
+! ****** This allocates arrays "fin", "s1", "s2", and "s3"
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use ds_def
+      use timing
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      character(*) :: fname
+      real(r_typ), dimension(:,:,:), allocatable :: fin
+      real(r_typ), dimension(:), allocatable :: s1,s2,s3
+      integer :: ln1,ln2,ln3
+!
+!-----------------------------------------------------------------------
+!
+      type(ds) :: s
+      integer :: ierr
+      real(r_typ) :: t1,wtime
+!
+!-----------------------------------------------------------------------
+!
+      t1 = wtime()
+!
+! ****** Read the data.
+!
+      call rdh5 (fname,s,ierr)
+!
+      if (ierr.ne.0) then
+        write (*,*)
+        write (*,*) '### ERROR in READ_3D_FILE:'
+        write (*,*) '### Could not read the requested data set.'
+        write (*,*) 'IERR (from RDHDF) = ',ierr
+        write (*,*) 'File name: ',trim(fname)
+        call exit (1)
+      end if
+!
+! ****** Check that it is a 3D dataset.
+!
+      if (s%ndim.ne.3) then
+        write (*,*)
+        write (*,*) '### ERROR in READ_3D_FILE:'
+        write (*,*) '### The file does not contain a 3D field.'
+        write (*,*) '### Number of dimensions = ',s%ndim
+        write (*,*) 'File name: ',trim(fname)
+        call exit (1)
+      end if
+!
+! ****** Check that the their are scales.
+!
+      if (.not.s%scale) then
+        write (*,*)
+        write (*,*) '### ERROR in READ_3D_FILE:'
+        write (*,*) '### The data set does not contain scales.'
+        write (*,*) 'File name: ',trim(fname)
+        call exit (1)
+      end if
+!
+! ****** Get the resolution of the input map and set resolution for
+!        returned arrays.
+!
+      ln1 = s%dims(1)
+      ln2 = s%dims(2)
+      ln3 = s%dims(3)
+!
+! ****** Allocate and load the scales and data.
+!
+      allocate (s1(ln1))
+      allocate (s2(ln2))
+      allocate (s3(ln3))
+      allocate (fin(ln1,ln2,ln3))
+!
+      s1(:) = s%scales(1)%f(:)
+      s2(:) = s%scales(2)%f(:)
+      s3(:) = s%scales(3)%f(:)
+!
+! ****** Read the data.
+!
+      fin(:,:,:) = s%f(:,:,:)
+!
+! ****** Free up memory.
+!
+      deallocate (s%scales(1)%f)
+      deallocate (s%scales(2)%f)
+      deallocate (s%scales(3)%f)
+      deallocate (s%f)
+!
+      wtime_io = wtime_io + (wtime() - t1)
+!
+end subroutine
+!#######################################################################
 subroutine rdh5 (fname,s,ierr)
 !
 !-----------------------------------------------------------------------
 !
 ! ****** Read a 1D, 2D, or 3D scientific data set from an HDF5 file.
 ! ****** The HDF5 file is currently assumed to contain only one
-! ****** dataset (1D,2d,3D), with or without scales, in group "/",
+! ****** dataset (1D,2D,or 3D), with or without scales, in group "/",
 ! ****** and has no other data members.
 !
 !-----------------------------------------------------------------------
@@ -2746,11 +3174,11 @@ subroutine rdh5 (fname,s,ierr)
 ! ****** Input arguments:
 !
 !          FNAME   : [character(*)]
-!                    HDF5 data file name to read from.
+!                    File name to read from.
 !
 ! ****** Output arguments:
 !
-!          S       : [structure of type SDS]
+!          S       : [structure of type DS]
 !                    A structure that holds the field, its
 !                    dimensions, and the scales, with the
 !                    components described below.
@@ -2795,8 +3223,9 @@ subroutine rdh5 (fname,s,ierr)
 !
 !-----------------------------------------------------------------------
 !
+      use iso_fortran_env
       use number_types
-      use sds_def
+      use ds_def
       use hdf5
       use h5ds
 !
@@ -2806,7 +3235,7 @@ subroutine rdh5 (fname,s,ierr)
 !
 !-----------------------------------------------------------------------
 !
-      type(sds) :: s
+      type(ds) :: s
       character(*) :: fname
 !
 !-----------------------------------------------------------------------
@@ -2815,7 +3244,7 @@ subroutine rdh5 (fname,s,ierr)
 !
 !-----------------------------------------------------------------------
 !
-      integer :: i,obj_type,n_members
+      integer :: i,j,k,n_members,obj_type
 !
       integer(HID_T) :: file_id       ! File identifier
       integer(HID_T) :: dset_id       ! Dataset identifier
@@ -2828,10 +3257,10 @@ subroutine rdh5 (fname,s,ierr)
       integer(HSIZE_T),dimension(:), allocatable :: s_dims,maxpts
       integer(HSIZE_T),dimension(1) :: s_dims_i
 !
-      real(KIND_REAL_4), dimension(:,:,:), allocatable :: f4
-      real(KIND_REAL_4), dimension(:),     allocatable :: f4dim
-      real(KIND_REAL_8), dimension(:,:,:), allocatable :: f8
-      real(KIND_REAL_8), dimension(:),     allocatable :: f8dim
+      real(REAL32), dimension(:,:,:), allocatable :: f4
+      real(REAL32), dimension(:),     allocatable :: f4dim
+      real(REAL64), dimension(:,:,:), allocatable :: f8
+      real(REAL64), dimension(:),     allocatable :: f8dim
 !
       character(512) :: obj_name
       character(4), parameter :: cname='RDH5'
@@ -2842,8 +3271,8 @@ subroutine rdh5 (fname,s,ierr)
 !
 ! ****** Initialize dimension count and arrays.
 !
-      s%ndim=0
-      s%dims(:)=1
+      s%ndim = 0
+      s%dims(:) = 1
 !
 ! ****** Initialize hdf5 interface.
 !
@@ -2897,7 +3326,9 @@ subroutine rdh5 (fname,s,ierr)
       call h5Sget_simple_extent_dims_f (dspace_id,s_dims,maxpts,ierr)
       deallocate(maxpts)
 !
-      s%dims(1:s%ndim)=s_dims(1:s%ndim)
+      do j=1,s%ndim
+        s%dims(j) = INT(s_dims(j))
+      end do
 !
 ! ****** Get the floating-point precision of the data and set flag.
 !
@@ -2920,12 +3351,24 @@ subroutine rdh5 (fname,s,ierr)
       if (s%hdf32) then
         allocate (f4(s%dims(1),s%dims(2),s%dims(3)))
         call h5Dread_f (dset_id,datatype_id,f4,s_dims,ierr)
-        s%f(:,:,:)=f4(:,:,:)
+        do k=1,s%dims(3)
+          do j=1,s%dims(2)
+            do i=1,s%dims(1)
+              s%f(i,j,k) = REAL(f4(i,j,k),r_typ)
+            enddo
+          enddo
+        enddo
         deallocate (f4)
       else
         allocate (f8(s%dims(1),s%dims(2),s%dims(3)))
         call h5Dread_f (dset_id,datatype_id,f8,s_dims,ierr)
-        s%f(:,:,:)=f8(:,:,:)
+        do k=1,s%dims(3)
+          do j=1,s%dims(2)
+            do i=1,s%dims(1)
+              s%f(i,j,k) = REAL(f8(i,j,k),r_typ)
+            enddo
+          enddo
+        enddo
         deallocate (f8)
       end if
 !
@@ -2987,7 +3430,7 @@ subroutine rdh5 (fname,s,ierr)
 !
 ! ****** Get dimension of scale.
 !
-          s_dims_i=s%dims(i)
+          s_dims_i = s%dims(i)
 !
 ! ****** Allocate scale.
 !
@@ -3000,15 +3443,19 @@ subroutine rdh5 (fname,s,ierr)
 !
 ! ****** Read in the scale data.
 !
-          if (s%hdf32) then
+          if (prec.eq.32) then
             allocate (f4dim(s_dims_i(1)))
             call h5Dread_f (dim_id,datatype_id,f4dim,s_dims_i,ierr)
-            s%scales(i)%f(:)=f4dim(:)
+            do j=1,s%dims(i)
+              s%scales(i)%f(j) = REAL(f4dim(j),r_typ)
+            end do
             deallocate (f4dim)
-          else
+          elseif (prec.eq.64) then
             allocate (f8dim(s_dims_i(1)))
             call h5Dread_f (dim_id,datatype_id,f8dim,s_dims_i,ierr)
-            s%scales(i)%f(:)=f8dim(:)
+            do j=1,s%dims(i)
+              s%scales(i)%f(j) = REAL(f8dim(j),r_typ)
+            end do
             deallocate (f8dim)
           end if
 !
@@ -3029,7 +3476,7 @@ subroutine rdh5 (fname,s,ierr)
 ! ****** scales (of length 1) so that the pointers to the scales
 ! ****** are valid.
 !
-        s%scale=.false.
+        s%scale = .false.
 !
         allocate (s%scales(1)%f(1))
         allocate (s%scales(2)%f(1))
@@ -3061,9 +3508,9 @@ subroutine wrh5 (fname,s,ierr)
 ! ****** Input arguments:
 !
 !          FNAME   : [character(*)]
-!                    HDF data file name to write to.
+!                    File name to write to.
 !
-!          S       : [structure of type SDS]
+!          S       : [structure of type DS]
 !                    A structure that holds the field, its
 !                    dimensions, and the scales, with the
 !                    components described below.
@@ -3077,8 +3524,9 @@ subroutine wrh5 (fname,s,ierr)
 !
 !-----------------------------------------------------------------------
 !
+      use iso_fortran_env
       use number_types
-      use sds_def
+      use ds_def
       use hdf5
       use h5ds
 !
@@ -3089,7 +3537,7 @@ subroutine wrh5 (fname,s,ierr)
 !-----------------------------------------------------------------------
 !
       character(*) :: fname
-      type(sds) :: s
+      type(ds) :: s
       integer :: ierr
       intent(in) :: fname,s
       intent(out) :: ierr
@@ -3097,7 +3545,7 @@ subroutine wrh5 (fname,s,ierr)
 !-----------------------------------------------------------------------
 !
       character(8) ::   dimname
-      integer :: i
+      integer :: i,j,k
       integer(HID_T) :: file_id       ! File identifier
       integer(HID_T) :: dset_id       ! Dataset identifier
       integer(HID_T) :: dspace_id,dspacedim_id   ! Dataspace identifiers
@@ -3105,10 +3553,10 @@ subroutine wrh5 (fname,s,ierr)
       integer(HSIZE_T),dimension(3) :: s_dims
       integer(HSIZE_T),dimension(1) :: s_dims_i
 !
-      real(KIND_REAL_4), dimension(:,:,:), allocatable :: f4
-      real(KIND_REAL_4), dimension(:),     allocatable :: f4dim
-      real(KIND_REAL_8), dimension(:,:,:), allocatable :: f8
-      real(KIND_REAL_8), dimension(:),     allocatable :: f8dim
+      real(REAL32), dimension(:,:,:), allocatable :: f4
+      real(REAL32), dimension(:),     allocatable :: f4dim
+      real(REAL64), dimension(:,:,:), allocatable :: f8
+      real(REAL64), dimension(:),     allocatable :: f8dim
 !
 !-----------------------------------------------------------------------
 !
@@ -3122,9 +3570,9 @@ subroutine wrh5 (fname,s,ierr)
 !
       do i=1,3
          if (i.le.s%ndim) then
-           s_dims(i)=s%dims(i)
+           s_dims(i) = INT(s%dims(i),HSIZE_T)
          else
-           s_dims(i)=1
+           s_dims(i) = 1
          endif
       end do
 !
@@ -3144,14 +3592,26 @@ subroutine wrh5 (fname,s,ierr)
 !
       if (s%hdf32) then
         allocate (f4(s_dims(1),s_dims(2),s_dims(3)))
-        f4(:,:,:)=s%f(:,:,:)
+        do k=1,s%dims(3)
+          do j=1,s%dims(2)
+            do i=1,s%dims(1)
+              f4(i,j,k) = REAL(s%f(i,j,k),REAL32)
+            enddo
+          enddo
+        enddo
         call h5Dcreate_f (file_id,'Data',H5T_NATIVE_REAL, &
                           dspace_id,dset_id,ierr)
         call h5Dwrite_f (dset_id,H5T_NATIVE_REAL,f4,s_dims,ierr)
         deallocate (f4)
       else
         allocate (f8(s_dims(1),s_dims(2),s_dims(3)))
-        f8(:,:,:)=s%f(:,:,:)
+        do k=1,s%dims(3)
+          do j=1,s%dims(2)
+            do i=1,s%dims(1)
+              f8(i,j,k) = REAL(s%f(i,j,k),REAL64)
+            enddo
+          enddo
+        enddo
         call h5Dcreate_f (file_id,'Data',H5T_NATIVE_DOUBLE, &
                           dspace_id,dset_id,ierr)
         call h5Dwrite_f (dset_id,H5T_NATIVE_DOUBLE,f8,s_dims,ierr)
@@ -3178,11 +3638,13 @@ subroutine wrh5 (fname,s,ierr)
           elseif (i.eq.3) then
             dimname='dim3'
           endif
-          s_dims_i=s_dims(i)
+          s_dims_i = s_dims(i)
           call h5Screate_simple_f(1,s_dims_i,dspacedim_id,ierr)
           if (s%hdf32) then
             allocate (f4dim(s_dims_i(1)))
-            f4dim(:)=s%scales(i)%f(:)
+            do j=1,s%dims(i)
+              f4dim(j) = REAL(s%scales(i)%f(j),REAL32)
+            end do
             call h5Dcreate_f (file_id,dimname,H5T_NATIVE_REAL, &
                               dspacedim_id,dim_id,ierr)
             call h5Dwrite_f (dim_id,H5T_NATIVE_REAL, &
@@ -3190,7 +3652,9 @@ subroutine wrh5 (fname,s,ierr)
             deallocate (f4dim)
           else
             allocate (f8dim(s_dims_i(1)))
-            f8dim(:)=s%scales(i)%f(:)
+            do j=1,s%dims(i)
+              f8dim(j) = REAL(s%scales(i)%f(j),REAL64)
+            end do
             call h5Dcreate_f (file_id,dimname,H5T_NATIVE_DOUBLE, &
                              dspacedim_id,dim_id,ierr)
             call h5Dwrite_f (dim_id,H5T_NATIVE_DOUBLE, &
@@ -3208,7 +3672,7 @@ subroutine wrh5 (fname,s,ierr)
           write (*,*) '### ERROR in WRH5:'
           write (*,*) '### Could not write the scales.'
           write (*,*) 'File name: ',trim(fname)
-          ierr=5
+          ierr = 5
           return
         endif
       endif
@@ -3240,8 +3704,7 @@ subroutine write_2d_file (fname,ln1,ln2,f,s1,s2,ierr)
 !-----------------------------------------------------------------------
 !
       use number_types
-      use ident
-      use sds_def
+      use ds_def
       use timing
 !
 !-----------------------------------------------------------------------
@@ -3251,14 +3714,15 @@ subroutine write_2d_file (fname,ln1,ln2,f,s1,s2,ierr)
 !-----------------------------------------------------------------------
 !
       character(*) :: fname
-      real(r_typ), dimension(:,:), allocatable :: f
-      real(r_typ), dimension(:), allocatable :: s1,s2
+      real(r_typ), dimension(ln1,ln2) :: f
+      real(r_typ), dimension(ln1) :: s1
+      real(r_typ), dimension(ln2) :: s2
       integer :: ln1,ln2
       real(r_typ) :: t1,wtime
 !
 !-----------------------------------------------------------------------
 !
-      type(sds) :: s
+      type(ds) :: s
       integer :: ierr
 !
 !-----------------------------------------------------------------------
@@ -3272,8 +3736,7 @@ subroutine write_2d_file (fname,ln1,ln2,f,s1,s2,ierr)
       s%dims(2) = ln2
       s%dims(3) = 1
       s%scale = .true.
-      !RMC[] Add input option to write out 32-bit data!
-      s%hdf32 = .false.
+      s%hdf32 = .true.
 !
       allocate (s%scales(1)%f(ln1))
       allocate (s%scales(2)%f(ln2))
@@ -3289,7 +3752,7 @@ subroutine write_2d_file (fname,ln1,ln2,f,s1,s2,ierr)
 !
       if (ierr.ne.0) then
         write (*,*)
-        write (*,*) '### ERROR in write_2d_file:'
+        write (*,*) '### ERROR in WRITE_2D_FILE:'
         write (*,*) '### Could not write the 2D data set.'
         write (*,*) 'File name: ',trim(fname)
         return
@@ -3313,7 +3776,6 @@ subroutine set_mesh
 !
 !-----------------------------------------------------------------------
 !
-      use ident
       use number_types
       use mesh
       use constants
@@ -3355,7 +3817,7 @@ subroutine set_mesh
           abs(p(1)).gt.eps.or. &
           abs(p(npm-1)-twopi).gt.eps) then
         write (*,*)
-        write (*,*) '### ERROR in ',cname,':'
+        write (*,*) '### ERROR in SET_MESH:'
         write (*,*) '### Anomaly in data file coordinates:'
         write (*,*)
         write (*,*) 'Expected t range:'
@@ -3451,7 +3913,6 @@ subroutine set_mesh
 !
 !$acc enter data copyin (t,p,dt,dt_i,st,st_i,ct,dp,dp_i,th,ph, &
 !$acc                    dth,dth_i,sth,cth,dph,dph_i)
-!
 end subroutine
 !#######################################################################
 subroutine load_diffusion
@@ -3462,7 +3923,6 @@ subroutine load_diffusion
 !
 !-----------------------------------------------------------------------
 !
-      use ident
       use number_types
       use mesh
       use fields
@@ -3602,7 +4062,6 @@ subroutine load_source
 !
 !-----------------------------------------------------------------------
 !
-      use ident
       use number_types
       use mesh
       use fields
@@ -3695,7 +4154,6 @@ subroutine load_vt
 !
 !-----------------------------------------------------------------------
 !
-      use ident
       use number_types
       use mesh
       use fields
@@ -3779,7 +4237,6 @@ subroutine load_vp
 !
 !-----------------------------------------------------------------------
 !
-      use ident
       use number_types
       use mesh
       use fields
@@ -3793,7 +4250,7 @@ subroutine load_vp
 !
 !-----------------------------------------------------------------------
 !
-      integer :: j,k,ierr
+      integer :: k,ierr
       real(r_typ) :: fn1,fs1
 !
       integer :: nft,nfp
@@ -4058,7 +4515,7 @@ subroutine advection_step_upwind (dtime_local)
 !
 !-----------------------------------------------------------------------
 !
-      integer :: j,k,kp1
+      integer :: j,k
       real(r_typ) :: cct,ccp
 !
       real(r_typ) :: fn = zero
@@ -4204,7 +4661,6 @@ subroutine get_m0 (f,fn1,fn2,fs1,fs2)
 !
 !-----------------------------------------------------------------------
 !
-      use ident
       use number_types
       use constants
       use mesh
@@ -4280,7 +4736,8 @@ subroutine interp2d (nxi,nyi,xi,yi,fi,nx,ny,x,y,f,ierr)
 !
 !-----------------------------------------------------------------------
 !
-      integer :: i,j,ii,jj,iip1,jjp1
+      integer :: i,j,iip1,jjp1
+      integer :: ii=0,jj=0
       real(r_typ) :: dummy,ax,ay,xv,yv
 !
 !-----------------------------------------------------------------------
@@ -4552,6 +5009,7 @@ subroutine read_input
       call defarg (GROUP_KA,'-dm','3','<val>')
       call defarg (GROUP_KA,'-diffusion_subcycles','30',' ')
       call defarg (GROUP_KA,'-omci','0','<val>')
+      call defarg (GROUP_KA,'-omct','0.0','<val>')
       call defarg (GROUP_KA,'-uw','1.','<val>')
       call defarg (GROUP_KA,'-vtfile','<none>','<file>')
       call defarg (GROUP_KA,'-vpfile','<none>','<file>')
@@ -4564,6 +5022,8 @@ subroutine read_input
       call defarg (GROUP_KA,'-difftfac','1.','<val>')
       call defarg (GROUP_KA,'-diffpfac','1.','<val>')
       call defarg (GROUP_K,'-vrun',' ',' ')
+      call defarg (GROUP_K,'-assimilate_data',' ',' ')
+      call defarg (GROUP_KA ,'-assimilate_data_map_list_filename','<none>','<file>')
 !
 ! ****** Parse the command line.
 !
@@ -4573,8 +5033,6 @@ subroutine read_input
 !
         write (*,*)
         write (*,*) '### ',cname,' Version ',cvers,' of ',cdate,'.'
-        write (*,*) '### Diffuse and advect a 2D scalar field on'// &
-                   ' the surface of a sphere.'
 !
 ! ****** Print the usage line.
 !
@@ -4650,6 +5108,16 @@ subroutine read_input
 !
       call fetcharg ('-omci',set,arg)
       output_map_idx_cadence = intval(arg,'-omci')
+!
+      call fetcharg ('-omct',set,arg)
+      output_map_time_cadence = fpval(arg,'-omct')
+!
+      if (output_map_time_cadence.gt.0 .and. output_map_idx_cadence.gt.0) then
+        write(*,*) "ERROR!  Cannot use both output_map_time_cadence"
+        write(*,*) "        and output_map_idx_cadence at the same time!"
+        call wrap_it_up
+        STOP 1
+      end if
 !
 ! ****** Viscosity file.
 !
@@ -4759,7 +5227,18 @@ subroutine read_input
 
       call fetcharg ('-diffpfac',set,arg)
       if (set) diffusion_coef_p_fac = fpval(arg,'-diffpfac')
-
+!
+! ****** Data assimilation.
+!
+      call fetcharg ('-assimilate_data',set,arg)
+      assimilate_data = set
+!
+      call fetcharg ('-assimilate_data_map_list_filename',set,arg)
+      if (set) then
+        assimilate_data_map_list_filename = trim(arg)
+      else
+        assimilate_data_map_list_filename = ' '
+      end if
 !
 end subroutine
 !#######################################################################
@@ -4799,12 +5278,28 @@ end subroutine
 !     Use the new flag "-omci" to set the Output Map Cadence Index.
 !     A list of all output is stored in an output text file
 !     called "map_output_list.txt".
-!     The output maps are stored in a subdirecotry named "output_maps".
+!     The output maps are stored in a subdirectory named "output_maps".
 !     If omci is set to 0 or not set, the subdirectory and text file are
 !     not created.
 !     The initial and final map files are still always output in the
 !     run directory as before.
 !   - Some internal updates and simplifications.
+!
+! 03/21/2022, RC, Version 0.5.0:
+!   - Added data assimilation.  Activate with the flag "-assimilate_data"
+!     and set the flag "-assimilate_data_map_list_filename" to the name
+!     of the CSV file obtained from the data aquisition tool pyoft.
+!     It is assumed that the code starts with the first entry of the
+!     CSV file at time=0.
+!   - Added time cadence output option.  Set with the flag "-omct <DT>"
+!     where <DT> is the time cadense requested for output.
+!     Note that one cannot use both -omct and -omci in the same run.
+!   - Updated timestep setting so that outputs and data assimilation are
+!     always at exact times.
+!   - Updated I/O routines, including adding a 3D reader.
+!   - Updated default of dt_max_increase_fac to 0.0 (disabled).
+!   - Updated text output of the run, including more information when 
+!     using the verbose "-v" flag.
 !
 !-----------------------------------------------------------------------
 !
