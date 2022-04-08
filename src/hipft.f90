@@ -45,8 +45,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.5.0'
-      character(*), parameter :: cdate='03/21/2022'
+      character(*), parameter :: cvers='0.6.0'
+      character(*), parameter :: cdate='04/07/2022'
 !
 end module
 !#######################################################################
@@ -143,7 +143,7 @@ module input_parameters
 !
       character(512) :: initial_map_filename = 'br_input.h5'
       character(512) :: output_map_root_filename = 'hipft_brmap'
-      character(512) :: output_map_subdirectory = 'output_maps'
+      character(512) :: output_map_directory = 'output_maps'
 !
 ! ****** Validation Mode ********
 !
@@ -172,7 +172,7 @@ module input_parameters
       real(r_typ)    :: dt_max = huge(one)
 !
 ! ****** Algorithm options.
-!  [RMC] This should be an int?  ADA vs DAD vs ADRDA vs DARAD etc?
+!
       logical :: strang_splitting = .false.
 !
 !-----------------------------------------------------------------------
@@ -208,6 +208,10 @@ module input_parameters
 !
       integer :: flow_num_method = 1
 !
+! ****** Use finite volume polar advection. If false, use simple averaging.
+!
+      logical :: advect_poles = .true.
+!
 ! ****** Upwind coefficient.
 !
       real(r_typ) :: upwind = 1._r_typ
@@ -222,8 +226,6 @@ module input_parameters
       character(512) :: diffusion_coef_filename = ' '
       logical        :: diffusion_coef_grid = .false.
       real(r_typ)    :: diffusion_coef_factor = diff_km2_s_to_rs2_hr
-      real(r_typ)    :: diffusion_coef_t_fac = one
-      real(r_typ)    :: diffusion_coef_p_fac = one
 !
 ! ****** Algorithm options.
 !
@@ -253,6 +255,7 @@ module input_parameters
 !
       logical :: assimilate_data = .false.
       character(512) :: assimilate_data_map_list_filename = ' '
+      character(512) :: assimilate_data_map_root_dir = '.'
 !
       integer, parameter :: IO_DATA_IN = 8
 !
@@ -366,14 +369,12 @@ module mesh
       integer :: nt,ntm,ntm1,ntm2
       integer :: np,npm,npm1,npm2
 !
-      real(r_typ) :: d2t_j1,d2t_jntm1
-!
       real(r_typ), dimension(:), allocatable :: t,p
       real(r_typ), dimension(:), allocatable :: th,ph
       real(r_typ), dimension(:), allocatable :: dt,dth,dp,dph
       real(r_typ), dimension(:), allocatable :: dt_i,dth_i,dp_i,dph_i
       real(r_typ), dimension(:), allocatable :: st,sth,ct,cth
-      real(r_typ), dimension(:), allocatable :: st_i
+      real(r_typ), dimension(:), allocatable :: st_i,sth_i
 !
 end module
 !#######################################################################
@@ -687,11 +688,11 @@ subroutine setup
 !
       if (output_map_idx_cadence.gt.0 .or.     &
           output_map_time_cadence.gt.0.0) then
-        cmd = 'mkdir -p '//trim(output_map_subdirectory)
+        cmd = 'mkdir -p '//trim(output_map_directory)
         call EXECUTE_COMMAND_LINE (cmd,exitstat=ierr)
         if (ierr.ne.0) then
           write (*,*) '### Could not make output subdirectory, using ./'
-          output_map_subdirectory = '.'
+          output_map_directory = '.'
         end if
       end if
 !
@@ -1397,7 +1398,7 @@ subroutine output_map
 !
         write (idx_str,'(i6.6)') idx_out
 !
-        full_filename = trim(output_map_subdirectory)//'/'// &
+        full_filename = trim(output_map_directory)//'/'// &
                    trim(output_map_root_filename)// &
                    '_idx'//idx_str//'.h5'
 !
@@ -2100,6 +2101,7 @@ subroutine update_field
       real(r_typ), dimension(:,:,:), allocatable :: new_data
       real(r_typ), dimension(:), allocatable :: s1,s2,s3
       integer :: ln1,ln2,nslices
+      character(1024) :: mapfile = ' '
 !
 !-----------------------------------------------------------------------
 !
@@ -2107,8 +2109,10 @@ subroutine update_field
 !
 ! ****** Read the map data.
 !
-       call read_3d_file (map_files_rel_path(current_map_input_idx), &
-                          ln1,ln2,nslices,new_data,s1,s2,s3,ierr)
+       mapfile = TRIM(assimilate_data_map_root_dir)//"/"&
+                 //TRIM(map_files_rel_path(current_map_input_idx))
+!
+       call read_3d_file (mapfile,ln1,ln2,nslices,new_data,s1,s2,s3,ierr)
 !
 ! ******  TODO:  Add error checking here (make sure scales match run
 !                until interp is added)
@@ -2248,6 +2252,7 @@ subroutine flux_transport_step
 !-----------------------------------------------------------------------
 !
 ! ****** Evolve the field by one time step.
+! ****** We use Strang splitting in a ARDRA sequence.
 !
 !-----------------------------------------------------------------------
 !
@@ -2262,19 +2267,26 @@ subroutine flux_transport_step
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ) :: dtime_local, t1, wtime
+      real(r_typ) :: dtime_local, dtime_local_half, t1, wtime
 !
 !-----------------------------------------------------------------------
 !
       t1 = wtime()
 !
-!     Could strang split these.  For now, use full dt.
-!
       dtime_local = dtime_global
+      dtime_local_half = dtime_local/two
 !
-      if (advance_flow)      call advection_step (dtime_local)
-      if (advance_diffusion) call diffusion_step (dtime_local)
-      if (advance_source)    call source_step    (dtime_local)
+      if (strang_splitting) then
+        if (advance_flow)      call advection_step (dtime_local_half)
+        if (advance_source)    call source_step    (dtime_local_half)
+        if (advance_diffusion) call diffusion_step (dtime_local)
+        if (advance_source)    call source_step    (dtime_local_half)
+        if (advance_flow)      call advection_step (dtime_local_half)
+      else
+        if (advance_flow)      call advection_step (dtime_local)
+        if (advance_source)    call source_step    (dtime_local)
+        if (advance_diffusion) call diffusion_step (dtime_local)
+      end if
 !
       wtime_flux_transport = wtime_flux_transport + (wtime() - t1)
 !
@@ -2299,7 +2311,8 @@ subroutine advection_step (dtime_local)
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ) :: dtime_local,t1,wtime
+      real(r_typ), INTENT(IN) :: dtime_local
+      real(r_typ) :: t1,wtime
 !
 !-----------------------------------------------------------------------
 !
@@ -2333,7 +2346,8 @@ subroutine diffusion_step (dtime_local)
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ) :: dtime_local,dtime_local2,t1,wtime
+      real(r_typ), INTENT(IN) :: dtime_local
+      real(r_typ) :: dtime_local2,t1,wtime
       real(r_typ) :: time_stepped,timetmp
       integer :: i
 !
@@ -2397,7 +2411,8 @@ subroutine source_step (dtime_local)
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ) :: dtime_local,t1,wtime
+      real(r_typ), INTENT(IN) :: dtime_local
+      real(r_typ) :: t1,wtime
 !
 !-----------------------------------------------------------------------
 !
@@ -2579,14 +2594,10 @@ subroutine load_diffusion_matrix
 ! ****** Set coef for internal points and phi boundary point at k=1.
 !
       do concurrent (j=2:ntm-1,k=2:npm-1)
-        coef(j,k,1)=diffusion_coef_p_fac*diffusion_coef(j,k) &
-                   *dph_i(k)*dp_i(k)*st_i(j)*st_i(j)
-        coef(j,k,2)=diffusion_coef_t_fac*diffusion_coef(j,k) &
-                   *dth_i(j)*dt_i(j)*st_i(j)*sth(j )
-        coef(j,k,4)=diffusion_coef_t_fac*diffusion_coef(j+1,k) &
-                   *dth_i(j+1)*dt_i(j)*st_i(j)*sth(j+1)
-        coef(j,k,5)=diffusion_coef_p_fac*diffusion_coef(j,k+1) &
-                   *dph_i(k+1)*dp_i(k)*st_i(j)*st_i(j )
+        coef(j,k,1)=diffusion_coef(j  ,k  )*dph_i(k  )*dp_i(k)*st_i(j)*st_i(j)
+        coef(j,k,2)=diffusion_coef(j  ,k  )*dth_i(j  )*dt_i(j)*st_i(j)*sth(j  )
+        coef(j,k,4)=diffusion_coef(j+1,k  )*dth_i(j+1)*dt_i(j)*st_i(j)*sth(j+1)
+        coef(j,k,5)=diffusion_coef(j  ,k+1)*dph_i(k+1)*dp_i(k)*st_i(j)*st_i(j)
 !
         coef(j,k,3)=-(coef(j,k,1)+coef(j,k,2)+coef(j,k,4)+coef(j,k,5))
       enddo
@@ -2671,7 +2682,7 @@ subroutine diffusion_step_sts_cd (dtime_local)
 !
       integer :: i,j
       integer*8 :: k
-      real(r_typ) :: dtime_local
+      real(r_typ), INTENT(IN) :: dtime_local
 !
 !-----------------------------------------------------------------------
 !
@@ -3853,6 +3864,7 @@ subroutine set_mesh
       allocate (dth(nt))
       allocate (dth_i(nt))
       allocate (sth(nt))
+      allocate (sth_i(nt))
       allocate (cth(nt))
       allocate (dph(np))
       allocate (dph_i(np))
@@ -3886,7 +3898,12 @@ subroutine set_mesh
       st_i(2:ntm-1) = one/st(2:ntm-1)
       st_i(1) = 0.
       st_i(ntm) = 0.
+!
       sth(:) = sin(th(:))
+      sth_i(2:ntm1) = one/sth(2:ntm1)
+      sth_i(1) = 0.
+      sth_i(nt) = 0.
+!
       cth(:) = cos(th(:))
 !
 ! ****** Set phi grids.
@@ -3912,7 +3929,7 @@ subroutine set_mesh
       pout(:) = p(1:npm-1)
 !
 !$acc enter data copyin (t,p,dt,dt_i,st,st_i,ct,dp,dp_i,th,ph, &
-!$acc                    dth,dth_i,sth,cth,dph,dph_i)
+!$acc                    dth,dth_i,sth,sth_i,cth,dph,dph_i)
 end subroutine
 !#######################################################################
 subroutine load_diffusion
@@ -4039,13 +4056,6 @@ subroutine load_diffusion
       end if
 !
       diffusion_coef(:,:) = diffusion_coef_factor*diffusion_coef(:,:)
-!
-      d2t_j1 = diffusion_coef_t_fac*two*(diffusion_coef(1,1)+ &
-               diffusion_coef(2,1))*twopi_i*dt_i(1)*dt_i(1)
-!
-      d2t_jntm1 = diffusion_coef_t_fac*two*(diffusion_coef(ntm,1)+ &
-                  diffusion_coef(ntm-1,1))*twopi_i*dt_i(ntm)*dt_i(ntm)
-!
 !$acc enter data copyin(diffusion_coef)
 !
       call load_diffusion_matrix
@@ -4386,7 +4396,7 @@ subroutine add_flow_meridianal_aft
 !
 end subroutine
 !#######################################################################
-subroutine get_flow_dtmax (dtmax)
+subroutine get_flow_dtmax (dtmaxflow)
 !
 !-----------------------------------------------------------------------
 !
@@ -4397,8 +4407,7 @@ subroutine get_flow_dtmax (dtmax)
 !
       use number_types
       use mesh
-      use fields
-      use input_parameters
+      use fields, ONLY : vt,vp
       use constants
 !
 !-----------------------------------------------------------------------
@@ -4407,29 +4416,31 @@ subroutine get_flow_dtmax (dtmax)
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ) :: dtmax
+      real(r_typ), INTENT(OUT) :: dtmaxflow
 !
 !-----------------------------------------------------------------------
 !
       integer :: j,k
-      real(r_typ) :: kdotv,deltat
+      real(r_typ) :: kdotv,deltat,dtmax
 !
 !-----------------------------------------------------------------------
 !
-      dtmax = huge(dtmax)
+      dtmax = huge(one)
 !
-!$omp parallel do default(shared) collapse(2) reduction(min:dtmax)
-!$acc parallel loop default(present) collapse(2) reduction(min:dtmax)
+!$omp parallel do default(shared) collapse(2) reduction(min:dtmax) &
+!$omp private(kdotv,deltat)
+!$acc parallel loop default(present) collapse(2) reduction(min:dtmax) &
+!$acc private(kdotv,deltat)
       do k=2,npm1
         do j=2,ntm1
-          kdotv = ABS(vt(j,k))/dt(j) + ABS(vp(j,k))/(sth(j)*dph(k))
+          kdotv = ABS(vt(j,k))*dt_i(j) + ABS(vp(j,k))*sth_i(j)*dph_i(k)
           deltat = one/MAX(kdotv,small_value)
           dtmax = MIN(dtmax,deltat)
         enddo
       enddo
 !$omp end parallel do
 !
-      dtmax = half*safety*dtmax
+      dtmaxflow = half*safety*dtmax
 !
 end subroutine
 !#######################################################################
@@ -4511,16 +4522,12 @@ subroutine advection_step_upwind (dtime_local)
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ) :: dtime_local
+      real(r_typ), INTENT(IN) :: dtime_local
 !
 !-----------------------------------------------------------------------
 !
       integer :: j,k
-      real(r_typ) :: cct,ccp
-!
-      real(r_typ) :: fn = zero
-      real(r_typ) :: fs = zero
-!
+      real(r_typ) :: cct,ccp,fn,fs
       real(r_typ), dimension(:,:), allocatable :: flux_t,flux_p
 !
 !-----------------------------------------------------------------------
@@ -4562,20 +4569,38 @@ subroutine advection_step_upwind (dtime_local)
                                       )
       enddo
 !
-! ****** Advect the values at the poles. [maybe change this to naive mode?]
+! ****** Advect the values at the poles.
 !
+      fn = zero
+      fs = zero
+!
+      if (advect_poles) then
 !$omp parallel do default(shared) reduction(+:fn,fs)
 !$acc parallel loop default(present) reduction(+:fn,fs)
-      do k=2,npm-1
-        fn = fn + flux_t(   2,k)*dph(k)
-        fs = fs + flux_t(ntm1,k)*dph(k)
-      enddo
+        do k=2,np-1
+          fn = fn + flux_t(   2,k)*dph(k)
+          fs = fs + flux_t(ntm1,k)*dph(k)
+        enddo
 !$omp end parallel do
-!
-      do concurrent (k=2:npm-1)
-        f(  1,k) = f(  1,k) - fn*dtime_local*two*pi_i*dt_i(  1)
-        f(ntm,k) = f(ntm,k) + fs*dtime_local*two*pi_i*dt_i(ntm)
-      end do
+! ****** Note that the south pole needs a sign change since the
+! ****** theta flux direction is reversed.
+        do concurrent (k=2:npm-1)
+          f(  1,k) = f(  1,k) - fn*dtime_local*two*pi_i*dt_i(  1)
+          f(ntm,k) = f(ntm,k) + fs*dtime_local*two*pi_i*dt_i(ntm)
+        end do
+      else
+!$omp parallel do default(shared) reduction(+:fn,fs)
+!$acc parallel loop default(present) reduction(+:fn,fs)
+        do k=2,npm-1
+          fn = fn + f(    2,k)*dp(k)
+          fs = fs + f(ntm-1,k)*dp(k)
+        enddo
+!$omp end parallel do
+        do concurrent (k=2:npm-1)
+          f(  1,k) = fn*twopi_i
+          f(ntm,k) = fs*twopi_i
+        end do
+      end if
 !
 ! ****** Set periodic boundary condition.
 !
@@ -4616,9 +4641,6 @@ subroutine ax (x,y)
 !
 ! ****** Compute y=Ax.
 !
-      fn2_fn1 = zero
-      fs2_fs1 = zero
-!
 ! ****** Compute inner points.
 !
       do concurrent (k=2:npm-1,j=2:ntm-1)
@@ -4633,17 +4655,24 @@ subroutine ax (x,y)
 !
 ! ****** Get the m=0 components near the poles.
 !
+      fn2_fn1 = zero
+      fs2_fs1 = zero
+!
 !$omp parallel do default(shared) reduction(+:fn2_fn1,fs2_fs1)
 !$acc parallel loop default(present) reduction(+:fn2_fn1,fs2_fs1)
       do k=2,npm-1
-        fn2_fn1 = fn2_fn1 + (x(2    ,k) - x(1  ,k))*dp(k)
-        fs2_fs1 = fs2_fs1 + (x(ntm-1,k) - x(ntm,k))*dp(k)
+        fn2_fn1 = fn2_fn1 + (  diffusion_coef(1    ,k)     &
+                             + diffusion_coef(2    ,k))    &
+                           *(x(2    ,k) - x(1  ,k))*dp(k)
+        fs2_fs1 = fs2_fs1 + (  diffusion_coef(ntm-1,k)     &
+                             + diffusion_coef(ntm  ,k))    &
+                           *(x(ntm-1,k) - x(ntm,k))*dp(k)
       enddo
 !$omp end parallel do
 !
       do concurrent (k=1:npm)
-        y(  1,k) = d2t_j1*fn2_fn1
-        y(ntm,k) = d2t_jntm1*fs2_fs1
+        y(  1,k) = fn2_fn1*dt_i(  1)*dt_i(  1)*pi_i
+        y(ntm,k) = fs2_fs1*dt_i(ntm)*dt_i(ntm)*pi_i
       enddo
 !
 ! ****** Set the periodic boundary conditions.
@@ -4999,6 +5028,7 @@ subroutine read_input
       call defarg (GROUP_K ,'-v',' ',' ')
       call defarg (GROUP_A ,'initial_map_filename',' ',' ')
       call defarg (GROUP_A ,'output_map_root_filename',' ',' ')
+      call defarg (GROUP_KA,'-output_map_directory','output_maps','<dir>')
       call defarg (GROUP_KA,'-visc','0.','<val>')
       call defarg (GROUP_KA,'-diffusion_coef_filename','<none>','<file>')
       call defarg (GROUP_K,'-diffusion_coef_grid',' ',' ')
@@ -5015,15 +5045,18 @@ subroutine read_input
       call defarg (GROUP_KA,'-vpfile','<none>','<file>')
       call defarg (GROUP_KA,'-vpomega','0.','<val>')
       call defarg (GROUP_K,'-va',' ',' ')
+      call defarg (GROUP_K,'-strang',' ',' ')
       call defarg (GROUP_KA,'-dr','0','<val>')
       call defarg (GROUP_KA,'-mf','0','<val>')
       call defarg (GROUP_K,'-diff',' ',' ')
       call defarg (GROUP_K,'-flow',' ',' ')
+      call defarg (GROUP_K,'-flowpoleavg',' ',' ')
       call defarg (GROUP_KA,'-difftfac','1.','<val>')
       call defarg (GROUP_KA,'-diffpfac','1.','<val>')
       call defarg (GROUP_K,'-vrun',' ',' ')
       call defarg (GROUP_K,'-assimilate_data',' ',' ')
       call defarg (GROUP_KA ,'-assimilate_data_map_list_filename','<none>','<file>')
+      call defarg (GROUP_KA ,'-assimilate_data_map_root_dir','.','<dir>')
 !
 ! ****** Parse the command line.
 !
@@ -5096,15 +5129,22 @@ subroutine read_input
       call fetcharg ('-v',set,arg)
       verbose = set
 !
-! ****** Input file.
+! ****** Input.
 !
       call fetcharg ('initial_map_filename',set,arg)
       initial_map_filename = trim(arg)
 !
-! ****** Output file.
+! ****** Output.
 !
       call fetcharg ('output_map_root_filename',set,arg)
       output_map_root_filename = trim(arg)
+!
+      call fetcharg ('-output_map_directory',set,arg)
+      if (set) then
+        output_map_directory = trim(arg)
+      else
+        output_map_directory = 'output_maps'
+      end if
 !
       call fetcharg ('-omci',set,arg)
       output_map_idx_cadence = intval(arg,'-omci')
@@ -5207,26 +5247,20 @@ subroutine read_input
       call fetcharg ('-diffusion_subcycles',set,arg)
       diffusion_subcycles = intval(arg,'-diffusion_subcycles')
 !
-! ****** Error-check parameters and set derived parameters.
-!
-! ****** Set the dimensions along which to filter.
+      call fetcharg ('-strang',set,arg)
+      if (set) strang_splitting = .true.
 !
       call fetcharg ('-diff',set,arg)
       if (set) advance_diffusion = .true.
-
+!
       call fetcharg ('-flow',set,arg)
       if (set) advance_flow = .true.
 !
+      call fetcharg ('-flowpoleavg',set,arg)
+      if (set) advect_poles = .false.
+!
       call fetcharg ('-vrun',set,arg)
       validation_run = set
-!
-! ****** Dimensions along which to diffuse.
-!
-      call fetcharg ('-difftfac',set,arg)
-      if (set) diffusion_coef_t_fac = fpval(arg,'-difftfac')
-
-      call fetcharg ('-diffpfac',set,arg)
-      if (set) diffusion_coef_p_fac = fpval(arg,'-diffpfac')
 !
 ! ****** Data assimilation.
 !
@@ -5238,6 +5272,13 @@ subroutine read_input
         assimilate_data_map_list_filename = trim(arg)
       else
         assimilate_data_map_list_filename = ' '
+      end if
+!
+      call fetcharg ('-assimilate_data_map_root_dir',set,arg)
+      if (set) then
+        assimilate_data_map_root_dir = trim(arg)
+      else
+        assimilate_data_map_root_dir = '.'
       end if
 !
 end subroutine
@@ -5253,7 +5294,7 @@ end subroutine
 !
 ! 11/01/2021, RC, Version 0.1.1:
 !   - Replaced all non-reduction OpenACC/MP loops with
-!     `do concurrent`.  This required alternative compiler
+!     `do concurrent`.  This requires alternative compiler
 !     flags to properly parallelize.  See build.sh for
 !     examples.
 !   - Merged sds and number_types modules/routines into main code.
@@ -5298,8 +5339,21 @@ end subroutine
 !     always at exact times.
 !   - Updated I/O routines, including adding a 3D reader.
 !   - Updated default of dt_max_increase_fac to 0.0 (disabled).
-!   - Updated text output of the run, including more information when 
+!   - Updated text output of the run, including more information when
 !     using the verbose "-v" flag.
+!
+! 04/07/2022, RC, Version 0.6.0:
+!   - Added option to use Strang splitting in ARDRA form.
+!     This will keep the accuracy second-order in time once
+!     the advection is updated to a higher-order scheme.
+!     To use, set "-strang" on the command line.
+!   - Added option to use simple pole averaging in advection.
+!     set -flowpoleavg to use.
+!   - Added -output_map_directory flag to set output directory.
+!   - Added -assimilate_data_map_root_dir flag to set the base
+!     directory for the input assimilation data.
+!   - Fixed polar diffusion coef.
+!   - Small robustness updates.
 !
 !-----------------------------------------------------------------------
 !

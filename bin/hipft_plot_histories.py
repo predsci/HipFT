@@ -60,12 +60,11 @@ def run(args):
 
   fig = plt.figure(num=None, figsize=(14, 7), dpi=120, facecolor=fc,frameon=True)
   ax = plt.gca()
-  h = plt.plot(time/24.0,(1e6)*flux_tot_s/(flux_tot_un),'k-',linewidth=lsz,markersize=mksz)
+  h = plt.plot(time/24.0,(1e2)*flux_tot_s/(flux_tot_un),'k-',linewidth=lsz,markersize=mksz)
   xmx = np.max(time/24.0)
   plt.xlim(xmin=0,xmax=xmx)
-  #plt.xticks((0, 4, 8, 12, 16, 20, 24, 28))
   plt.xlabel('Time (Days)', {'fontsize': fsize, 'color': tc})
-  plt.ylabel('Relative Flux Imbalance ($10^{-6}$)', {'fontsize': fsize, 'color': tc})
+  plt.ylabel('Relative Flux Imbalance ($10^{-2}$)', {'fontsize': fsize, 'color': tc})
   ax.tick_params(axis='y',labelsize=fsize)
   ax.tick_params(axis='x',labelsize=fsize)
   ax2 = ax.twinx()  
@@ -76,11 +75,28 @@ def run(args):
   ax.grid(zorder=0)
   plt.legend([h2[0],h1[0],h[0]],["Flux (+)","Flux (-)","Flux Imbalance"],loc='upper center',fontsize=fsize)
   fig.tight_layout()
-
   fig.savefig('history_flux.png', bbox_inches="tight", pad_inches=0, dpi=120, facecolor=fig.get_facecolor(), edgecolor=None)
-  fig.savefig('history_flux.eps', bbox_inches="tight", pad_inches=0, dpi=120, facecolor=fig.get_facecolor(), edgecolor=None)
-  
+  #fig.savefig('history_flux.eps', bbox_inches="tight", pad_inches=0, dpi=120, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
+  
+  
+  fig = plt.figure(num=None, figsize=(14, 7), dpi=120, facecolor=fc,frameon=True)
+  ax = plt.gca()
+  h = plt.plot(time/24.0,brmax,'b-',linewidth=lsz,markersize=mksz)
+  xmx = np.max(time/24.0)
+  plt.xlim(xmin=0,xmax=xmx)
+  plt.xlabel('Time (Days)', {'fontsize': fsize, 'color': tc})
+  plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
+  ax.tick_params(axis='y',labelsize=fsize)
+  ax.tick_params(axis='x',labelsize=fsize)
+  h1 = plt.plot(time/24.0,-brmin,'r-',linewidth=lsz,markersize=mksz)
+  ax.grid(zorder=0)
+  plt.legend([h[0],h1[0]],["max(Br)","-min(Br)"],loc='upper center',fontsize=fsize)
+  fig.tight_layout()
+  fig.savefig('history_br.png', bbox_inches="tight", dpi=120, facecolor=fig.get_facecolor(), edgecolor=None)
+  #fig.savefig('history_flux.eps', bbox_inches="tight", dpi=120, facecolor=fig.get_facecolor(), edgecolor=None)
+  plt.close('all')
+  
   
   
   exit()
