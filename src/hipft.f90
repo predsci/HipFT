@@ -45,8 +45,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.6.0'
-      character(*), parameter :: cdate='04/07/2022'
+      character(*), parameter :: cvers='0.7.0'
+      character(*), parameter :: cdate='04/11/2022'
 !
 end module
 !#######################################################################
@@ -98,6 +98,9 @@ module constants
       real(r_typ), parameter :: twentyfour=24.0_r_typ
       real(r_typ), parameter :: twentyfive=25.0_r_typ
       real(r_typ), parameter :: fivehundred_i=0.002_r_typ
+      real(r_typ), parameter :: three_quarter=0.75_r_typ
+      real(r_typ), parameter :: two_third=0.66666666666666666_r_typ
+      real(r_typ), parameter :: third=0.33333333333333333_r_typ
 !
       real(r_typ), parameter :: pi=3.1415926535897932_r_typ
       real(r_typ), parameter :: pi_i=0.3183098861837907_r_typ
@@ -173,7 +176,7 @@ module input_parameters
 !
 ! ****** Algorithm options.
 !
-      logical :: strang_splitting = .false.
+      logical :: strang_splitting = .true.
 !
 !-----------------------------------------------------------------------
 !
@@ -204,13 +207,12 @@ module input_parameters
       integer :: flow_mf_model = 0
 !
 ! ****** Algorithm options.
-! ****** 1: Upwind. Can set to central differencing with upwind=0.
+!        Can set upwind to central differencing by also setting UPWIND=0.
+! ****** 1: FE+Upwind.
+! ****** 2: RK3TVD+Upwind.
+! ****** 3: RK3TVD+WENO3.
 !
-      integer :: flow_num_method = 1
-!
-! ****** Use finite volume polar advection. If false, use simple averaging.
-!
-      logical :: advect_poles = .true.
+      integer :: flow_num_method = 2
 !
 ! ****** Upwind coefficient.
 !
@@ -2252,7 +2254,7 @@ subroutine flux_transport_step
 !-----------------------------------------------------------------------
 !
 ! ****** Evolve the field by one time step.
-! ****** We use Strang splitting in a ARDRA sequence.
+! ****** Strang splitting is in a ARDRA sequence.
 !
 !-----------------------------------------------------------------------
 !
@@ -2274,17 +2276,19 @@ subroutine flux_transport_step
       t1 = wtime()
 !
       dtime_local = dtime_global
-      dtime_local_half = dtime_local/two
 !
-      if (strang_splitting) then
-        if (advance_flow)      call advection_step (dtime_local_half)
-        if (advance_source)    call source_step    (dtime_local_half)
-        if (advance_diffusion) call diffusion_step (dtime_local)
-        if (advance_source)    call source_step    (dtime_local_half)
-        if (advance_flow)      call advection_step (dtime_local_half)
+! ****** If only advancing flow or diffusion, no need to split.
+!
+      if (strang_splitting.and.advance_flow.and.advance_diffusion) then
+        dtime_local_half = dtime_local*half
+        call advection_step (dtime_local_half)
+!        if (advance_source)    call source_step    (dtime_local_half)
+        call diffusion_step (dtime_local)
+!        if (advance_source)    call source_step    (dtime_local_half)
+        call advection_step (dtime_local_half)
       else
         if (advance_flow)      call advection_step (dtime_local)
-        if (advance_source)    call source_step    (dtime_local)
+!        if (advance_source)    call source_step    (dtime_local)
         if (advance_diffusion) call diffusion_step (dtime_local)
       end if
 !
@@ -2320,7 +2324,13 @@ subroutine advection_step (dtime_local)
 !
       dtime_advection_used = dtime_local
 !
-      if (flow_num_method.eq.1) call advection_step_upwind (dtime_local)
+      if (flow_num_method.eq.1) then
+        call advection_step_fe_upwind (dtime_local)
+      elseif (flow_num_method.eq.2) then
+        call advection_step_rk3tvd_upwind (dtime_local)
+      elseif (flow_num_method.eq.3) then
+        call advection_step_rk3tvd_weno3 (dtime_local)
+      end if
 !
       wtime_flux_transport_advection = wtime_flux_transport_advection &
                                        + (wtime() - t1)
@@ -4341,9 +4351,9 @@ subroutine add_flow_differential_rotation_aft
 !
 ! ****** Parameters in m/s
 !
-      real(r_typ) :: t0 = 46.0_r_typ
-      real(r_typ) :: t2 = -262.0_r_typ
-      real(r_typ) :: t4 = -379.0_r_typ
+      real(r_typ), parameter :: t0 = 46.0_r_typ
+      real(r_typ), parameter :: t2 = -262.0_r_typ
+      real(r_typ), parameter :: t4 = -379.0_r_typ
 !
 !-----------------------------------------------------------------------
 !
@@ -4379,9 +4389,9 @@ subroutine add_flow_meridianal_aft
 !
 ! ****** Paramters in m/s
 !
-      real(r_typ) :: s1 = 22.0_r_typ
-      real(r_typ) :: s3 = 11.0_r_typ
-      real(r_typ) :: s5 = -28.0_r_typ
+      real(r_typ), parameter :: s1 = 22.0_r_typ
+      real(r_typ), parameter :: s3 = 11.0_r_typ
+      real(r_typ), parameter :: s5 = -28.0_r_typ
 !
 !-----------------------------------------------------------------------
 !
@@ -4501,12 +4511,12 @@ subroutine diffusion_step_euler_cd (dtime_local)
 !
 end subroutine
 !#######################################################################
-subroutine advection_step_upwind (dtime_local)
+subroutine advection_step_fe_upwind (dtime_local)
 !
 !-----------------------------------------------------------------------
 !
-! ****** Advance the field with advection by the time-step DT
-! ****** using the upwind method.
+! ****** Advance the field with advection by the time-step dtime_local
+! ****** using the Foward-Euler+Upwind method.
 !
 !-----------------------------------------------------------------------
 !
@@ -4574,7 +4584,166 @@ subroutine advection_step_upwind (dtime_local)
       fn = zero
       fs = zero
 !
-      if (advect_poles) then
+!$omp parallel do default(shared) reduction(+:fn,fs)
+!$acc parallel loop default(present) reduction(+:fn,fs)
+      do k=2,np-1
+        fn = fn + flux_t(   2,k)*dph(k)
+        fs = fs + flux_t(ntm1,k)*dph(k)
+      enddo
+!$omp end parallel do
+! ****** Note that the south pole needs a sign change since the
+! ****** theta flux direction is reversed.
+      do concurrent (k=2:npm-1)
+        f(  1,k) = f(  1,k) - fn*dtime_local*two*pi_i*dt_i(  1)
+        f(ntm,k) = f(ntm,k) + fs*dtime_local*two*pi_i*dt_i(ntm)
+      end do
+!
+! ****** Set periodic boundary condition.
+!
+      call set_periodic_bc_2d (f,ntm,npm)
+!
+!$acc exit data delete(flux_t,flux_p)
+      deallocate (flux_t)
+      deallocate (flux_p)
+!
+end subroutine
+!#######################################################################
+subroutine advection_step_rk3tvd_upwind (dtime_local)
+!
+!-----------------------------------------------------------------------
+!
+! ****** Advance the field with advection by the time-step dtime_local
+! ****** using the RK3TVD+Upwind method.
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use input_parameters
+      use constants
+      use mesh
+      use fields
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      real(r_typ), INTENT(IN) :: dtime_local
+!
+!-----------------------------------------------------------------------
+!
+      integer :: j,k
+      real(r_typ), dimension(:,:), allocatable :: f1,f2,aop
+!
+!-----------------------------------------------------------------------
+!
+! ****** Allocate temporary arrays for RK.
+!
+      allocate (f1(ntm,npm))
+      allocate (f2(ntm,npm))
+      allocate (aop(ntm,npm))
+!$acc enter data create(f1,f2,aop)
+!
+      call advection_operator_upwind (f,aop)
+      do concurrent (k=1:npm,j=1:ntm)
+        f1(j,k) = f(j,k) - dtime_local*aop(j,k)
+      enddo
+!
+      call advection_operator_upwind (f1,aop)
+      do concurrent (k=1:npm,j=1:ntm)
+        f2(j,k) = three_quarter*f(j,k) + quarter*f1(j,k) &
+                                       - quarter*dtime_local*aop(j,k)
+      enddo
+!
+      call advection_operator_upwind (f2,aop)
+      do concurrent (k=1:npm,j=1:ntm)
+        f(j,k) = third*f(j,k) + two_third*f2(j,k) &
+                              - two_third*dtime_local*aop(j,k)
+      enddo
+!
+! ****** Deallocate temporary arrays.
+!
+!$acc exit data delete(f1,f2,aop)
+      deallocate (f1)
+      deallocate (f2)
+      deallocate (aop)
+!
+end subroutine
+!#######################################################################
+subroutine advection_operator_upwind (ftemp,aop)
+!
+!-----------------------------------------------------------------------
+!
+! ****** Compute DIV(v*f) using Upwinding
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use input_parameters
+      use constants
+      use mesh
+      use fields, ONLY: vt,vp
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      real(r_typ), dimension(ntm,npm), INTENT(IN) :: ftemp
+      real(r_typ), dimension(ntm,npm), INTENT(OUT) :: aop
+!
+!-----------------------------------------------------------------------
+!
+      integer :: j,k
+      real(r_typ) :: cct,ccp,fn,fs
+      real(r_typ), dimension(:,:), allocatable :: flux_t,flux_p
+!
+!-----------------------------------------------------------------------
+!
+      allocate (flux_t(nt,np))
+      allocate (flux_p(nt,np))
+!$acc enter data create(flux_t,flux_p)
+!
+      do concurrent (k=1:np,j=1:nt)
+        flux_t(j,k) = zero
+        flux_p(j,k) = zero
+      enddo
+!
+! ****** Compute the fluxes at the cell faces.
+!
+      do concurrent (k=2:npm1,j=2:ntm1)
+        cct = sign(upwind,vt(j,k))
+        ccp = sign(upwind,vp(j,k))
+        flux_t(j,k) = vt(j,k)*half*((one - cct)*ftemp(j  ,k  ) + &
+                                    (one + cct)*ftemp(j-1,k  ))
+        flux_p(j,k) = vp(j,k)*half*((one - ccp)*ftemp(j  ,k  ) + &
+                                    (one + ccp)*ftemp(j  ,k-1))
+      enddo
+!
+! ****** Set periodicity of the flux (seam).
+!
+      call set_periodic_bc_2d (flux_t,nt,np)
+      call set_periodic_bc_2d (flux_p,nt,np)
+!
+! ****** Advect F by one time step.
+!
+      do concurrent (k=2:npm-1,j=2:ntm-1)
+        aop(j,k) = (  (  sth(j+1)*flux_t(j+1,k)  &
+                       - sth(j  )*flux_t(j  ,k)  &
+                      )*st_i(j)*dt_i(j)          &
+                    + (           flux_p(j,k+1)  &
+                       -          flux_p(j,k  )  &
+                      )*st_i(j)*dp_i(k)          &
+                   )
+      enddo
+!
+! ****** Get the advection operator at the poles.
+!
+      fn = zero
+      fs = zero
+!
 !$omp parallel do default(shared) reduction(+:fn,fs)
 !$acc parallel loop default(present) reduction(+:fn,fs)
         do k=2,np-1
@@ -4585,30 +4754,45 @@ subroutine advection_step_upwind (dtime_local)
 ! ****** Note that the south pole needs a sign change since the
 ! ****** theta flux direction is reversed.
         do concurrent (k=2:npm-1)
-          f(  1,k) = f(  1,k) - fn*dtime_local*two*pi_i*dt_i(  1)
-          f(ntm,k) = f(ntm,k) + fs*dtime_local*two*pi_i*dt_i(ntm)
+          aop(  1,k) = fn*two*pi_i*dt_i(  1)
+          aop(ntm,k) = -fs*two*pi_i*dt_i(ntm)
         end do
-      else
-!$omp parallel do default(shared) reduction(+:fn,fs)
-!$acc parallel loop default(present) reduction(+:fn,fs)
-        do k=2,npm-1
-          fn = fn + f(    2,k)*dp(k)
-          fs = fs + f(ntm-1,k)*dp(k)
-        enddo
-!$omp end parallel do
-        do concurrent (k=2:npm-1)
-          f(  1,k) = fn*twopi_i
-          f(ntm,k) = fs*twopi_i
-        end do
-      end if
 !
 ! ****** Set periodic boundary condition.
 !
-      call set_periodic_bc_2d (f,ntm,npm)
+      call set_periodic_bc_2d (aop,ntm,npm)
 !
 !$acc exit data delete(flux_t,flux_p)
       deallocate (flux_t)
       deallocate (flux_p)
+!
+end subroutine
+!#######################################################################
+subroutine advection_step_rk3tvd_weno3 (dtime_local)
+!
+!-----------------------------------------------------------------------
+!
+! ****** Advance the field with advection by the time-step dtime_local
+! ****** using the RK3TVD+WENO3 method.
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use input_parameters
+      use constants
+      use mesh
+      use fields
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      real(r_typ), INTENT(IN) :: dtime_local
+!
+!-----------------------------------------------------------------------
+!
 !
 end subroutine
 !#######################################################################
@@ -4635,7 +4819,8 @@ subroutine ax (x,y)
 !
       integer :: j,k
       real(r_typ) :: fn2_fn1,fs2_fs1
-      real(r_typ), dimension(ntm,npm) :: x,y
+      real(r_typ), dimension(ntm,npm), INTENT(IN) :: x
+      real(r_typ), dimension(ntm,npm), INTENT(OUT) :: y
 !
 !-----------------------------------------------------------------------
 !
@@ -5045,12 +5230,12 @@ subroutine read_input
       call defarg (GROUP_KA,'-vpfile','<none>','<file>')
       call defarg (GROUP_KA,'-vpomega','0.','<val>')
       call defarg (GROUP_K,'-va',' ',' ')
-      call defarg (GROUP_K,'-strang',' ',' ')
+      call defarg (GROUP_K,'-nostrang',' ',' ')
       call defarg (GROUP_KA,'-dr','0','<val>')
       call defarg (GROUP_KA,'-mf','0','<val>')
       call defarg (GROUP_K,'-diff',' ',' ')
       call defarg (GROUP_K,'-flow',' ',' ')
-      call defarg (GROUP_K,'-flowpoleavg',' ',' ')
+      call defarg (GROUP_KA,'-fm','2','<val>')
       call defarg (GROUP_KA,'-difftfac','1.','<val>')
       call defarg (GROUP_KA,'-diffpfac','1.','<val>')
       call defarg (GROUP_K,'-vrun',' ',' ')
@@ -5247,8 +5432,8 @@ subroutine read_input
       call fetcharg ('-diffusion_subcycles',set,arg)
       diffusion_subcycles = intval(arg,'-diffusion_subcycles')
 !
-      call fetcharg ('-strang',set,arg)
-      if (set) strang_splitting = .true.
+      call fetcharg ('-nostrang',set,arg)
+      if (set) strang_splitting = .false.
 !
       call fetcharg ('-diff',set,arg)
       if (set) advance_diffusion = .true.
@@ -5256,8 +5441,8 @@ subroutine read_input
       call fetcharg ('-flow',set,arg)
       if (set) advance_flow = .true.
 !
-      call fetcharg ('-flowpoleavg',set,arg)
-      if (set) advect_poles = .false.
+      call fetcharg ('-fm',set,arg)
+      if (set) flow_num_method = intval(arg,'-fm')
 !
       call fetcharg ('-vrun',set,arg)
       validation_run = set
@@ -5354,6 +5539,16 @@ end subroutine
 !     directory for the input assimilation data.
 !   - Fixed polar diffusion coef.
 !   - Small robustness updates.
+!
+! 04/11/2022, RC, Version 0.7.0:
+!   - Added the RK3TVD time-stepping scheme for advection.
+!     This is now the default.
+!   - Made the default splitting method to be Strang splitting.
+!     The "-strang" input flag is now "-nostrang" and disables
+!     strang splitting.
+!   - Added "-fm" input flag to set advection numerical method.
+!     1) FE+UW  2) RK3TVD+UW  3) RK3TVD+WENO3 (coming soon).
+!   - Removed "-flowpoleavg".  No use case.
 !
 !-----------------------------------------------------------------------
 !
