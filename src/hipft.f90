@@ -45,8 +45,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.7.0'
-      character(*), parameter :: cdate='04/11/2022'
+      character(*), parameter :: cvers='0.7.1'
+      character(*), parameter :: cdate='04/29/2022'
 !
 end module
 !#######################################################################
@@ -709,8 +709,8 @@ subroutine setup
 ! ****** Allocate flow arrays.
 !
       if (advance_flow) then
-        allocate (vt(nt,np))
-        allocate (vp(nt,np))
+        allocate (vt(nt,npm))
+        allocate (vp(ntm,np))
         vt(:,:) = 0.
         vp(:,:) = 0.
 !$acc enter data copyin(vt,vp)
@@ -724,7 +724,11 @@ subroutine setup
 !
       call analysis_step
 !
-      output_current_map = .true.
+      if (output_map_idx_cadence .gt. 0 .or. &
+         output_map_time_cadence .gt. 0.0) then
+        output_current_map = .true.
+      end if 
+!
       call output_step
 !
       call write_welcome_message
@@ -1804,10 +1808,13 @@ subroutine update_flow
         timestep_flow_needs_updating = .true.
         timestep_needs_updating = .true.
 !
-        do concurrent (k=1:np,j=1:nt)
+        do concurrent (k=1:npm,j=1:nt)
           vt(j,k) = 0.
-          vp(j,k) = 0.
         end do
+!        
+        do concurrent (k=1:np,j=1:ntm)
+          vp(j,k) = 0.
+        end do        
 !
 ! ***** Add in flow from file (this should save current state and check
 !       if a new one is needed/interp to avoid tons of I/O.
@@ -1829,8 +1836,8 @@ subroutine update_flow
 ! ***** Add in constant angular velocity (rigid rotation)
 !
         if (flow_vp_rigid_omega.gt.0.) then
-          do concurrent (k=1:np,j=1:nt)
-            vp(j,k) = vp(j,k)+flow_vp_rigid_omega*km_s_to_rs_hr*sth(j)
+          do concurrent (k=1:np,j=1:ntm)
+            vp(j,k) = vp(j,k)+flow_vp_rigid_omega*km_s_to_rs_hr*st(j)
           end do
         endif
 !
@@ -1838,15 +1845,17 @@ subroutine update_flow
 !
         if (flow_attenuate) then
 !
-          do concurrent (k=2:np-1,j=2:nt-1)
 !
-! ****** Interpolate f at half-half (vel) mesh point.
+! ****** Need to interpolate f at half-mesh point.
 !
-            br_avg = quarter*(f(j-1,k) + f(j,k-1) + f(j,k) + f(j-1,k-1))
-!
+          do concurrent (k=2:npm-1,j=2:nt-1)
+            br_avg = half*(f(j-1,k) + f(j,k))
             vt(j,k) = vt(j,k)*(one - tanh(abs(br_avg)*fivehundred_i))
+          end do
+          
+          do concurrent (k=2:np-1,j=2:ntm-1)
+            br_avg = half*(f(j,k-1) + f(j,k))
             vp(j,k) = vp(j,k)*(one - tanh(abs(br_avg)*fivehundred_i))
-!
           end do
 !
 ! ****** Set poles. Maybe not needed since field is weak at pole?
@@ -1856,14 +1865,17 @@ subroutine update_flow
           vp_npole = 0.
           vp_spole = 0.
 !
-!$acc parallel loop present(vt,vp) &
-!$acc                  reduction(+:vt_npole,vt_spole,vp_npole,vp_spole)
-          do k=2,npm1
-            vt_npole = vt_npole + vt(   2,k)*dph(k)
-            vt_spole = vt_spole + vt(ntm1,k)*dph(k)
-            vp_npole = vp_npole + vp(   2,k)*dph(k)
-            vp_spole = vp_spole + vp(ntm1,k)*dph(k)
+!$acc parallel loop present(vt) reduction(+:vt_npole,vt_spole)
+          do k=2,npm-1
+            vt_npole = vt_npole + vt(   2,k)*dp(k)
+            vt_spole = vt_spole + vt(ntm1,k)*dp(k)
           enddo
+!
+!$acc parallel loop present(vp) reduction(+:vp_npole,vp_spole)
+          do k=2,npm1
+            vp_npole = vp_npole + vp(    2,k)*dph(k)
+            vp_spole = vp_spole + vp(ntm-1,k)*dph(k)
+          enddo  
 !
           vt_npole = vt_npole*twopi_i
           vt_spole = vt_spole*twopi_i
@@ -1881,17 +1893,20 @@ subroutine update_flow
 !
 ! ****** Now set the pole:
 !
-          do concurrent (k=1:np)
+          do concurrent (k=1:npm)
             vt( 1,k) = two*vt_spole-vt(   2,k)
             vt(nt,k) = two*vt_spole-vt(ntm1,k)
-            vp( 1,k) = two*vp_spole-vp(   2,k)
-            vp(nt,k) = two*vp_spole-vp(ntm1,k)
           end do
+!
+          do concurrent (k=1:np)
+            vp(  1,k) = two*vp_spole-vp(    2,k)
+            vp(ntm,k) = two*vp_spole-vp(ntm-1,k)
+          end do  
 !
 ! ****** Set periodicity
 !
-          call set_periodic_bc_2d (vt,nt,np)
-          call set_periodic_bc_2d (vp,nt,np)
+          call set_periodic_bc_2d (vt,nt,npm)
+          call set_periodic_bc_2d (vp,ntm,np)
 !
 ! ****** Since this needs to be done each timestep as Br changes,
 ! ****** the full velocity profile needs to be reloaded and
@@ -2604,12 +2619,25 @@ subroutine load_diffusion_matrix
 ! ****** Set coef for internal points and phi boundary point at k=1.
 !
       do concurrent (j=2:ntm-1,k=2:npm-1)
-        coef(j,k,1)=diffusion_coef(j  ,k  )*dph_i(k  )*dp_i(k)*st_i(j)*st_i(j)
-        coef(j,k,2)=diffusion_coef(j  ,k  )*dth_i(j  )*dt_i(j)*st_i(j)*sth(j  )
-        coef(j,k,4)=diffusion_coef(j+1,k  )*dth_i(j+1)*dt_i(j)*st_i(j)*sth(j+1)
-        coef(j,k,5)=diffusion_coef(j  ,k+1)*dph_i(k+1)*dp_i(k)*st_i(j)*st_i(j)
+!
+        coef(j,k,1) = half*(diffusion_coef(j  ,k  )  &
+                          + diffusion_coef(j+1,k  )) &
+                     *dph_i(k  )*dp_i(k)*st_i(j)*st_i(j)
+!
+        coef(j,k,2) = half*(diffusion_coef(j  ,k  )  &
+                          + diffusion_coef(j  ,k+1)) &
+                     *dth_i(j  )*dt_i(j)*st_i(j)*sth(j  )
+!
+        coef(j,k,4) = half*(diffusion_coef(j+1,k  )  &
+                          + diffusion_coef(j+1,k+1)) &
+                     *dth_i(j+1)*dt_i(j)*st_i(j)*sth(j+1)
+!
+        coef(j,k,5) = half*(diffusion_coef(j  ,k+1)  &
+                          + diffusion_coef(j+1,k+1)) &
+                     *dph_i(k+1)*dp_i(k)*st_i(j)*st_i(j)
 !
         coef(j,k,3)=-(coef(j,k,1)+coef(j,k,2)+coef(j,k,4)+coef(j,k,5))
+!
       enddo
 !
 end subroutine
@@ -4201,9 +4229,9 @@ subroutine load_vt
         call read_2d_file (flow_vt_filename,nfp,nft,sf,pf,tf,ierr)
         sf(:,:) = TRANSPOSE(sf(:,:))
 !
-! ****** Interpolate vt onto the half mesh (th,ph).
+! ****** Interpolate vt onto the half mesh (th,p).
 !
-        call interp2d (nft,nfp,tf,pf,sf,nt,np,th,ph,vt,ierr)
+        call interp2d (nft,nfp,tf,pf,sf,nt,npm,th,p,vt,ierr)
 ! ****** Error exit: interpolation error.
         if (ierr.ne.0) then
           write (*,*)
@@ -4216,16 +4244,16 @@ subroutine load_vt
 !
 ! ****** Enforce periodicity.
 !
-        vt(:, 1)=vt(:,npm1)
-        vt(:,np)=vt(:,   2)
+        vt(:,  1)=vt(:,npm-1)
+        vt(:,npm)=vt(:,    2)
 !
 ! ****** Set the pole value to only have an m=0 component.
 !
         fn1=0.
         fs1=0.
-        do k=2,npm1
-          fn1=fn1+vt(   2,k)*dph(k)
-          fs1=fs1+vt(ntm1,k)*dph(k)
+        do k=2,npm-1
+          fn1=fn1+vt(   2,k)*dp(k)
+          fs1=fs1+vt(ntm1,k)*dp(k)
         enddo
         fn1=fn1*twopi_i
         fs1=fs1*twopi_i
@@ -4284,9 +4312,9 @@ subroutine load_vp
         call read_2d_file (flow_vp_filename,nfp,nft,sf,pf,tf,ierr)
         sf(:,:) = TRANSPOSE(sf(:,:))
 !
-! ****** Interpolate vp onto the half mesh (th,ph).
+! ****** Interpolate vp onto the correct mesh (t,ph).
 !
-        call interp2d (nft,nfp,tf,pf,sf,nt,np,th,ph,vp,ierr)
+        call interp2d (nft,nfp,tf,pf,sf,ntm,np,t,ph,vp,ierr)
 !
         if (ierr.ne.0) then
           write (*,*)
@@ -4307,14 +4335,14 @@ subroutine load_vp
         fn1=0.
         fs1=0.
         do k=2,npm1
-          fn1=fn1+vp(   2,k)*dph(k)
-          fs1=fs1+vp(ntm1,k)*dph(k)
+          fn1=fn1+vp(    2,k)*dph(k)
+          fs1=fs1+vp(ntm-1,k)*dph(k)
         enddo
         fn1=fn1*twopi_i
         fs1=fs1*twopi_i
 !
-        vp( 1,:)=two*fn1-vp(   2,:)
-        vp(nt,:)=two*fs1-vp(ntm1,:)
+        vp(  1,:)=two*fn1-vp(     2,:)
+        vp(ntm,:)=two*fs1-vp(ntm- 1,:)
 !
         if (verbose) then
           write (*,*)
@@ -4361,9 +4389,9 @@ subroutine add_flow_differential_rotation_aft
 !
 !-----------------------------------------------------------------------
 !
-      do concurrent (k=1:np,j=1:nt)
-        vp(j,k)=vp(j,k) + &
-                m_s_to_rs_hr*sth(j)*(t0 + t2*cth(j)**2 + t4*cth(j)**4)
+      do concurrent (k=1:np,j=1:ntm)
+        vp(j,k) = vp(j,k) + &
+                  m_s_to_rs_hr*st(j)*(t0 + t2*ct(j)**2 + t4*ct(j)**4)
       enddo
 !
 end subroutine
@@ -4399,9 +4427,10 @@ subroutine add_flow_meridianal_aft
 !
 !-----------------------------------------------------------------------
 !
-      do concurrent (k=1:np,j=1:nt)
-        vt(j,k) = vt(j,k) - m_s_to_rs_hr*sth(j)*               &
-                 ( s1*cth(j) + s3*cth(j)**3 + s5*cth(j)**5 )
+      do concurrent (k=1:npm,j=1:nt)
+        vt(j,k) = vt(j,k) -            &
+                  m_s_to_rs_hr*sth(j)* &
+                  (s1*cth(j) + s3*cth(j)**3 + s5*cth(j)**5)
       enddo
 !
 end subroutine
@@ -4410,7 +4439,7 @@ subroutine get_flow_dtmax (dtmaxflow)
 !
 !-----------------------------------------------------------------------
 !
-! ****** Get the maximum time step that can be used for stable
+! ****** Get the maximum time step tha\t can be used for stable
 ! ****** (explicit) advection.
 !
 !-----------------------------------------------------------------------
@@ -4441,9 +4470,10 @@ subroutine get_flow_dtmax (dtmaxflow)
 !$omp private(kdotv,deltat)
 !$acc parallel loop default(present) collapse(2) reduction(min:dtmax) &
 !$acc private(kdotv,deltat)
-      do k=2,npm1
-        do j=2,ntm1
-          kdotv = ABS(vt(j,k))*dt_i(j) + ABS(vp(j,k))*sth_i(j)*dph_i(k)
+      do k=2,npm-1
+        do j=2,ntm-1
+          kdotv = MAX(ABS(vt(j,k)),ABS(vt(j+1,k)))*dt_i(j) &
+                + MAX(ABS(vp(j,k)),ABS(vp(j,k+1)))*st_i(j)*dp_i(k)
           deltat = one/MAX(kdotv,small_value)
           dtmax = MIN(dtmax,deltat)
         enddo
@@ -4544,28 +4574,34 @@ subroutine advection_step_fe_upwind (dtime_local)
 !
 ! ****** Allocate temporary flux arrays on the half-mesh.
 !
-      allocate (flux_t(nt,np))
-      allocate (flux_p(nt,np))
+      allocate (flux_t(nt,npm))
+      allocate (flux_p(ntm,np))
 !$acc enter data create(flux_t,flux_p)
 !
-      do concurrent (k=1:np,j=1:nt)
-        flux_t(j,k)=0.
-        flux_p(j,k)=0.
+      do concurrent (k=1:npm,j=1:nt)
+        flux_t(j,k) = zero
       enddo
+!
+      do concurrent (k=1:np,j=1:ntm)
+        flux_p(j,k) = zero
+      enddo      
 !
 ! ****** Compute the fluxes at the cell faces.
 !
-      do concurrent (k=2:npm1,j=2:ntm1)
+      do concurrent (k=2:npm-1,j=2:ntm1)
         cct=sign(upwind,vt(j,k))
-        ccp=sign(upwind,vp(j,k))
         flux_t(j,k)=vt(j,k)*half*((one-cct)*f(j,k)+(one+cct)*f(j-1,k))
+      enddo
+!
+      do concurrent (k=2:npm1,j=2:ntm-1)
+        ccp=sign(upwind,vp(j,k))
         flux_p(j,k)=vp(j,k)*half*((one-ccp)*f(j,k)+(one+ccp)*f(j,k-1))
       enddo
 !
 ! ****** Set periodicity of the flux (seam).
 !
-      call set_periodic_bc_2d (flux_t,nt,np)
-      call set_periodic_bc_2d (flux_p,nt,np)
+      call set_periodic_bc_2d (flux_t,nt,npm)
+      call set_periodic_bc_2d (flux_p,ntm,np)
 !
 ! ****** Advect F by one time step.
 !
@@ -4586,9 +4622,9 @@ subroutine advection_step_fe_upwind (dtime_local)
 !
 !$omp parallel do default(shared) reduction(+:fn,fs)
 !$acc parallel loop default(present) reduction(+:fn,fs)
-      do k=2,np-1
-        fn = fn + flux_t(   2,k)*dph(k)
-        fs = fs + flux_t(ntm1,k)*dph(k)
+      do k=2,npm-1
+        fn = fn + flux_t(   2,k)*dp(k)
+        fs = fs + flux_t(ntm1,k)*dp(k)
       enddo
 !$omp end parallel do
 ! ****** Note that the south pole needs a sign change since the
@@ -4702,32 +4738,36 @@ subroutine advection_operator_upwind (ftemp,aop)
 !
 !-----------------------------------------------------------------------
 !
-      allocate (flux_t(nt,np))
-      allocate (flux_p(nt,np))
+      allocate (flux_t(nt,npm))
+      allocate (flux_p(ntm,np))
 !$acc enter data create(flux_t,flux_p)
 !
-      do concurrent (k=1:np,j=1:nt)
+      do concurrent (k=1:npm,j=1:nt)
         flux_t(j,k) = zero
-        flux_p(j,k) = zero
       enddo
+!
+      do concurrent (k=1:np,j=1:ntm)
+        flux_p(j,k) = zero
+      enddo    
 !
 ! ****** Compute the fluxes at the cell faces.
 !
-      do concurrent (k=2:npm1,j=2:ntm1)
-        cct = sign(upwind,vt(j,k))
-        ccp = sign(upwind,vp(j,k))
-        flux_t(j,k) = vt(j,k)*half*((one - cct)*ftemp(j  ,k  ) + &
-                                    (one + cct)*ftemp(j-1,k  ))
-        flux_p(j,k) = vp(j,k)*half*((one - ccp)*ftemp(j  ,k  ) + &
-                                    (one + ccp)*ftemp(j  ,k-1))
+      do concurrent (k=2:npm-1,j=2:ntm1)
+        cct=sign(upwind,vt(j,k))
+        flux_t(j,k)=vt(j,k)*half*((one-cct)*ftemp(j,k)+(one+cct)*ftemp(j-1,k))
+      enddo
+!
+      do concurrent (k=2:npm1,j=2:ntm-1)
+        ccp=sign(upwind,vp(j,k))
+        flux_p(j,k)=vp(j,k)*half*((one-ccp)*ftemp(j,k)+(one+ccp)*ftemp(j,k-1))
       enddo
 !
 ! ****** Set periodicity of the flux (seam).
 !
-      call set_periodic_bc_2d (flux_t,nt,np)
-      call set_periodic_bc_2d (flux_p,nt,np)
+      call set_periodic_bc_2d (flux_t,nt,npm)
+      call set_periodic_bc_2d (flux_p,ntm,np)
 !
-! ****** Advect F by one time step.
+! ****** Compute advection operator F.
 !
       do concurrent (k=2:npm-1,j=2:ntm-1)
         aop(j,k) = (  (  sth(j+1)*flux_t(j+1,k)  &
@@ -4746,9 +4786,9 @@ subroutine advection_operator_upwind (ftemp,aop)
 !
 !$omp parallel do default(shared) reduction(+:fn,fs)
 !$acc parallel loop default(present) reduction(+:fn,fs)
-        do k=2,np-1
-          fn = fn + flux_t(   2,k)*dph(k)
-          fs = fs + flux_t(ntm1,k)*dph(k)
+        do k=2,npm-1
+          fn = fn + flux_t(   2,k)*dp(k)
+          fs = fs + flux_t(ntm1,k)*dp(k)
         enddo
 !$omp end parallel do
 ! ****** Note that the south pole needs a sign change since the
@@ -4849,8 +4889,8 @@ subroutine ax (x,y)
         fn2_fn1 = fn2_fn1 + (  diffusion_coef(1    ,k)     &
                              + diffusion_coef(2    ,k))    &
                            *(x(2    ,k) - x(1  ,k))*dp(k)
-        fs2_fs1 = fs2_fs1 + (  diffusion_coef(ntm-1,k)     &
-                             + diffusion_coef(ntm  ,k))    &
+        fs2_fs1 = fs2_fs1 + (  diffusion_coef(nt-1,k)     &
+                             + diffusion_coef(nt  ,k))    &
                            *(x(ntm-1,k) - x(ntm,k))*dp(k)
       enddo
 !$omp end parallel do
@@ -5322,7 +5362,11 @@ subroutine read_input
 ! ****** Output.
 !
       call fetcharg ('output_map_root_filename',set,arg)
-      output_map_root_filename = trim(arg)
+      if (set) then
+        output_map_root_filename = trim(arg)
+      else
+        output_map_root_filename = '.'
+      end if      
 !
       call fetcharg ('-output_map_directory',set,arg)
       if (set) then
@@ -5550,6 +5594,13 @@ end subroutine
 !     1) FE+UW  2) RK3TVD+UW  3) RK3TVD+WENO3 (coming soon).
 !   - Removed "-flowpoleavg".  No use case.
 !
+! 04/29/2022, RC, Version 0.7.1:
+!   - BUG FIX: Changed staggering of the velocity.  Now, Vt is on the 
+!     theta half mesh and the phi main mesh, while Vp is on the 
+!     theta main mesh and the phi half mesh.  This avoids averaging in 
+!     the advection operator (which was not being done).
+!   - BUG FIX: The diffusion_coef was not being averaged.
+!   - BUG FIX: Fixed issue when not outputting time-dept I/O.
 !-----------------------------------------------------------------------
 !
 !#######################################################################
