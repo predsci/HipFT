@@ -12,6 +12,7 @@
 ! ****** HipFT: High Performance Flux Transport.
 !
 !     Authors:  Ronald M. Caplan
+!               Miko M. Stulajter
 !
 !     HipFT incorporates code from multiple tools developed by
 !     Zoran Mikic and Jon A. Linker.
@@ -45,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.7.1'
-      character(*), parameter :: cdate='04/29/2022'
+      character(*), parameter :: cvers='0.8.0'
+      character(*), parameter :: cdate='05/17/2022'
 !
 end module
 !#######################################################################
@@ -443,6 +444,44 @@ module sts
 !
 end module
 !#######################################################################
+module weno
+!
+      use number_types
+!
+      implicit none
+!
+      real(r_typ), dimension(:), allocatable :: D_C_CPt
+      real(r_typ), dimension(:), allocatable :: D_M_MCt
+      real(r_typ), dimension(:), allocatable :: D_C_MCt
+      real(r_typ), dimension(:), allocatable :: D_P_CPt
+      real(r_typ), dimension(:), allocatable :: D_M_Tt
+      real(r_typ), dimension(:), allocatable :: D_CP_Tt
+      real(r_typ), dimension(:), allocatable :: D_P_Tt
+      real(r_typ), dimension(:), allocatable :: D_MC_Tt
+!
+      real(r_typ), dimension(:), allocatable :: D_C_CPp
+      real(r_typ), dimension(:), allocatable :: D_M_MCp
+      real(r_typ), dimension(:), allocatable :: D_C_MCp
+      real(r_typ), dimension(:), allocatable :: D_P_CPp
+      real(r_typ), dimension(:), allocatable :: D_M_Tp
+      real(r_typ), dimension(:), allocatable :: D_CP_Tp
+      real(r_typ), dimension(:), allocatable :: D_P_Tp
+      real(r_typ), dimension(:), allocatable :: D_MC_Tp
+!
+      real(r_typ), dimension(:,:), allocatable :: alpha_t
+      real(r_typ), dimension(:,:), allocatable :: alpha_p
+!
+      real(r_typ), parameter :: weno_eps = 1.0e-6_r_typ
+!
+      real(r_typ) :: p0p,p1p,p0m,p1m
+      real(r_typ) :: B0p,B1p,B0m,B1m
+      real(r_typ) :: w0p,w1p,w0m,w1m
+      real(r_typ) :: wp_sum,wm_sum
+      real(r_typ) :: OM0p,OM1p,OM0m,OM1m
+      real(r_typ) :: up,um
+!
+end module
+!#######################################################################
 module matrix_storage
 !
       use number_types
@@ -727,7 +766,7 @@ subroutine setup
       if (output_map_idx_cadence .gt. 0 .or. &
          output_map_time_cadence .gt. 0.0) then
         output_current_map = .true.
-      end if 
+      end if
 !
       call output_step
 !
@@ -1256,6 +1295,8 @@ subroutine set_unchanging_quantities
 !
       if (advance_diffusion) call load_diffusion
 !
+      if (advance_flow.and.flow_num_method.eq.3) call load_weno
+!
 end subroutine
 !#######################################################################
 subroutine output_step
@@ -1370,10 +1411,6 @@ subroutine output_map
 !-----------------------------------------------------------------------
 !
       integer :: ierr = 0
-!
-! ****** File sequence number.
-!
-      integer*8, save :: idx = 0
 !
 ! ****** File name.
 !
@@ -1811,19 +1848,19 @@ subroutine update_flow
         do concurrent (k=1:npm,j=1:nt)
           vt(j,k) = 0.
         end do
-!        
+!
         do concurrent (k=1:np,j=1:ntm)
           vp(j,k) = 0.
-        end do        
+        end do
 !
 ! ***** Add in flow from file (this should save current state and check
 !       if a new one is needed/interp to avoid tons of I/O.
 !
-        call add_flow_from_file
+!        call add_flow_from_file
 !
 ! ***** Add in flow from ConFlow algorithm.
 !
-!       call add_flow_from_conflow (metadata_structure,flow_array)
+!        call add_flow_from_conflow (metadata_structure,flow_array)
 !
 ! ***** Add in meridianal flow model.
 !
@@ -1845,14 +1882,13 @@ subroutine update_flow
 !
         if (flow_attenuate) then
 !
-!
 ! ****** Need to interpolate f at half-mesh point.
 !
           do concurrent (k=2:npm-1,j=2:nt-1)
             br_avg = half*(f(j-1,k) + f(j,k))
             vt(j,k) = vt(j,k)*(one - tanh(abs(br_avg)*fivehundred_i))
           end do
-          
+!
           do concurrent (k=2:np-1,j=2:ntm-1)
             br_avg = half*(f(j,k-1) + f(j,k))
             vp(j,k) = vp(j,k)*(one - tanh(abs(br_avg)*fivehundred_i))
@@ -1875,7 +1911,7 @@ subroutine update_flow
           do k=2,npm1
             vp_npole = vp_npole + vp(    2,k)*dph(k)
             vp_spole = vp_spole + vp(ntm-1,k)*dph(k)
-          enddo  
+          enddo
 !
           vt_npole = vt_npole*twopi_i
           vt_spole = vt_spole*twopi_i
@@ -1896,12 +1932,12 @@ subroutine update_flow
           do concurrent (k=1:npm)
             vt( 1,k) = two*vt_spole-vt(   2,k)
             vt(nt,k) = two*vt_spole-vt(ntm1,k)
-          end do
+          enddo
 !
           do concurrent (k=1:np)
             vp(  1,k) = two*vp_spole-vp(    2,k)
             vp(ntm,k) = two*vp_spole-vp(ntm-1,k)
-          end do  
+          enddo
 !
 ! ****** Set periodicity
 !
@@ -1915,6 +1951,10 @@ subroutine update_flow
           flow_needs_updating = .true.
 !
         end if
+!
+! ****** If using WENO3 for flow, set new alpha values for LF.
+!
+        if (flow_num_method.eq.3) call set_lf_alpha
 !
       end if
 !
@@ -2205,9 +2245,11 @@ subroutine update_timestep
 !
         if (advance_flow.and.timestep_flow_needs_updating) then
           call get_flow_dtmax (dtmax_flow)
-          dtime_global = MIN(dtime_global,dtmax_flow)
           timestep_flow_needs_updating = .false.
+        else
+          dtmax_flow = huge(one)
         end if
+        dtime_global = MIN(dtime_global,dtmax_flow)
 !
         ! Check for negative values with source?
 !
@@ -2555,6 +2597,33 @@ function wtime ()
 !
       return
 end function
+!#######################################################################
+subroutine set_periodic_bc_1d (a,n1)
+!
+!-----------------------------------------------------------------------
+!
+! ****** Set the periodic phi direction boundary condition for
+! ****** a 1D array assuming a two-point overlap.
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      real(r_typ), dimension(n1) :: a
+      integer :: n1
+!
+!-----------------------------------------------------------------------
+!
+      a(1)  = a(n1-1)
+      a(n1) = a(2)
+!
+end subroutine
 !#######################################################################
 subroutine set_periodic_bc_2d (a,n1,n2)
 !
@@ -3887,24 +3956,24 @@ subroutine set_mesh
 !
 ! ****** Allocate main mesh grid quantities.
 !
-      allocate (dt(ntm))
+      allocate (dt  (ntm))
       allocate (dt_i(ntm))
-      allocate (st(ntm))
+      allocate (st  (ntm))
       allocate (st_i(ntm))
-      allocate (ct(ntm))
-      allocate (dp(npm))
+      allocate (ct  (ntm))
+      allocate (dp  (npm))
       allocate (dp_i(npm))
 !
 ! ****** Allocate half mesh grid quantities.
 !
-      allocate (th(nt))
-      allocate (ph(np))
-      allocate (dth(nt))
+      allocate (th   (nt))
+      allocate (ph   (np))
+      allocate (dth  (nt))
       allocate (dth_i(nt))
-      allocate (sth(nt))
+      allocate (sth  (nt))
       allocate (sth_i(nt))
-      allocate (cth(nt))
-      allocate (dph(np))
+      allocate (cth  (nt))
+      allocate (dph  (np))
       allocate (dph_i(np))
 !
 ! ****** Set theta grids.
@@ -3920,8 +3989,9 @@ subroutine set_mesh
       dth_i(:) = one/dth(:)
 !
       do i=1,ntm
-        dt(i) = th(i+1) - th(i) !   half*(t(i+1) + t(i)) - half*(t(i) + t(i-1))
-                                ! = half*(t(i+1) - t(i-1))
+        dt(i) = th(i+1) - th(i)
+        !   half*(t(i+1) + t(i)) - half*(t(i) + t(i-1))
+        ! = half*(t(i+1) - t(i-1))
         dt_i(i) = one/dt(i)
       enddo
 !
@@ -4097,6 +4167,184 @@ subroutine load_diffusion
 !$acc enter data copyin(diffusion_coef)
 !
       call load_diffusion_matrix
+!
+end subroutine
+!#######################################################################
+subroutine load_weno
+!
+!-----------------------------------------------------------------------
+!
+! ****** Setup WENO3.
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use mesh
+      use weno
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      integer :: j,k
+      real(r_typ) :: dt_total,dp_total
+!
+!-----------------------------------------------------------------------
+!
+! ****** Allocate arrays.
+!
+      allocate (alpha_t(ntm,npm))
+      alpha_t(:,:) = 0.
+      allocate (alpha_p(ntm,npm))
+      alpha_p(:,:) = 0.
+!
+      allocate (D_C_CPt(nt))
+      allocate (D_M_MCt(nt))
+      allocate (D_C_MCt(nt))
+      allocate (D_P_CPt(nt))
+      allocate (D_M_Tt(nt))
+      allocate (D_CP_Tt(nt))
+      allocate (D_P_Tt(nt))
+      allocate (D_MC_Tt(nt))
+!
+      allocate (D_C_CPp(np))
+      allocate (D_M_MCp(np))
+      allocate (D_C_MCp(np))
+      allocate (D_P_CPp(np))
+      allocate (D_M_Tp(np))
+      allocate (D_CP_Tp(np))
+      allocate (D_P_Tp(np))
+      allocate (D_MC_Tp(np))
+!
+! ****** Set grid weights.
+!
+      do j=3,ntm2
+        dt_total = dt(j-1) + dt(j) + dt(j+1)
+        D_C_CPt(j) =           dt(j  )/(dt(j  )+dt(j+1))
+        D_M_MCt(j) =           dt(j-1)/(dt(j-1)+dt(j  ))
+        D_C_MCt(j) =           dt(j  )/(dt(j-1)+dt(j  ))
+        D_P_CPt(j) =           dt(j+1)/(dt(j  )+dt(j+1))
+        D_M_Tt (j) =           dt(j-1)/dt_total
+        D_CP_Tt(j) = (dt(j  )+dt(j+1))/dt_total
+        D_P_Tt (j) =           dt(j+1)/dt_total
+        D_MC_Tt(j) = (dt(j-1)+dt(j  ))/dt_total
+      enddo
+!
+      do k=2,npm1
+        dp_total = dp(k-1) + dp(k) + dp(k+1)
+        D_C_CPp(k) =           dp(k  )/(dp(k  )+dp(k+1))
+        D_M_MCp(k) =           dp(k-1)/(dp(k-1)+dp(k  ))
+        D_C_MCp(k) =           dp(k  )/(dp(k-1)+dp(k  ))
+        D_P_CPp(k) =           dp(k+1)/(dp(k  )+dp(k+1))
+        D_M_Tp (k) =           dp(k-1)/dp_total
+        D_CP_Tp(k) = (dp(k  )+dp(k+1))/dp_total
+        D_P_Tp (k) =           dp(k+1)/dp_total
+        D_MC_Tp(k) = (dp(k-1)+dp(k  ))/dp_total
+      enddo
+!
+! ****** Enforce periodicity.
+!
+      call set_periodic_bc_1d (D_C_CPp,np)
+      call set_periodic_bc_1d (D_M_MCp,np)
+      call set_periodic_bc_1d (D_C_MCp,np)
+      call set_periodic_bc_1d (D_P_CPp,np)
+      call set_periodic_bc_1d (D_M_Tp,np)
+      call set_periodic_bc_1d (D_CP_Tp,np)
+      call set_periodic_bc_1d (D_P_Tp,np)
+      call set_periodic_bc_1d (D_MC_Tp,np)
+!
+!$acc enter data copyin(D_C_CPt,D_M_MCt,D_C_MCt,D_P_CPt, &
+!$acc                   D_M_Tt, D_CP_Tt,D_P_Tt, D_MC_Tt, &
+!$acc                   D_C_CPp,D_M_MCp,D_C_MCp,D_P_CPp, &
+!$acc                   D_M_Tp, D_CP_Tp,D_P_Tp, D_MC_Tp, &
+!$acc                   alpha_t,alpha_p)
+!
+end subroutine
+!#######################################################################
+subroutine set_lf_alpha
+!
+!-----------------------------------------------------------------------
+!
+! ****** Set Local Lax-Friedrichs alpha foruse with WENO3.
+! ****** This should be called any time the velocity field changes.
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use mesh
+      use fields, ONLY : vt,vp
+      use weno
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      integer :: j,k
+!
+!-----------------------------------------------------------------------
+!
+! ****** Get alpha for theta:
+!
+      do concurrent (k=1:npm,j=3:ntm-1)
+        alpha_t(j,k) = MAX(ABS(vt(j-2,k)), &
+                           ABS(vt(j-1,k)), &
+                           ABS(vt(j  ,k)), &
+                           ABS(vt(j+1,k)), &
+                           ABS(vt(j+2,k)))
+      enddo
+      j = 2
+      do concurrent (k=1:npm)
+        alpha_t(j,k) = MAX(ABS(vt(j-1,k)), &
+                           ABS(vt(j  ,k)), &
+                           ABS(vt(j+1,k)), &
+                           ABS(vt(j+2,k)))
+      enddo
+      j = 1
+      do concurrent (k=1:npm)
+        alpha_t(j,k) = MAX(ABS(vt(j  ,k)), &
+                           ABS(vt(j+1,k)), &
+                           ABS(vt(j+2,k)))
+      enddo
+      j = ntm
+      do concurrent (k=1:npm)
+        alpha_t(j,k) = MAX(ABS(vt(j  ,k)), &
+                           ABS(vt(j-1,k)), &
+                           ABS(vt(j-2,k)))
+      enddo
+!
+! ****** Get alpha for phi:
+!
+      do concurrent (k=3:np-2,j=2:ntm-1)
+        alpha_p(j,k) = MAX(ABS(vp(j,k-2)), &
+                           ABS(vp(j,k-1)), &
+                           ABS(vp(j,k  )), &
+                           ABS(vp(j,k+1)), &
+                           ABS(vp(j,k+2)))
+      enddo
+!
+      k = 2
+      do concurrent (j=2:ntm-1)
+        alpha_p(j,k) = MAX(ABS(vp(j,np-2)), &
+                           ABS(vp(j,k-1 )), &
+                           ABS(vp(j,k   )), &
+                           ABS(vp(j,k+1 )), &
+                           ABS(vp(j,k+2 )))
+      enddo
+!
+      k = npm-1
+      do concurrent (j=2:ntm-1)
+        alpha_p(j,k) = MAX(ABS(vp(j,k-2 )), &
+                           ABS(vp(j,k-1 )), &
+                           ABS(vp(j,k   )), &
+                           ABS(vp(j,k+1 )), &
+                           ABS(vp(j,3   )))
+      enddo
+!
+      call set_periodic_bc_2d (alpha_p,ntm,npm)
 !
 end subroutine
 !#######################################################################
@@ -4584,7 +4832,7 @@ subroutine advection_step_fe_upwind (dtime_local)
 !
       do concurrent (k=1:np,j=1:ntm)
         flux_p(j,k) = zero
-      enddo      
+      enddo
 !
 ! ****** Compute the fluxes at the cell faces.
 !
@@ -4738,33 +4986,29 @@ subroutine advection_operator_upwind (ftemp,aop)
 !
 !-----------------------------------------------------------------------
 !
+! ****** Allocate temporary arrays
+! ****** (we set all points here so no initialization needed)
+!
       allocate (flux_t(nt,npm))
       allocate (flux_p(ntm,np))
 !$acc enter data create(flux_t,flux_p)
 !
-      do concurrent (k=1:npm,j=1:nt)
-        flux_t(j,k) = zero
-      enddo
-!
-      do concurrent (k=1:np,j=1:ntm)
-        flux_p(j,k) = zero
-      enddo    
-!
 ! ****** Compute the fluxes at the cell faces.
 !
-      do concurrent (k=2:npm-1,j=2:ntm1)
-        cct=sign(upwind,vt(j,k))
-        flux_t(j,k)=vt(j,k)*half*((one-cct)*ftemp(j,k)+(one+cct)*ftemp(j-1,k))
+      do concurrent (k=1:npm,j=2:ntm1)
+        cct = sign(upwind,vt(j,k))
+        flux_t(j,k) = vt(j,k)*half*((one-cct)*ftemp(j  ,k) &
+                                  + (one+cct)*ftemp(j-1,k))
       enddo
 !
       do concurrent (k=2:npm1,j=2:ntm-1)
-        ccp=sign(upwind,vp(j,k))
-        flux_p(j,k)=vp(j,k)*half*((one-ccp)*ftemp(j,k)+(one+ccp)*ftemp(j,k-1))
+        ccp = sign(upwind,vp(j,k))
+        flux_p(j,k) = vp(j,k)*half*((one-ccp)*ftemp(j,k  ) &
+                                  + (one+ccp)*ftemp(j,k-1))
       enddo
 !
-! ****** Set periodicity of the flux (seam).
+! ****** Set periodicity of the fluxp (seam).
 !
-      call set_periodic_bc_2d (flux_t,nt,npm)
       call set_periodic_bc_2d (flux_p,ntm,np)
 !
 ! ****** Compute advection operator F.
@@ -4794,11 +5038,226 @@ subroutine advection_operator_upwind (ftemp,aop)
 ! ****** Note that the south pole needs a sign change since the
 ! ****** theta flux direction is reversed.
         do concurrent (k=2:npm-1)
-          aop(  1,k) = fn*two*pi_i*dt_i(  1)
+          aop(  1,k) =  fn*two*pi_i*dt_i(  1)
           aop(ntm,k) = -fs*two*pi_i*dt_i(ntm)
         end do
 !
 ! ****** Set periodic boundary condition.
+!
+      call set_periodic_bc_2d (aop,ntm,npm)
+!
+!$acc exit data delete(flux_t,flux_p)
+      deallocate (flux_t)
+      deallocate (flux_p)
+!
+end subroutine
+!#######################################################################
+subroutine advection_operator_weno3 (ftemp,aop)
+!
+!-----------------------------------------------------------------------
+!
+! ****** Compute DIV(v*f) with WENO3 using
+! ****** Local Lax-Friedrichs flux splitting and 2nd order
+! ****** theta-direction approximation reconstruction.
+! ****** The scheme should be 4th-order in phi and 2nd-order in theta
+! ****** in smooth regions away from the pole.
+! ****** Next to the pole, theta becomes 1st order (upwinding).
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use input_parameters
+      use constants
+      use mesh
+      use weno
+      use fields, ONLY: vt,vp
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      real(r_typ), dimension(ntm,npm), INTENT(IN) :: ftemp
+      real(r_typ), dimension(ntm,npm), INTENT(OUT) :: aop
+!
+!-----------------------------------------------------------------------
+!
+      integer :: j,k
+      real(r_typ) :: cct,fn,fs
+      real(r_typ), dimension(:,:), allocatable :: flux_t,flux_p
+      real(r_typ), dimension(:,:), allocatable :: LP,LN
+!
+!-----------------------------------------------------------------------
+!
+! ****** Allocate temporary arrays
+! ****** (we set all points here so no initialization needed)
+!
+      allocate (flux_t(nt,npm))
+      allocate (LP(ntm,npm))
+      allocate (LN(ntm,npm))
+!$acc enter data create(flux_t,LP,LN)
+!
+! ****** Compute Lax-Friedrichs fluxes.
+!
+      do concurrent (k=1:npm,j=1:ntm1)
+        LP(j,k) = half*ftemp(j,k)*(vt(j+1,k) - alpha_t(j,k))
+        LN(j,k) = half*ftemp(j,k)*(vt(j  ,k) + alpha_t(j,k))
+      enddo
+!
+! ***** No need to seam since k loop covers all points.
+!
+      do concurrent (k=1:npm,j=3:nt-2)
+!
+        p0p = (one + D_C_CPt(j  ))*LP(j  ,k) - D_C_CPt(j  )*LP(j+1,k)
+        p1p =        D_M_MCt(j  ) *LP(j  ,k) + D_C_MCt(j  )*LP(j-1,k)
+        p0m = (one + D_C_MCt(j-1))*LN(j-1,k) - D_C_MCt(j-1)*LN(j-2,k)
+        p1m =        D_P_CPt(j-1) *LN(j-1,k) + D_C_CPt(j-1)*LN(j  ,k)
+!
+        B0p = four*(D_C_CPt(j  )*(LP(j+1,k) - LP(j  ,k)))**2
+        B1p = four*(D_C_MCt(j  )*(LP(j  ,k) - LP(j-1,k)))**2
+        B0m = four*(D_C_MCt(j-1)*(LN(j-1,k) - LN(j-2,k)))**2
+        B1m = four*(D_C_CPt(j-1)*(LN(j  ,k) - LN(j-1,k)))**2
+!
+        w0p = D_M_Tt(j) *(one/(weno_eps + B0p)**2)
+        w1p = D_CP_Tt(j)*(one/(weno_eps + B1p)**2)
+        w0m = D_P_Tt(j) *(one/(weno_eps + B0m)**2)
+        w1m = D_MC_Tt(j)*(one/(weno_eps + B1m)**2)
+!
+        wp_sum = w0p + w1p
+        wm_sum = w0m + w1m
+!
+        OM0p = w0p/wp_sum
+        OM1p = w1p/wp_sum
+        OM0m = w0m/wm_sum
+        OM1m = w1m/wm_sum
+!
+        up = OM0p*p0p + OM1p*p1p
+        um = OM0m*p0m + OM1m*p1m
+!
+        flux_t(j,k) = up + um
+!
+      enddo
+!
+! ****** Compute upwind theta flux for points near the pole.
+!
+      do concurrent (k=1:npm)
+!
+        cct=sign(upwind,vt(2,k))
+        flux_t(2,k) = vt(2,k)*half*((one-cct)*ftemp(2,k) &
+                                  + (one+cct)*ftemp(1,k))
+!
+        cct=sign(upwind,vt(ntm1,k))
+        flux_t(ntm1,k) = vt(ntm1,k)*half*((one-cct)*ftemp(ntm1,k) &
+                                        + (one+cct)*ftemp(ntm2,k))
+!
+      enddo
+!
+!$acc exit data delete (LP,LN)
+      deallocate (LP)
+      deallocate (LN)
+!
+! ### PHI ######################################
+!
+      allocate (flux_p(ntm,np))
+      allocate (LP(ntm,0:npm))
+      allocate (LN(ntm,0:npm))
+!$acc enter data create(flux_p,LP,LN)
+!
+! ****** Compute flux splitting:
+!
+      ! Compute N+(i) and P-(i):
+
+      do concurrent (k=1:npm-1,j=2:ntm-1)
+        LP(j,k) = half*ftemp(j,k)*(vp(j,k+1) - alpha_p(j,k))
+        LN(j,k) = half*ftemp(j,k)*(vp(j,k  ) + alpha_p(j,k))
+      enddo
+!
+      do concurrent (j=2:ntm-1)
+        LP(j,0) = half*ftemp(j,npm-2)*(vp(j,npm-1) - alpha_p(j,npm-2))
+        LN(j,0) = half*ftemp(j,npm-2)*(vp(j,npm-2) + alpha_p(j,npm-2))
+      enddo
+!
+      do concurrent (j=2:ntm-1)
+        LP(j,npm) = half*ftemp(j,npm)*(vp(j,3) - alpha_p(j,npm))
+        LN(j,npm) = half*ftemp(j,npm)*(vp(j,2) + alpha_p(j,npm))
+      enddo
+!
+! ***** No need to seam since k loop covers all.
+!
+! ****** Now compute f+(i-1/2) and f-(i-1/2)
+! ****** Note that N-(i) = N+(i-1)
+!
+      do concurrent (k=2:npm1,j=2:ntm-1)
+!
+        p0p = (one + D_C_CPp(k  ))*LP(j,k  ) - D_C_CPp(k  )*LP(j,k+1)
+        p1p =        D_M_MCp(k  ) *LP(j,k  ) + D_C_MCp(k  )*LP(j,k-1)
+        p0m = (one + D_C_MCp(k-1))*LN(j,k-1) - D_C_MCp(k-1)*LN(j,k-2)
+        p1m =        D_P_CPp(k-1) *LN(j,k-1) + D_C_CPp(k-1)*LN(j,k  )
+!
+        B0p = four*(D_C_CPp(k  )*(LP(j,k+1) - LP(j,k  )))**2
+        B1p = four*(D_C_MCp(k  )*(LP(j,k  ) - LP(j,k-1)))**2
+        B0m = four*(D_C_MCp(k-1)*(LN(j,k-1) - LN(j,k-2)))**2
+        B1m = four*(D_C_CPp(k-1)*(LN(j,k  ) - LN(j,k-1)))**2
+!
+        w0p = D_M_Tp (k)*(one/(weno_eps + B0p)**2)
+        w1p = D_CP_Tp(k)*(one/(weno_eps + B1p)**2)
+        w0m = D_P_Tp (k)*(one/(weno_eps + B0m)**2)
+        w1m = D_MC_Tp(k)*(one/(weno_eps + B1m)**2)
+!
+        wp_sum = w0p + w1p
+        wm_sum = w0m + w1m
+!
+        OM0p = w0p/wp_sum
+        OM1p = w1p/wp_sum
+        OM0m = w0m/wm_sum
+        OM1m = w1m/wm_sum
+!
+        up = OM0p*p0p + OM1p*p1p
+        um = OM0m*p0m + OM1m*p1m
+!
+        flux_p(j,k) = up + um
+!
+      enddo
+!
+      call set_periodic_bc_2d (flux_p,ntm,np)
+!
+!$acc exit data delete (LP,LN)
+      deallocate (LP)
+      deallocate (LN)
+!
+! ****** Now evaluation the advection operator for internal points.
+!
+      do concurrent (k=2:npm-1,j=2:ntm-1)
+        aop(j,k) = (  (  sth(j+1)*flux_t(j+1,k)  &
+                       - sth(j  )*flux_t(j  ,k)  &
+                      )*st_i(j)*dt_i(j)          &
+                    + (           flux_p(j,k+1)  &
+                       -          flux_p(j,k  )  &
+                      )*st_i(j)*dp_i(k)          &
+                   )
+      enddo
+!
+! ****** Get the advection operator at the poles.
+!
+      fn = zero
+      fs = zero
+!
+!$omp parallel do default(shared) reduction(+:fn,fs)
+!$acc parallel loop default(present) reduction(+:fn,fs)
+        do k=2,npm-1
+          fn = fn + flux_t(   2,k)*dp(k)
+          fs = fs + flux_t(ntm1,k)*dp(k)
+        enddo
+!$omp end parallel do
+! ****** Note that the south pole needs a sign change since the
+! ****** theta flux direction is reversed.
+        do concurrent (k=2:npm-1)
+          aop(  1,k) =  fn*two*pi_i*dt_i(  1)
+          aop(ntm,k) = -fs*two*pi_i*dt_i(ntm)
+        end do
+!
+! ****** Set periodic phi boundary condition.
 !
       call set_periodic_bc_2d (aop,ntm,npm)
 !
@@ -4833,6 +5292,41 @@ subroutine advection_step_rk3tvd_weno3 (dtime_local)
 !
 !-----------------------------------------------------------------------
 !
+      integer :: j,k
+      real(r_typ), dimension(:,:), allocatable :: f1,f2,aop
+!
+!-----------------------------------------------------------------------
+!
+! ****** Allocate temporary arrays for RK.
+!
+      allocate (f1(ntm,npm))
+      allocate (f2(ntm,npm))
+      allocate (aop(ntm,npm))
+!$acc enter data create(f1,f2,aop)
+!
+      call advection_operator_weno3 (f,aop)
+      do concurrent (k=1:npm,j=1:ntm)
+        f1(j,k) = f(j,k) - dtime_local*aop(j,k)
+      enddo
+!
+      call advection_operator_weno3 (f1,aop)
+      do concurrent (k=1:npm,j=1:ntm)
+        f2(j,k) = three_quarter*f(j,k) + quarter*f1(j,k) &
+                                       - quarter*dtime_local*aop(j,k)
+      enddo
+!
+      call advection_operator_weno3 (f2,aop)
+      do concurrent (k=1:npm,j=1:ntm)
+        f(j,k) = third*f(j,k) + two_third*f2(j,k) &
+                              - two_third*dtime_local*aop(j,k)
+      enddo
+!
+! ****** Deallocate temporary arrays.
+!
+!$acc exit data delete(f1,f2,aop)
+      deallocate (f1)
+      deallocate (f2)
+      deallocate (aop)
 !
 end subroutine
 !#######################################################################
@@ -5366,7 +5860,7 @@ subroutine read_input
         output_map_root_filename = trim(arg)
       else
         output_map_root_filename = '.'
-      end if      
+      end if
 !
       call fetcharg ('-output_map_directory',set,arg)
       if (set) then
@@ -5595,12 +6089,16 @@ end subroutine
 !   - Removed "-flowpoleavg".  No use case.
 !
 ! 04/29/2022, RC, Version 0.7.1:
-!   - BUG FIX: Changed staggering of the velocity.  Now, Vt is on the 
-!     theta half mesh and the phi main mesh, while Vp is on the 
-!     theta main mesh and the phi half mesh.  This avoids averaging in 
+!   - BUG FIX: Changed staggering of the velocity.  Now, Vt is on the
+!     theta half mesh and the phi main mesh, while Vp is on the
+!     theta main mesh and the phi half mesh.  This avoids averaging in
 !     the advection operator (which was not being done).
 !   - BUG FIX: The diffusion_coef was not being averaged.
 !   - BUG FIX: Fixed issue when not outputting time-dept I/O.
+!
+! 05/17/2022, RC+MS, Version 0.8.0:
+!   - Added implementation of the WENO3 advection scheme (-fm 3).
+!   - Bug fix for time-step calculation.
 !-----------------------------------------------------------------------
 !
 !#######################################################################

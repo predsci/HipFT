@@ -13,9 +13,9 @@ TMAX=672.0
 
 ./hipft $INITMAP -flow -dr 1 -mf 1 -va -diff -visc $VISC -diffusion_subcycles 1 -fm 2 -omct $OUTCAD -assimilate_data -assimilate_data_map_list_filename $INDATACSV -assimilate_data_map_root_dir $INDATADIR -output_map_directory $OUTDATADIR -time $TMAX $TEST 1>${TEST}.log 2>${TEST}.err 
 
-~/Dropbox/PSI/SWQU/OFT/codes/hipft/git/trunk/bin/hipft_plot_histories.py
+hipft_plot_histories.py
 
-~/Dropbox/PSI/SWQU/OFT/codes/hipft/git/trunk/bin/make_hipft_plots.sh $OUTDATADIR $TEST
+make_hipft_plots.sh $OUTDATADIR $TEST
 
 cp ${OUTDATADIR}/plots/${TEST}.mov .
 

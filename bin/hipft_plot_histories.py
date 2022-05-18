@@ -97,10 +97,6 @@ def run(args):
   #fig.savefig('history_flux.eps', bbox_inches="tight", dpi=120, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
   
-  
-  
-  exit()
-  
   # VALIDATION
   
   # Check sum of val - if exactly 0, assume no validation run performed...
@@ -118,27 +114,14 @@ def run(args):
   ax.grid(zorder=0)
   fig.tight_layout()
   
-  fig.savefig(file_root_str+'_valerr.png', bbox_inches="tight", pad_inches=0, dpi=120, facecolor=fig.get_facecolor(), edgecolor=None)
-  fig.savefig(file_root_str+'_valerr.eps', bbox_inches="tight", pad_inches=0, dpi=120, facecolor=fig.get_facecolor(), edgecolor=None)
+  fig.savefig('history_val.png', bbox_inches="tight", pad_inches=0, dpi=120, facecolor=fig.get_facecolor(), edgecolor=None)
+#  fig.savefig('history_val.eps', bbox_inches="tight", pad_inches=0, dpi=120, facecolor=fig.get_facecolor(), edgecolor=None)
   
-
 def main():
   ## Get input agruments:
   args = argParsing()
   run(args)
 
-
 if __name__ == '__main__':
   main()
-
-
-
-
-
-
-
-
-
-
-
 
