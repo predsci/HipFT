@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.8.0'
-      character(*), parameter :: cdate='05/17/2022'
+      character(*), parameter :: cvers='0.9.0'
+      character(*), parameter :: cdate='05/20/2022'
 !
 end module
 !#######################################################################
@@ -104,9 +104,12 @@ module constants
       real(r_typ), parameter :: third=0.33333333333333333_r_typ
 !
       real(r_typ), parameter :: pi=3.1415926535897932_r_typ
+      real(r_typ), parameter :: pi_two=1.5707963267948966_r_typ
       real(r_typ), parameter :: pi_i=0.3183098861837907_r_typ
       real(r_typ), parameter :: twopi=6.2831853071795864_r_typ
       real(r_typ), parameter :: twopi_i=0.15915494309189535_r_typ
+      real(r_typ), parameter :: threepi_two=4.71238898038469_r_typ
+      real(r_typ), parameter :: threepi_four=2.356194490192345_r_typ
 !
       real(r_typ), parameter :: rsun_cm=6.96e10_r_typ
 !
@@ -151,7 +154,7 @@ module input_parameters
 !
 ! ****** Validation Mode ********
 !
-      logical        :: validation_run=.false.
+      integer        :: validation_run = 0
 !
 ! ****** Output map cadence ********
 !
@@ -195,6 +198,10 @@ module input_parameters
 ! ****** Add a rigid rotation vp velocity (km/s) of omega*sin(theta).
 !
       real(r_typ)    :: flow_vp_rigid_omega = 0.
+!
+! ****** Add a constant vt velocity (km/s).
+!
+      real(r_typ)    :: flow_vt_const = 0.
 !
 ! ****** Attenuate the veolcity based on the value of Br.
 ! ****** This causes flow to be updated each step.
@@ -973,6 +980,7 @@ subroutine write_welcome_message
       write (*,*) ' ****** HipFT: High Performance Flux Transport.'
       write (*,*) ''
       write (*,*) '        Authors:  Ronald M. Caplan'
+      write (*,*) '                  Miko M. Stulajter'
       write (*,*) '                  Jon A. Linker'
       write (*,*) '                  Zoran Mikic'
       write (*,*) ''
@@ -1017,6 +1025,7 @@ subroutine load_initial_condition
       use globals
       use read_2d_file_interface
       use output
+      use constants
 !
 !-----------------------------------------------------------------------
 !
@@ -1027,7 +1036,8 @@ subroutine load_initial_condition
       real(r_typ) :: fn1,fs1,fn2,fs2
       real(r_typ), dimension(:,:), allocatable :: f_local
       real(r_typ), dimension(:), allocatable :: s1,s2
-      integer :: n1,n2,ierr
+      integer :: n1,n2,ierr,i,j
+      real(r_typ), parameter :: val2_g_width = 0.03_r_typ
 !
 !-----------------------------------------------------------------------
 !
@@ -1040,14 +1050,21 @@ subroutine load_initial_condition
 !
       call read_2d_file (initial_map_filename,n1,n2,f_local,s1,s2,ierr)
 !
-      if (validation_run) then
+      if (validation_run .eq. 1) then
 !
         allocate (fval_u0(n1,n2))
 !
 ! ****** Make initial solution f and output.
 !
+! ****** Have to put this on and off GPU since the routines
+!        are GPU-only.
+!
+!$acc enter data create (f_local,fval_u0)
+!$acc enter data copyin (s1,s2)
         call tesseral_spherical_harmonic (0,6,s1,s2,n1,n2,f_local)
         call tesseral_spherical_harmonic (5,6,s1,s2,n1,n2,fval_u0)
+!$acc update self (f_local,fval_u0)
+!$acc exit data delete (f_local,fval_u0,s1,s2)
 !
         fval_u0(:,:) = 1000.0_r_typ*(f_local(:,:) +                  &
                               sqrt(14.0_r_typ/11.0_r_typ)*fval_u0(:,:))
@@ -1055,7 +1072,7 @@ subroutine load_initial_condition
         call write_2d_file(                                           &
             (trim(output_map_root_filename)//'_initial_0.h5')       &
                            ,n1,n2,fval_u0,s1,s2,ierr)
-
+!
         f_local(:,:) = fval_u0(:,:)
 !
 ! ****** Caculate final analytic solution and output.
@@ -1072,6 +1089,19 @@ subroutine load_initial_condition
 !
 !$acc enter data copyin(fval_u0)
 !
+      elseif (validation_run .eq. 2) then
+!
+! ****** Make initial solution f and output.
+!
+        do j=1,n2
+          do i=1,n1
+            f_local(i,j) = - EXP( (-(s2(j)-threepi_four)**2 - &
+                                    (s1(i)-pi_two      )**2 )/val2_g_width) &
+                           + EXP( (-(s2(j)-threepi_four)**2 - &
+                                    (s1(i)-threepi_two )**2 )/val2_g_width)
+          enddo
+        enddo
+!           
       end if
 !
 ! ****** Set resolution values.
@@ -1553,7 +1583,7 @@ subroutine analysis_step
 !
 ! ****** If running validation, compute current exact solution.
 !
-      if (validation_run) then
+      if (validation_run .eq. 1) then
         allocate (fval(npm-1,ntm))
 !$acc enter data create (fval)
 !
@@ -1585,7 +1615,7 @@ subroutine analysis_step
           h_minbr = min(f(i,j),h_minbr)
           h_maxbr = max(f(i,j),h_maxbr)
           h_minabsbr = min(abs(f(i,j)),h_minabsbr)
-          if (validation_run) then
+          if (validation_run .eq. 1) then
             fv = (f(i,j) - fval(j,i))**2
             fv2 = fval(j,i)**2
           else
@@ -1598,7 +1628,7 @@ subroutine analysis_step
       enddo
 !$omp end parallel do
 !
-      if (validation_run) then
+      if (validation_run .eq. 1) then
         h_valerr = sqrt(h_valerr/sumfval2)
 !$acc exit data delete (fval)
       end if
@@ -1870,11 +1900,19 @@ subroutine update_flow
 !
         if (flow_dr_model.eq.1) call add_flow_differential_rotation_aft
 !
-! ***** Add in constant angular velocity (rigid rotation)
+! ***** Add in constant angular phi velocity (rigid rotation)
 !
-        if (flow_vp_rigid_omega.gt.0.) then
+        if (flow_vp_rigid_omega.ne.0.) then
           do concurrent (k=1:np,j=1:ntm)
-            vp(j,k) = vp(j,k)+flow_vp_rigid_omega*km_s_to_rs_hr*st(j)
+            vp(j,k) = vp(j,k) + flow_vp_rigid_omega*km_s_to_rs_hr*st(j)
+          end do
+        endif
+!
+! ***** Add in constant theta velocity.
+!
+        if (flow_vt_const .ne. 0.) then
+          do concurrent (k=1:npm,j=1:nt)
+            vt(j,k) = vt(j,k) + flow_vt_const*km_s_to_rs_hr
           end do
         endif
 !
@@ -4838,12 +4876,12 @@ subroutine advection_step_fe_upwind (dtime_local)
 !
       do concurrent (k=2:npm-1,j=2:ntm1)
         cct=sign(upwind,vt(j,k))
-        flux_t(j,k)=vt(j,k)*half*((one-cct)*f(j,k)+(one+cct)*f(j-1,k))
+        flux_t(j,k) = vt(j,k)*half*((one-cct)*f(j,k)+(one+cct)*f(j-1,k))
       enddo
 !
       do concurrent (k=2:npm1,j=2:ntm-1)
         ccp=sign(upwind,vp(j,k))
-        flux_p(j,k)=vp(j,k)*half*((one-ccp)*f(j,k)+(one+ccp)*f(j,k-1))
+        flux_p(j,k) = vp(j,k)*half*((one-ccp)*f(j,k)+(one+ccp)*f(j,k-1))
       enddo
 !
 ! ****** Set periodicity of the flux (seam).
@@ -5763,6 +5801,7 @@ subroutine read_input
       call defarg (GROUP_KA,'-vtfile','<none>','<file>')
       call defarg (GROUP_KA,'-vpfile','<none>','<file>')
       call defarg (GROUP_KA,'-vpomega','0.','<val>')
+      call defarg (GROUP_KA,'-vt_const','0.','<val>')
       call defarg (GROUP_K,'-va',' ',' ')
       call defarg (GROUP_K,'-nostrang',' ',' ')
       call defarg (GROUP_KA,'-dr','0','<val>')
@@ -5772,7 +5811,7 @@ subroutine read_input
       call defarg (GROUP_KA,'-fm','2','<val>')
       call defarg (GROUP_KA,'-difftfac','1.','<val>')
       call defarg (GROUP_KA,'-diffpfac','1.','<val>')
-      call defarg (GROUP_K,'-vrun',' ',' ')
+      call defarg (GROUP_KA,'-vrun','0','<val>')
       call defarg (GROUP_K,'-assimilate_data',' ',' ')
       call defarg (GROUP_KA ,'-assimilate_data_map_list_filename','<none>','<file>')
       call defarg (GROUP_KA ,'-assimilate_data_map_root_dir','.','<dir>')
@@ -5941,6 +5980,9 @@ subroutine read_input
       call fetcharg ('-vpomega',set,arg)
       flow_vp_rigid_omega = fpval(arg,'-vpomega')
 !
+      call fetcharg ('-vt_const',set,arg)
+      flow_vt_const = fpval(arg,'-vt_const')      
+!
       call fetcharg ('-va',set,arg)
       if (set) flow_attenuate = .true.
 !
@@ -5983,7 +6025,7 @@ subroutine read_input
       if (set) flow_num_method = intval(arg,'-fm')
 !
       call fetcharg ('-vrun',set,arg)
-      validation_run = set
+      if (set) validation_run = intval(arg,'-vrun')
 !
 ! ****** Data assimilation.
 !
@@ -6099,6 +6141,15 @@ end subroutine
 ! 05/17/2022, RC+MS, Version 0.8.0:
 !   - Added implementation of the WENO3 advection scheme (-fm 3).
 !   - Bug fix for time-step calculation.
+!
+! 05/20/2022, RC+MS, Version 0.9.0:
+!   - vrun has been changed to an integer to select which validation
+!     run initial condition to use.
+!   - Added Guassian blob initial validation condition (-vrun 2).
+!   - Added -vt_const to allow adding a constant velocity in theta
+!     in km/s (used for validation runs).
+!   - Fixed GPU issue with -vrun 1 initial condition.
+!
 !-----------------------------------------------------------------------
 !
 !#######################################################################
