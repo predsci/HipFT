@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.9.0'
-      character(*), parameter :: cdate='05/20/2022'
+      character(*), parameter :: cvers='0.10.0'
+      character(*), parameter :: cdate='06/07/2022'
 !
 end module
 !#######################################################################
@@ -198,6 +198,11 @@ module input_parameters
 ! ****** Add a rigid rotation vp velocity (km/s) of omega*sin(theta).
 !
       real(r_typ)    :: flow_vp_rigid_omega = 0.
+!
+! ****** Add a rigid rotation velocity (km/s) of omega for a rigid
+! ****** rotation through the poles.
+!
+      real(r_typ)    :: flow_rigid_omega = 0.
 !
 ! ****** Add a constant vt velocity (km/s).
 !
@@ -458,18 +463,14 @@ module weno
       implicit none
 !
       real(r_typ), dimension(:), allocatable :: D_C_CPt
-      real(r_typ), dimension(:), allocatable :: D_M_MCt
       real(r_typ), dimension(:), allocatable :: D_C_MCt
-      real(r_typ), dimension(:), allocatable :: D_P_CPt
       real(r_typ), dimension(:), allocatable :: D_M_Tt
       real(r_typ), dimension(:), allocatable :: D_CP_Tt
       real(r_typ), dimension(:), allocatable :: D_P_Tt
       real(r_typ), dimension(:), allocatable :: D_MC_Tt
 !
       real(r_typ), dimension(:), allocatable :: D_C_CPp
-      real(r_typ), dimension(:), allocatable :: D_M_MCp
       real(r_typ), dimension(:), allocatable :: D_C_MCp
-      real(r_typ), dimension(:), allocatable :: D_P_CPp
       real(r_typ), dimension(:), allocatable :: D_M_Tp
       real(r_typ), dimension(:), allocatable :: D_CP_Tp
       real(r_typ), dimension(:), allocatable :: D_P_Tp
@@ -657,7 +658,7 @@ program HIPFT
           write(*,FMT) 'Starting step: ',ntime,'  Time:',time,' /', &
                         time_end,'  dt to use:',dtime_global
           flush(OUTPUT_UNIT)
-        endif
+        end if
 !
 ! ****** Evolve the field for one timestep.
 !
@@ -1099,6 +1100,16 @@ subroutine load_initial_condition
                                     (s1(i)-pi_two      )**2 )/val2_g_width) &
                            + EXP( (-(s2(j)-threepi_four)**2 - &
                                     (s1(i)-threepi_two )**2 )/val2_g_width)
+          enddo
+        enddo
+!   
+      elseif (validation_run .eq. 3) then
+!
+! ****** Make initial solution f and output.
+!
+        do j=1,n2
+          do i=1,n1
+            f_local(i,j) = - EXP((-(s2(j)-pi_two)**2)/(val2_g_width)) 
           enddo
         enddo
 !           
@@ -1860,7 +1871,9 @@ subroutine update_flow
 !
       integer :: j,k
       real(r_typ) :: br_avg
+      real(r_typ) :: vrigid_pole
       real(r_typ) :: vt_npole,vt_spole,vp_npole,vp_spole
+      real(r_typ) :: p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,cp,cph
 !
 !-----------------------------------------------------------------------
 !
@@ -1877,11 +1890,11 @@ subroutine update_flow
 !
         do concurrent (k=1:npm,j=1:nt)
           vt(j,k) = 0.
-        end do
+        enddo
 !
         do concurrent (k=1:np,j=1:ntm)
           vp(j,k) = 0.
-        end do
+        enddo
 !
 ! ***** Add in flow from file (this should save current state and check
 !       if a new one is needed/interp to avoid tons of I/O.
@@ -1905,15 +1918,52 @@ subroutine update_flow
         if (flow_vp_rigid_omega.ne.0.) then
           do concurrent (k=1:np,j=1:ntm)
             vp(j,k) = vp(j,k) + flow_vp_rigid_omega*km_s_to_rs_hr*st(j)
-          end do
-        endif
+          enddo
+        end if
 !
 ! ***** Add in constant theta velocity.
 !
         if (flow_vt_const .ne. 0.) then
           do concurrent (k=1:npm,j=1:nt)
             vt(j,k) = vt(j,k) + flow_vt_const*km_s_to_rs_hr
-          end do
+          enddo
+        end if
+!
+! ***** Add in rigid rotation velocity through the poles.
+!
+        if (flow_rigid_omega .ne. 0.) then
+          vrigid_pole = flow_rigid_omega*km_s_to_rs_hr
+          do concurrent (k=1:npm,j=1:nt)
+            cp = cos(p(k))
+            p1 = -2*cth(j)*abs(sth(j)*cp)
+            p2 = (cp*cth(j)**2-cp)*abs(cp)**3
+            p3 = (-3*cp*cth(j)**2+2*cp)*abs(cp)
+            p4 = sign(1,cp)*cth(j)**2
+            p5 = 2*abs(cp)**3*cth(j)*abs(sth(j))
+            p6 = (-cp**4+3*cp**2-1)*cth(j)**2
+            p7 = (-2*cp**3*sth(j)+2*sth(j)*cp)*cth(j)
+            p8 = cp**4-2*cp**2+1
+            p9 = abs(sth(j)*cp)*sin(p(k))*vrigid_pole
+            p10 = (cp**4-3*cp**2+1)*cth(j)**2
+            p11 = (2*cp**3*sth(j)-2*sth(j)*cp)*cth(j)
+            p12 = cp**4+2*cp**2
+            vt(j,k) = vt(j,k)+(-((p1+(p2+p3+p4)*sign(1,sth(j))    &
+                  +p5+p6+p7+p8)*p9)/SQRT(p10+p11-p12))
+            if ((abs(vt(j,k))>10**5) .or. (abs(vt(j,k))<-10**-5)) then 
+              vt(j,k)=0
+            endif
+          enddo
+          do concurrent (k=1:np,j=1:ntm)
+            cph = cos(ph(k))
+            p1 = vrigid_pole*(cph**2*ct(j)+st(j)*cph-ct(j))*sign(1,cph)*abs(st(j))
+            p2 = (cph**4-3*cph**2+1)*ct(j)**2
+            p3 = (2*cph**3*st(j)-2*st(j)*cph)*ct(j)
+            p4 = cph**4+2*cph**2
+            vp(j,k) = vp(j,k)- p1/SQRT(p2+p3-p4)
+            if ((abs(vp(j,k))>10**5) .or. (abs(vp(j,k))<-10**-5)) then 
+              vp(j,k)=0
+            endif
+         end do
         endif
 !
 ! ***** Attenuate velocity based on Br.
@@ -1925,12 +1975,12 @@ subroutine update_flow
           do concurrent (k=2:npm-1,j=2:nt-1)
             br_avg = half*(f(j-1,k) + f(j,k))
             vt(j,k) = vt(j,k)*(one - tanh(abs(br_avg)*fivehundred_i))
-          end do
+          enddo
 !
           do concurrent (k=2:np-1,j=2:ntm-1)
             br_avg = half*(f(j,k-1) + f(j,k))
             vp(j,k) = vp(j,k)*(one - tanh(abs(br_avg)*fivehundred_i))
-          end do
+          enddo
 !
 ! ****** Set poles. Maybe not needed since field is weak at pole?
 !
@@ -2083,7 +2133,7 @@ subroutine load_data_assimilation
         READ (IO_DATA_IN,'(a)',iostat=io)
         if (io/=0) exit
         num_maps_in_list = num_maps_in_list + 1
-      end do
+      enddo
       REWIND (IO_DATA_IN)
 !
 ! ****** Allocate space to store the list.
@@ -2838,7 +2888,7 @@ subroutine diffusion_step_sts_cd (dtime_local)
           call load_sts_rkl2 (dtime_local)
         elseif(diffusion_num_method.eq.3) then
           call load_sts_rkg2 (dtime_local)
-        endif
+        end if
         need_to_load_sts = .false.
       end if
 !
@@ -2931,13 +2981,13 @@ subroutine load_sts_rkl2 (dtime_local)
 !
       if (sts_s.lt.3) then
         sts_s = 3
-      endif
+      end if
 !
 ! ****** Make sure s is odd.
 !
       if (MOD(sts_s,2).eq.0) then
         sts_s = sts_s + 1
-      endif
+      end if
 !
 ! ****** Allocate super-time-step coefficent arrays.
 !
@@ -3046,13 +3096,13 @@ subroutine load_sts_rkg2 (dtime_local)
 !
       if (sts_s.lt.3) then
         sts_s = 3
-      endif
+      end if
 !
 ! ****** Make sure s is odd.
 !
       if (MOD(sts_s,2).eq.0) then
         sts_s = sts_s + 1
-      endif
+      end if
 !
 ! ****** Allocate super-time-step coefficent arrays.
 !
@@ -3450,7 +3500,7 @@ subroutine rdh5 (fname,s,ierr)
         write (*,*) '### Input file contains too few/many datasets.'
         write (*,*) 'File name: ',trim(fname)
         return
-      endif
+      end if
 !
 ! ****** Assume the Dataset is in index 0 and get its name.
 !
@@ -3469,7 +3519,7 @@ subroutine rdh5 (fname,s,ierr)
         write (*,*) '### Input file Dataset at index 0 is a scale.'
         write (*,*) 'File name: ',trim(fname)
         return
-      endif
+      end if
 !
 ! ****** Get dimensions (need s_dims array for format requirements).
 !
@@ -3484,7 +3534,7 @@ subroutine rdh5 (fname,s,ierr)
 !
       do j=1,s%ndim
         s%dims(j) = INT(s_dims(j))
-      end do
+      enddo
 !
 ! ****** Get the floating-point precision of the data and set flag.
 !
@@ -3604,14 +3654,14 @@ subroutine rdh5 (fname,s,ierr)
             call h5Dread_f (dim_id,datatype_id,f4dim,s_dims_i,ierr)
             do j=1,s%dims(i)
               s%scales(i)%f(j) = REAL(f4dim(j),r_typ)
-            end do
+            enddo
             deallocate (f4dim)
           elseif (prec.eq.64) then
             allocate (f8dim(s_dims_i(1)))
             call h5Dread_f (dim_id,datatype_id,f8dim,s_dims_i,ierr)
             do j=1,s%dims(i)
               s%scales(i)%f(j) = REAL(f8dim(j),r_typ)
-            end do
+            enddo
             deallocate (f8dim)
           end if
 !
@@ -3729,8 +3779,8 @@ subroutine wrh5 (fname,s,ierr)
            s_dims(i) = INT(s%dims(i),HSIZE_T)
          else
            s_dims(i) = 1
-         endif
-      end do
+         end if
+      enddo
 !
 ! ****** Initialize hdf5 interface.
 !
@@ -3772,7 +3822,7 @@ subroutine wrh5 (fname,s,ierr)
                           dspace_id,dset_id,ierr)
         call h5Dwrite_f (dset_id,H5T_NATIVE_DOUBLE,f8,s_dims,ierr)
         deallocate (f8)
-      endif
+      end if
       if (ierr.ne.0) then
         write (*,*)
         write (*,*) '### ERROR in WRH5:'
@@ -3793,14 +3843,14 @@ subroutine wrh5 (fname,s,ierr)
             dimname='dim2'
           elseif (i.eq.3) then
             dimname='dim3'
-          endif
+          end if
           s_dims_i = s_dims(i)
           call h5Screate_simple_f(1,s_dims_i,dspacedim_id,ierr)
           if (s%hdf32) then
             allocate (f4dim(s_dims_i(1)))
             do j=1,s%dims(i)
               f4dim(j) = REAL(s%scales(i)%f(j),REAL32)
-            end do
+            enddo
             call h5Dcreate_f (file_id,dimname,H5T_NATIVE_REAL, &
                               dspacedim_id,dim_id,ierr)
             call h5Dwrite_f (dim_id,H5T_NATIVE_REAL, &
@@ -3810,19 +3860,19 @@ subroutine wrh5 (fname,s,ierr)
             allocate (f8dim(s_dims_i(1)))
             do j=1,s%dims(i)
               f8dim(j) = REAL(s%scales(i)%f(j),REAL64)
-            end do
+            enddo
             call h5Dcreate_f (file_id,dimname,H5T_NATIVE_DOUBLE, &
                              dspacedim_id,dim_id,ierr)
             call h5Dwrite_f (dim_id,H5T_NATIVE_DOUBLE, &
                              f8dim,s_dims_i,ierr)
             deallocate (f8dim)
-          endif
+          end if
           call h5DSset_scale_f (dim_id,ierr,dimname)
           call h5DSattach_scale_f (dset_id,dim_id,i,ierr)
           call h5DSset_label_f(dset_id, i, dimname, ierr)
           call h5Dclose_f (dim_id,ierr)
           call h5Sclose_f (dspacedim_id,ierr)
-        end do
+        enddo
         if (ierr.ne.0) then
           write (*,*)
           write (*,*) '### ERROR in WRH5:'
@@ -3830,8 +3880,8 @@ subroutine wrh5 (fname,s,ierr)
           write (*,*) 'File name: ',trim(fname)
           ierr = 5
           return
-        endif
-      endif
+        end if
+      end if
 !
 ! ****** Close the dataset.
 !
@@ -4239,18 +4289,14 @@ subroutine load_weno
       alpha_p(:,:) = 0.
 !
       allocate (D_C_CPt(nt))
-      allocate (D_M_MCt(nt))
       allocate (D_C_MCt(nt))
-      allocate (D_P_CPt(nt))
       allocate (D_M_Tt(nt))
       allocate (D_CP_Tt(nt))
       allocate (D_P_Tt(nt))
       allocate (D_MC_Tt(nt))
 !
       allocate (D_C_CPp(np))
-      allocate (D_M_MCp(np))
       allocate (D_C_MCp(np))
-      allocate (D_P_CPp(np))
       allocate (D_M_Tp(np))
       allocate (D_CP_Tp(np))
       allocate (D_P_Tp(np))
@@ -4258,12 +4304,10 @@ subroutine load_weno
 !
 ! ****** Set grid weights.
 !
-      do j=3,ntm2
+      do j=2,ntm1
         dt_total = dt(j-1) + dt(j) + dt(j+1)
         D_C_CPt(j) =           dt(j  )/(dt(j  )+dt(j+1))
-        D_M_MCt(j) =           dt(j-1)/(dt(j-1)+dt(j  ))
         D_C_MCt(j) =           dt(j  )/(dt(j-1)+dt(j  ))
-        D_P_CPt(j) =           dt(j+1)/(dt(j  )+dt(j+1))
         D_M_Tt (j) =           dt(j-1)/dt_total
         D_CP_Tt(j) = (dt(j  )+dt(j+1))/dt_total
         D_P_Tt (j) =           dt(j+1)/dt_total
@@ -4273,9 +4317,7 @@ subroutine load_weno
       do k=2,npm1
         dp_total = dp(k-1) + dp(k) + dp(k+1)
         D_C_CPp(k) =           dp(k  )/(dp(k  )+dp(k+1))
-        D_M_MCp(k) =           dp(k-1)/(dp(k-1)+dp(k  ))
         D_C_MCp(k) =           dp(k  )/(dp(k-1)+dp(k  ))
-        D_P_CPp(k) =           dp(k+1)/(dp(k  )+dp(k+1))
         D_M_Tp (k) =           dp(k-1)/dp_total
         D_CP_Tp(k) = (dp(k  )+dp(k+1))/dp_total
         D_P_Tp (k) =           dp(k+1)/dp_total
@@ -4285,17 +4327,15 @@ subroutine load_weno
 ! ****** Enforce periodicity.
 !
       call set_periodic_bc_1d (D_C_CPp,np)
-      call set_periodic_bc_1d (D_M_MCp,np)
       call set_periodic_bc_1d (D_C_MCp,np)
-      call set_periodic_bc_1d (D_P_CPp,np)
       call set_periodic_bc_1d (D_M_Tp,np)
       call set_periodic_bc_1d (D_CP_Tp,np)
       call set_periodic_bc_1d (D_P_Tp,np)
       call set_periodic_bc_1d (D_MC_Tp,np)
 !
-!$acc enter data copyin(D_C_CPt,D_M_MCt,D_C_MCt,D_P_CPt, &
+!$acc enter data copyin(D_C_CPt,D_C_MCt, &
 !$acc                   D_M_Tt, D_CP_Tt,D_P_Tt, D_MC_Tt, &
-!$acc                   D_C_CPp,D_M_MCp,D_C_MCp,D_P_CPp, &
+!$acc                   D_C_CPp,D_C_MCp, &
 !$acc                   D_M_Tp, D_CP_Tp,D_P_Tp, D_MC_Tp, &
 !$acc                   alpha_t,alpha_p)
 !
@@ -4875,12 +4915,12 @@ subroutine advection_step_fe_upwind (dtime_local)
 ! ****** Compute the fluxes at the cell faces.
 !
       do concurrent (k=2:npm-1,j=2:ntm1)
-        cct=sign(upwind,vt(j,k))
+        cct = sign(upwind,vt(j,k))
         flux_t(j,k) = vt(j,k)*half*((one-cct)*f(j,k)+(one+cct)*f(j-1,k))
       enddo
 !
       do concurrent (k=2:npm1,j=2:ntm-1)
-        ccp=sign(upwind,vp(j,k))
+        ccp = sign(upwind,vp(j,k))
         flux_p(j,k) = vp(j,k)*half*((one-ccp)*f(j,k)+(one+ccp)*f(j,k-1))
       enddo
 !
@@ -4918,7 +4958,7 @@ subroutine advection_step_fe_upwind (dtime_local)
       do concurrent (k=2:npm-1)
         f(  1,k) = f(  1,k) - fn*dtime_local*two*pi_i*dt_i(  1)
         f(ntm,k) = f(ntm,k) + fs*dtime_local*two*pi_i*dt_i(ntm)
-      end do
+      enddo
 !
 ! ****** Set periodic boundary condition.
 !
@@ -5078,7 +5118,7 @@ subroutine advection_operator_upwind (ftemp,aop)
         do concurrent (k=2:npm-1)
           aop(  1,k) =  fn*two*pi_i*dt_i(  1)
           aop(ntm,k) = -fs*two*pi_i*dt_i(ntm)
-        end do
+        enddo
 !
 ! ****** Set periodic boundary condition.
 !
@@ -5147,31 +5187,31 @@ subroutine advection_operator_weno3 (ftemp,aop)
 !
       do concurrent (k=1:npm,j=3:nt-2)
 !
-        p0p = (one + D_C_CPt(j  ))*LP(j  ,k) - D_C_CPt(j  )*LP(j+1,k)
-        p1p =        D_M_MCt(j  ) *LP(j  ,k) + D_C_MCt(j  )*LP(j-1,k)
         p0m = (one + D_C_MCt(j-1))*LN(j-1,k) - D_C_MCt(j-1)*LN(j-2,k)
-        p1m =        D_P_CPt(j-1) *LN(j-1,k) + D_C_CPt(j-1)*LN(j  ,k)
+        p1m =        D_C_MCt(j  ) *LN(j-1,k) + D_C_CPt(j-1)*LN(j  ,k)
+        p0p = (one + D_C_CPt(j  ))*LP(j  ,k) - D_C_CPt(j  )*LP(j+1,k)
+        p1p =        D_C_CPt(j-1) *LP(j  ,k) + D_C_MCt(j  )*LP(j-1,k)
 !
-        B0p = four*(D_C_CPt(j  )*(LP(j+1,k) - LP(j  ,k)))**2
-        B1p = four*(D_C_MCt(j  )*(LP(j  ,k) - LP(j-1,k)))**2
         B0m = four*(D_C_MCt(j-1)*(LN(j-1,k) - LN(j-2,k)))**2
         B1m = four*(D_C_CPt(j-1)*(LN(j  ,k) - LN(j-1,k)))**2
+        B0p = four*(D_C_CPt(j  )*(LP(j+1,k) - LP(j  ,k)))**2
+        B1p = four*(D_C_MCt(j  )*(LP(j  ,k) - LP(j-1,k)))**2
 !
+        w0m = D_P_Tt(j-1) *(one/(weno_eps + B0m)**2)
+        w1m = D_MC_Tt(j-1)*(one/(weno_eps + B1m)**2)
         w0p = D_M_Tt(j) *(one/(weno_eps + B0p)**2)
         w1p = D_CP_Tt(j)*(one/(weno_eps + B1p)**2)
-        w0m = D_P_Tt(j) *(one/(weno_eps + B0m)**2)
-        w1m = D_MC_Tt(j)*(one/(weno_eps + B1m)**2)
 !
-        wp_sum = w0p + w1p
         wm_sum = w0m + w1m
+        wp_sum = w0p + w1p
 !
-        OM0p = w0p/wp_sum
-        OM1p = w1p/wp_sum
         OM0m = w0m/wm_sum
         OM1m = w1m/wm_sum
+        OM0p = w0p/wp_sum
+        OM1p = w1p/wp_sum
 !
-        up = OM0p*p0p + OM1p*p1p
         um = OM0m*p0m + OM1m*p1m
+        up = OM0p*p0p + OM1p*p1p
 !
         flux_t(j,k) = up + um
 !
@@ -5228,31 +5268,31 @@ subroutine advection_operator_weno3 (ftemp,aop)
 !
       do concurrent (k=2:npm1,j=2:ntm-1)
 !
-        p0p = (one + D_C_CPp(k  ))*LP(j,k  ) - D_C_CPp(k  )*LP(j,k+1)
-        p1p =        D_M_MCp(k  ) *LP(j,k  ) + D_C_MCp(k  )*LP(j,k-1)
         p0m = (one + D_C_MCp(k-1))*LN(j,k-1) - D_C_MCp(k-1)*LN(j,k-2)
-        p1m =        D_P_CPp(k-1) *LN(j,k-1) + D_C_CPp(k-1)*LN(j,k  )
+        p1m =        D_C_MCp(k  ) *LN(j,k-1) + D_C_CPp(k-1)*LN(j,k  )
+        p0p = (one + D_C_CPp(k  ))*LP(j,k  ) - D_C_CPp(k  )*LP(j,k+1)
+        p1p =        D_C_CPp(k-1) *LP(j,k  ) + D_C_MCp(k  )*LP(j,k-1)
 !
-        B0p = four*(D_C_CPp(k  )*(LP(j,k+1) - LP(j,k  )))**2
-        B1p = four*(D_C_MCp(k  )*(LP(j,k  ) - LP(j,k-1)))**2
         B0m = four*(D_C_MCp(k-1)*(LN(j,k-1) - LN(j,k-2)))**2
         B1m = four*(D_C_CPp(k-1)*(LN(j,k  ) - LN(j,k-1)))**2
+        B0p = four*(D_C_CPp(k  )*(LP(j,k+1) - LP(j,k  )))**2
+        B1p = four*(D_C_MCp(k  )*(LP(j,k  ) - LP(j,k-1)))**2
 !
+        w0m = D_P_Tp (k-1)*(one/(weno_eps + B0m)**2)
+        w1m = D_MC_Tp(k-1)*(one/(weno_eps + B1m)**2)
         w0p = D_M_Tp (k)*(one/(weno_eps + B0p)**2)
         w1p = D_CP_Tp(k)*(one/(weno_eps + B1p)**2)
-        w0m = D_P_Tp (k)*(one/(weno_eps + B0m)**2)
-        w1m = D_MC_Tp(k)*(one/(weno_eps + B1m)**2)
 !
-        wp_sum = w0p + w1p
         wm_sum = w0m + w1m
+        wp_sum = w0p + w1p
 !
-        OM0p = w0p/wp_sum
-        OM1p = w1p/wp_sum
         OM0m = w0m/wm_sum
         OM1m = w1m/wm_sum
+        OM0p = w0p/wp_sum
+        OM1p = w1p/wp_sum
 !
-        up = OM0p*p0p + OM1p*p1p
         um = OM0m*p0m + OM1m*p1m
+        up = OM0p*p0p + OM1p*p1p
 !
         flux_p(j,k) = up + um
 !
@@ -5293,7 +5333,7 @@ subroutine advection_operator_weno3 (ftemp,aop)
         do concurrent (k=2:npm-1)
           aop(  1,k) =  fn*two*pi_i*dt_i(  1)
           aop(ntm,k) = -fs*two*pi_i*dt_i(ntm)
-        end do
+        enddo
 !
 ! ****** Set periodic phi boundary condition.
 !
@@ -5801,6 +5841,7 @@ subroutine read_input
       call defarg (GROUP_KA,'-vtfile','<none>','<file>')
       call defarg (GROUP_KA,'-vpfile','<none>','<file>')
       call defarg (GROUP_KA,'-vpomega','0.','<val>')
+      call defarg (GROUP_KA,'-vomega','0.','<val>')
       call defarg (GROUP_KA,'-vt_const','0.','<val>')
       call defarg (GROUP_K,'-va',' ',' ')
       call defarg (GROUP_K,'-nostrang',' ',' ')
@@ -5980,17 +6021,20 @@ subroutine read_input
       call fetcharg ('-vpomega',set,arg)
       flow_vp_rigid_omega = fpval(arg,'-vpomega')
 !
+      call fetcharg ('-vomega',set,arg)
+      flow_rigid_omega = fpval(arg,'-vomega')
+!
       call fetcharg ('-vt_const',set,arg)
-      flow_vt_const = fpval(arg,'-vt_const')      
+      flow_vt_const = fpval(arg,'-vt_const')
 !
       call fetcharg ('-va',set,arg)
       if (set) flow_attenuate = .true.
 !
       call fetcharg ('-dr',set,arg)
-      flow_dr_model = intval(arg,'-dr')
+      if (set) flow_dr_model = intval(arg,'-dr')
 !
       call fetcharg ('-mf',set,arg)
-      flow_mf_model = intval(arg,'-mf')
+      if (set) flow_mf_model = intval(arg,'-mf')
 !
 ! ****** Time to diffuse for.
 !
@@ -6149,6 +6193,11 @@ end subroutine
 !   - Added -vt_const to allow adding a constant velocity in theta
 !     in km/s (used for validation runs).
 !   - Fixed GPU issue with -vrun 1 initial condition.
+!
+! 06/07/2022, RC+MS, Version 0.10.0:
+!   - Bug fix for WENO3 scheme.
+!   - Added new validation run IC.
+!   - Added new rotated rigid velocity option for testing purposes.
 !
 !-----------------------------------------------------------------------
 !
