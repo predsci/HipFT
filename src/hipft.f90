@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.10.0'
-      character(*), parameter :: cdate='06/07/2022'
+      character(*), parameter :: cvers='0.11.0'
+      character(*), parameter :: cdate='06/20/2022'
 !
 end module
 !#######################################################################
@@ -80,54 +80,58 @@ module constants
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ), parameter :: zero=0.0_r_typ
-      real(r_typ), parameter :: one=1.0_r_typ
-      integer*8,   parameter :: one_int=1
-      real(r_typ), parameter :: two=2.0_r_typ
-      integer*8,   parameter :: two_int=2
-      real(r_typ), parameter :: three=3._r_typ
-      integer*8,   parameter :: three_int=3
-      real(r_typ), parameter :: four=4._r_typ
-      integer*8,   parameter :: four_int=4
-      real(r_typ), parameter :: six=6._r_typ
-      real(r_typ), parameter :: nine=9._r_typ
-      real(r_typ), parameter :: ten=10._r_typ
-      real(r_typ), parameter :: fifteen=15._r_typ
-      real(r_typ), parameter :: sixteen=16._r_typ
-      real(r_typ), parameter :: half=0.5_r_typ
-      real(r_typ), parameter :: quarter=0.25_r_typ
-      real(r_typ), parameter :: twentyfour=24.0_r_typ
-      real(r_typ), parameter :: twentyfive=25.0_r_typ
-      real(r_typ), parameter :: fivehundred_i=0.002_r_typ
-      real(r_typ), parameter :: three_quarter=0.75_r_typ
-      real(r_typ), parameter :: two_third=0.66666666666666666_r_typ
-      real(r_typ), parameter :: third=0.33333333333333333_r_typ
+      real(r_typ), parameter :: zero = 0.0_r_typ
+      real(r_typ), parameter :: one = 1.0_r_typ
+      integer*8,   parameter :: one_int = 1
+      real(r_typ), parameter :: two = 2.0_r_typ
+      integer*8,   parameter :: two_int = 2
+      real(r_typ), parameter :: three = 3._r_typ
+      integer*8,   parameter :: three_int = 3
+      real(r_typ), parameter :: four = 4._r_typ
+      integer*8,   parameter :: four_int = 4
+      real(r_typ), parameter :: six = 6._r_typ
+      real(r_typ), parameter :: nine = 9._r_typ
+      real(r_typ), parameter :: ten = 10._r_typ
+      real(r_typ), parameter :: fifteen = 15._r_typ
+      real(r_typ), parameter :: sixteen = 16._r_typ
+      real(r_typ), parameter :: half = 0.5_r_typ
+      real(r_typ), parameter :: quarter = 0.25_r_typ
+      real(r_typ), parameter :: twentyfour = 24.0_r_typ
+      real(r_typ), parameter :: twentyfive = 25.0_r_typ
+      real(r_typ), parameter :: fivehundred_i = 0.002_r_typ
+      real(r_typ), parameter :: three_quarter = 0.75_r_typ
+      real(r_typ), parameter :: two_third = 0.66666666666666666_r_typ
+      real(r_typ), parameter :: third = 0.33333333333333333_r_typ
 !
-      real(r_typ), parameter :: pi=3.1415926535897932_r_typ
-      real(r_typ), parameter :: pi_two=1.5707963267948966_r_typ
-      real(r_typ), parameter :: pi_i=0.3183098861837907_r_typ
-      real(r_typ), parameter :: twopi=6.2831853071795864_r_typ
-      real(r_typ), parameter :: twopi_i=0.15915494309189535_r_typ
-      real(r_typ), parameter :: threepi_two=4.71238898038469_r_typ
-      real(r_typ), parameter :: threepi_four=2.356194490192345_r_typ
+      real(r_typ), parameter :: pi = 3.1415926535897932_r_typ
+      real(r_typ), parameter :: pi_two = 1.5707963267948966_r_typ
+      real(r_typ), parameter :: pi_i = 0.3183098861837907_r_typ
+      real(r_typ), parameter :: twopi = 6.2831853071795864_r_typ
+      real(r_typ), parameter :: twopi_i = 0.15915494309189535_r_typ
+      real(r_typ), parameter :: threepi_two = 4.71238898038469_r_typ
+      real(r_typ), parameter :: threepi_four = 2.356194490192345_r_typ
 !
-      real(r_typ), parameter :: rsun_cm=6.96e10_r_typ
+      real(r_typ), parameter :: d2r = 0.017453292519943295_r_typ
+      real(r_typ), parameter :: r2d = 57.29577951308232_r_typ
+!
+      real(r_typ), parameter :: rsun_cm = 6.96e10_r_typ
+      real(r_typ), parameter :: rsun_cm2 = 4.84416e21_r_typ
 !
       real(r_typ), parameter :: &
-                         diff_km2_s_to_rs2_s=2.0643413925221e-12_r_typ
+                         diff_km2_s_to_rs2_s = 2.0643413925221e-12_r_typ
       real(r_typ), parameter :: &
-                         diff_km2_s_to_rs2_hr=7.43162901307967e-09_r_typ
+                         diff_km2_s_to_rs2_hr = 7.43162901307967e-09_r_typ
       real(r_typ), parameter :: &
-                         km_s_to_rs_hr=0.005172413793103448_r_typ
+                         km_s_to_rs_hr = 0.005172413793103448_r_typ
       real(r_typ), parameter :: &
-                         m_s_to_rs_hr=5.172413793103448e-06_r_typ
+                         m_s_to_rs_hr = 5.172413793103448e-06_r_typ
       real(r_typ), parameter :: &
-                         km_s_to_rs_s=1.4367816091954023e-06_r_typ
-      real(r_typ), parameter :: output_flux_fac=1.0e-21_r_typ
+                         km_s_to_rs_s = 1.4367816091954023e-06_r_typ
+      real(r_typ), parameter :: output_flux_fac = 1.0e-21_r_typ
 !
-      real(r_typ), parameter :: small_value=tiny(one)
-      real(r_typ), parameter :: large_value=huge(one)
-      real(r_typ), parameter :: safety=0.95_r_typ
+      real(r_typ), parameter :: small_value = tiny(one)
+      real(r_typ), parameter :: large_value = huge(one)
+      real(r_typ), parameter :: safety = 0.95_r_typ
 !
 end module
 !#######################################################################
@@ -181,6 +185,10 @@ module input_parameters
 ! ****** Algorithm options.
 !
       logical :: strang_splitting = .true.
+!
+! ****** Analysis options.
+!
+      real(r_typ) :: pole_flux_lat_limit = 25.0_r_typ
 !
 !-----------------------------------------------------------------------
 !
@@ -368,8 +376,10 @@ module globals
 !
 ! ****** History analysis variables.
 !
-      real(r_typ) :: h_minbr, h_maxbr, h_minabsbr, &
-                     h_fluxp, h_fluxm, h_valerr
+      real(r_typ) :: h_minbr, h_maxbr, h_minabsbr,                   &
+                     h_fluxp, h_fluxm, h_valerr,                     &
+                     h_fluxp_pn, h_fluxm_pn, h_fluxp_ps, h_fluxm_ps, &
+                     h_area_pn, h_area_ps, h_eq_dipole, h_ax_dipole
 !
       real(r_typ) :: u0max,u0min
 !
@@ -917,18 +927,36 @@ subroutine create_and_open_output_log_files
 !
       call FFOPEN (IO_HIST_NUM,io_hist_num_filename,'rw',ierr)
 !
-      write (IO_HIST_NUM,'(a10,a,6(a22,a),a15)')                      &
-      'STEP',' ','TIME',' ','DTIME',' ','DTIME_ADV_STB',' ',          &
-      'DTIME_ADV_USED',' ','DTIME_DIFF_STB',' ','DTIME_DIFF_USED',    &
-      ' ','N_DIFF_PER_STEP'
+      write (IO_HIST_NUM,'(a10,a,6(a22,a),a15)') &
+      'STEP',' ',&
+      'TIME',' ',&
+      'DTIME',' ',&
+      'DTIME_ADV_STB',' ',&
+      'DTIME_ADV_USED',' ',&
+      'DTIME_DIFF_STB',' ',&
+      'DTIME_DIFF_USED',' ',&
+      'N_DIFF_PER_STEP'
 !
       close(IO_HIST_NUM)
 !
       call FFOPEN (IO_HIST_SOL,io_hist_sol_filename,'rw',ierr)
 !
-      write (IO_HIST_SOL,'(a10,a,7(a22,a))')                          &
-      'STEP',' ','TIME',' ','BR_MIN',' ','BR_MAX',' ','BR_ABS_MIN',   &
-      ' ','FLUX_POSITIVE',' ','FLUX_NEGATIVE',' ',                    &
+      write (IO_HIST_SOL,'(a10,a,15(a22,a))') &
+      'STEP',' ',&
+      'TIME',' ',&
+      'BR_MIN',' ',&
+      'BR_MAX',' ',&
+      'BR_ABS_MIN', ' ',&
+      'FLUX_POSITIVE',' ',&
+      'FLUX_NEGATIVE',' ',&
+      'NPOLE_FLUX_POSITIVE',' ',&
+      'NPOLE_FLUX_NEGATIVE',' ',&
+      'SPOLE_FLUX_POSITIVE',' ',&
+      'SPOLE_FLUX_NEGATIVE',' ',&
+      'NPOLE_AREA',' ',&
+      'SPOLE_AREA',' ',&
+      'EQ_DIPOLE',' ',&
+      'AX_DIPOLE',' ',&
       'VALIDATION_ERR_CVRMSD'
 !
       close(IO_MAP_OUT_LIST)
@@ -936,9 +964,13 @@ subroutine create_and_open_output_log_files
       if (output_map_idx_cadence.gt.0 .or.     &
           output_map_time_cadence.gt.0.0) then
 !
-        call FFOPEN (IO_MAP_OUT_LIST,io_map_output_list_filename,'rw',ierr)
+        call FFOPEN (IO_MAP_OUT_LIST,io_map_output_list_filename,&
+                     'rw',ierr)
 !
-        write (IO_MAP_OUT_LIST,'(a10,a,a25,a,a)') 'IDX',' ','TIME',' ','FILENAME'
+        write (IO_MAP_OUT_LIST,'(a10,a,a25,a,a)') &
+                               'IDX',' ',&
+                               'TIME',' ',&
+                               'FILENAME'
 !
         close(IO_MAP_OUT_LIST)
       end if
@@ -1102,17 +1134,17 @@ subroutine load_initial_condition
                                     (s1(i)-threepi_two )**2 )/val2_g_width)
           enddo
         enddo
-!   
+!
       elseif (validation_run .eq. 3) then
 !
 ! ****** Make initial solution f and output.
 !
         do j=1,n2
           do i=1,n1
-            f_local(i,j) = - EXP((-(s2(j)-pi_two)**2)/(val2_g_width)) 
+            f_local(i,j) = - EXP((-(s2(j)-pi_two)**2)/(val2_g_width))
           enddo
         enddo
-!           
+!
       end if
 !
 ! ****** Set resolution values.
@@ -1400,8 +1432,8 @@ subroutine output_histories
 !
       integer :: ierr
       integer*8 :: niters
-      character(*), parameter :: FMT='(i10,a,6(1pe22.15,a),i15)'
-      character(*), parameter :: FMT2='(i10,a,7(1pe22.15,a))'
+      character(*), parameter :: FMT='(i10,a,6(1pe23.15e3,a),i15)'
+      character(*), parameter :: FMT2='(i10,a,15(1pe23.15e3,a))'
 !
 !-----------------------------------------------------------------------
 !
@@ -1423,10 +1455,15 @@ subroutine output_histories
 !
       call FFOPEN (IO_HIST_SOL,io_hist_sol_filename,'a',ierr)
 
-      write(IO_HIST_SOL,FMT2) ntime,' ',                              &
-                             time,' ',h_minbr,' ',h_maxbr,' ',        &
-                             h_minabsbr, ' ',h_fluxp,' ',h_fluxm,     &
-                             ' ',h_valerr
+      write(IO_HIST_SOL,FMT2) ntime,' ',time,' ',                     &
+                              h_minbr,' ',h_maxbr,' ',h_minabsbr,' ', &
+                              h_fluxp,    ' ', h_fluxm,    ' ',       &
+                              h_fluxp_pn, ' ', h_fluxm_pn, ' ',       &
+                              h_fluxp_ps, ' ', h_fluxm_ps, ' ',       &
+                              h_area_pn,  ' ', h_area_ps,  ' ',       &
+                              h_eq_dipole,' ', h_ax_dipole,' ',       &
+                              h_valerr
+
 !
       close(IO_HIST_SOL)
 !
@@ -1583,10 +1620,11 @@ subroutine analysis_step
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ) :: t1,wtime
-      real(r_typ) :: sumfval2,fv,fv2
+      real(r_typ) :: t1, wtime
+      real(r_typ) :: sumfval2, fv, fv2, eqd1, eqd2
+      real(r_typ) :: tav, da_t, da_p, sn_t, d_t, cs_t, cs_p
       real(r_typ), dimension(:,:), allocatable :: fval
-      integer :: i,j
+      integer :: i, j
 !
 !-----------------------------------------------------------------------
 !
@@ -1605,10 +1643,8 @@ subroutine analysis_step
 !
       end if
 !
-! ***** Get metrics of the current field.
+! ***** Get max and min metrics.
 !
-      h_fluxp = 0.
-      h_fluxm = 0.
       h_minbr = large_value
       h_maxbr = small_value
       h_minabsbr = large_value
@@ -1619,8 +1655,8 @@ subroutine analysis_step
 !$omp         reduction(+:sumfval2,h_valerr) &
 !$omp         reduction(max:h_maxbr) reduction(min:h_minbr,h_minabsbr)
 !$acc parallel loop collapse(2) default(present) &
-!$acc         reduction(+:sumfval2,h_valerr) &
-!$acc         reduction(max:h_maxbr) reduction(min:h_minbr,h_minabsbr)
+!$acc&         reduction(+:sumfval2,h_valerr) &
+!$acc&         reduction(max:h_maxbr) reduction(min:h_minbr,h_minabsbr)
       do j=1,npm-2
         do i=1,ntm
           h_minbr = min(f(i,j),h_minbr)
@@ -1644,64 +1680,47 @@ subroutine analysis_step
 !$acc exit data delete (fval)
       end if
 !
-! ****** Get flux in units of 1e21 Mx
+! ****** Get integrated metrics.
 !
-      call get_flux (h_fluxp,h_fluxm)
-      h_fluxp = output_flux_fac*h_fluxp*rsun_cm**2
-      h_fluxm = output_flux_fac*h_fluxm*rsun_cm**2
+      h_fluxp = 0.
+      h_fluxm = 0.
+      h_fluxp_pn = 0.
+      h_fluxm_pn = 0.
+      h_fluxp_ps = 0.
+      h_fluxm_ps = 0.
+      h_area_pn = 0.
+      h_area_ps = 0.
+      eqd1 = 0.
+      eqd2 = 0.
+      h_eq_dipole = 0.
+      h_ax_dipole = 0.
 !
-      wtime_analysis = wtime_analysis + (wtime() - t1)
-!
-end subroutine
-!#######################################################################
-subroutine get_flux (fluxp,fluxm)
-!
-!-----------------------------------------------------------------------
-!
-! ****** Calculate the total positive and negative flux.
-!
-!-----------------------------------------------------------------------
-!
-      use input_parameters
-      use globals
-      use mesh
-      use fields
-      use constants
-!
-!-----------------------------------------------------------------------
-!
-      implicit none
-!
-!-----------------------------------------------------------------------
-!
-      real(r_typ) :: fluxp,fluxm
-!
-!-----------------------------------------------------------------------
-!
-      integer :: i,j
-      real(r_typ) :: tav,da_t,da_p
-      real(r_typ) :: fv,area_check
-!
-!-----------------------------------------------------------------------
-!
-      fluxp = 0.
-      fluxm = 0.
-      area_check = 0.
-!
-!$omp parallel do collapse(2) default(shared) &
-!$omp         reduction(+:fluxp,fluxm,area_check)
+!$omp parallel do   collapse(2) default(shared)                 &
+!$omp reduction(+:h_fluxp,h_fluxm,h_fluxp_pn,h_fluxm_pn,        &
+!$omp             h_fluxp_ps,h_fluxm_ps,eqd1,eqd2,h_ax_dipole,h_area_ps)
 !$acc parallel loop collapse(2) default(present) &
-!$acc         reduction(+:fluxp,fluxm,area_check)
+!$acc& reduction(+:h_fluxp,h_fluxm,h_fluxp_pn,h_fluxm_pn,h_area_pn, &
+!$acc&             h_fluxp_ps,h_fluxm_ps,h_area_ps,eqd1,eqd2,h_ax_dipole)
       do i=1,npm-1
         do j=1,ntm
+!
           if (j.eq.1) then
             tav=half*(t(1)+t(2))
-            da_t=quarter*sin(tav)*dth(2)
+            sn_t = sin(tav)
+            cs_t = cos(tav)
+            d_t = dth(2)
+            da_t=quarter*sn_t*d_t
           else if (j.eq.ntm) then
             tav=half*(t(ntm)+t(ntm-1))
-            da_t=quarter*sin(tav)*dth(ntm)
+            sn_t = sin(tav)
+            cs_t = cos(tav)
+            d_t = dth(ntm)
+            da_t=quarter*sn_t*d_t
           else
-            da_t=sin(t(j))*dt(j)
+            sn_t = sin(t(j))
+            cs_t = cos(t(j))
+            d_t = dt(j)
+            da_t = sn_t*d_t
           end if
 !
           if (i.eq.1) then
@@ -1711,108 +1730,73 @@ subroutine get_flux (fluxp,fluxm)
           else
             da_p=dp(i)
           end if
+          cs_p = cos(p(i))
 !
           fv = f(j,i)*da_t*da_p
 !
+! ****** Fluxes.
+!
           if (fv.gt.0.) then
-            fluxp = fluxp + fv
+            h_fluxp = h_fluxp + fv
           else
-            fluxm = fluxm + fv
+            h_fluxm = h_fluxm + fv
           end if
 !
-          area_check = area_check + da_t*da_p
+! ****** Polar fluxes and areas.
+!
+          if (t(j).le.pole_flux_lat_limit*d2r) then
+            if (fv.gt.0.) then
+              h_fluxp_pn = h_fluxp_pn + fv
+            else
+              h_fluxm_pn = h_fluxm_pn + fv
+            end if
+            h_area_pn = h_area_pn + da_t*da_p
+          end if
+!
+          if (t(j).ge.pi-pole_flux_lat_limit*d2r) then
+            if (fv.gt.0.) then
+              h_fluxp_ps = h_fluxp_ps + fv
+            else
+              h_fluxm_ps = h_fluxm_ps + fv
+            end if
+            h_area_ps = h_area_ps + da_t*da_p
+          end if
+!
+! ****** Dipoles.
+!
+          eqd1 = eqd1 + f(j,i)*sn_t*cs_p*d_t*da_p
+          eqd2 = eqd2 + f(j,i)*cs_t*cs_p*d_t*da_p
+          h_ax_dipole = h_ax_dipole + f(j,i)*cs_t*d_t*da_p
+!
         enddo
       enddo
 !$omp end parallel do
 !
-!      print*,'ZMFLUX:'
-!      print*,'Area int:   ', area_check*1.0e-21_r_typ*rsun_cm**2
-!      print*,'Area exact: ', 1.0e-21_r_typ*four*pi*rsun_cm**2
-!      print*,'Flux+: ',fluxp
-!      print*,'Flux-: ',fluxm
+! ****** Set equatorial dipole strength.
 !
-end subroutine
-!#######################################################################
-subroutine get_flux_trap (fluxp,fluxm)
+      eqd1 = three_quarter*pi*eqd1
+      eqd2 = three_quarter*pi*eqd2
+      h_eq_dipole = SQRT(eqd1**2 + eqd2**2)
 !
-!-----------------------------------------------------------------------
+! ****** Set axial dipole strength.
 !
-! ****** Calculate the total positive and negative flux.
+      h_ax_dipole = three_quarter*pi*h_ax_dipole
 !
-!-----------------------------------------------------------------------
+! ****** Set fluxes to be in units of Mx
 !
-      use input_parameters
-      use globals
-      use mesh
-      use fields
-      use constants
+      h_fluxp    = rsun_cm2*h_fluxp
+      h_fluxm    = rsun_cm2*h_fluxm
+      h_fluxp_pn = rsun_cm2*h_fluxp_pn
+      h_fluxm_pn = rsun_cm2*h_fluxm_pn
+      h_fluxp_ps = rsun_cm2*h_fluxp_ps
+      h_fluxm_ps = rsun_cm2*h_fluxm_ps
 !
-!-----------------------------------------------------------------------
-!
-      implicit none
-!
-!-----------------------------------------------------------------------
-!
-      real(r_typ) :: fluxp,fluxm
-!
-!-----------------------------------------------------------------------
-!
-      integer :: j,k
-      real(r_typ) :: fav,favp,favm,area_check
-      real(r_typ), dimension(:), allocatable :: int_tmp_p, int_tmp_m, area_chk
-!
-!-----------------------------------------------------------------------
-!
-      fluxp = 0.
-      fluxm = 0.
-      area_check = 0.
-!
-!$acc update self(f)
-!
-      allocate (int_tmp_p(npm-1))
-      allocate (int_tmp_m(npm-1))
-      allocate (area_chk(npm-1))
-      int_tmp_p(:)=0.
-      int_tmp_m(:)=0
-      area_chk(:)=0.
-!
-! ****** First, do integration along theta direction.
-!
-      do j=1,ntm-1
-        do k=1,npm-1
-          fav = half*(f(j+1,k) + f(j,k))
-          if (fav.gt.0.) then
-            int_tmp_p(k) = int_tmp_p(k) + fav*dth(j+1)*sth(j+1)
-          else
-            int_tmp_m(k) = int_tmp_m(k) + fav*dth(j+1)*sth(j+1)
-          end if
-          area_chk(k) = area_chk(k) + dth(j+1)*sth(j+1)
-        enddo
-      enddo
-!
-! ****** Now, do integration along phi direction.
-!
-      do k=1,npm-2
-        favp = half*(int_tmp_p(k+1) + int_tmp_p(k))
-        favm = half*(int_tmp_m(k+1) + int_tmp_m(k))
-        fluxp = fluxp + favp*dph(k+1)
-        fluxm = fluxm + favm*dph(k+1)
-        area_check = area_check + area_chk(k)*dph(k+1)
-      enddo
-!
-      fluxp = 1.0e-21_r_typ*fluxp*rsun_cm**2
-      fluxm = 1.0e-21_r_typ*fluxm*rsun_cm**2
-      area_check = area_check*1.0e-21_r_typ*rsun_cm**2
-!
-      deallocate (int_tmp_p)
-      deallocate (int_tmp_m)
-      deallocate (area_chk)
-
-      print*,'TRAPZ:'
-      print*,'Area int:   ', area_check
-      print*,'Area exact: ', 1.0e-21_r_typ*four*pi*rsun_cm**2
-      print*,'Flux+: ',fluxp
-      print*,'Flux-: ',fluxm
+! ****** Set polar areas to be in units of cm.
+!  
+      h_area_pn = rsun_cm2*h_area_pn
+      h_area_ps = rsun_cm2*h_area_ps
+!      
+      wtime_analysis = wtime_analysis + (wtime() - t1)
 !
 end subroutine
 !#######################################################################
@@ -1938,7 +1922,7 @@ subroutine update_flow
             p1 = -2*cth(j)*abs(sth(j)*cp)
             p2 = (cp*cth(j)**2-cp)*abs(cp)**3
             p3 = (-3*cp*cth(j)**2+2*cp)*abs(cp)
-            p4 = sign(1,cp)*cth(j)**2
+            p4 = sign(one,cp)*cth(j)**2
             p5 = 2*abs(cp)**3*cth(j)*abs(sth(j))
             p6 = (-cp**4+3*cp**2-1)*cth(j)**2
             p7 = (-2*cp**3*sth(j)+2*sth(j)*cp)*cth(j)
@@ -1947,20 +1931,20 @@ subroutine update_flow
             p10 = (cp**4-3*cp**2+1)*cth(j)**2
             p11 = (2*cp**3*sth(j)-2*sth(j)*cp)*cth(j)
             p12 = cp**4+2*cp**2
-            vt(j,k) = vt(j,k)+(-((p1+(p2+p3+p4)*sign(1,sth(j))    &
+            vt(j,k) = vt(j,k)+(-((p1+(p2+p3+p4)*sign(one,sth(j))    &
                   +p5+p6+p7+p8)*p9)/SQRT(p10+p11-p12))
-            if ((abs(vt(j,k))>10**5) .or. (abs(vt(j,k))<-10**-5)) then 
+            if ((abs(vt(j,k))>10**5) .or. (abs(vt(j,k))<-10**-5)) then
               vt(j,k)=0
             endif
           enddo
           do concurrent (k=1:np,j=1:ntm)
             cph = cos(ph(k))
-            p1 = vrigid_pole*(cph**2*ct(j)+st(j)*cph-ct(j))*sign(1,cph)*abs(st(j))
+            p1 = vrigid_pole*(cph**2*ct(j)+st(j)*cph-ct(j))*sign(one,cph)*abs(st(j))
             p2 = (cph**4-3*cph**2+1)*ct(j)**2
             p3 = (2*cph**3*st(j)-2*st(j)*cph)*ct(j)
             p4 = cph**4+2*cph**2
             vp(j,k) = vp(j,k)- p1/SQRT(p2+p3-p4)
-            if ((abs(vp(j,k))>10**5) .or. (abs(vp(j,k))<-10**-5)) then 
+            if ((abs(vp(j,k))>10**5) .or. (abs(vp(j,k))<-10**-5)) then
               vp(j,k)=0
             endif
          end do
@@ -4125,7 +4109,7 @@ subroutine set_mesh
       pout(:) = p(1:npm-1)
 !
 !$acc enter data copyin (t,p,dt,dt_i,st,st_i,ct,dp,dp_i,th,ph, &
-!$acc                    dth,dth_i,sth,sth_i,cth,dph,dph_i)
+!$acc&                   dth,dth_i,sth,sth_i,cth,dph,dph_i)
 end subroutine
 !#######################################################################
 subroutine load_diffusion
@@ -4334,10 +4318,10 @@ subroutine load_weno
       call set_periodic_bc_1d (D_MC_Tp,np)
 !
 !$acc enter data copyin(D_C_CPt,D_C_MCt, &
-!$acc                   D_M_Tt, D_CP_Tt,D_P_Tt, D_MC_Tt, &
-!$acc                   D_C_CPp,D_C_MCp, &
-!$acc                   D_M_Tp, D_CP_Tp,D_P_Tp, D_MC_Tp, &
-!$acc                   alpha_t,alpha_p)
+!$acc&                  D_M_Tt, D_CP_Tt,D_P_Tt, D_MC_Tt, &
+!$acc&                  D_C_CPp,D_C_MCp, &
+!$acc&                  D_M_Tp, D_CP_Tp,D_P_Tp, D_MC_Tp, &
+!$acc&                  alpha_t,alpha_p)
 !
 end subroutine
 !#######################################################################
@@ -4795,7 +4779,7 @@ subroutine get_flow_dtmax (dtmaxflow)
 !$omp parallel do default(shared) collapse(2) reduction(min:dtmax) &
 !$omp private(kdotv,deltat)
 !$acc parallel loop default(present) collapse(2) reduction(min:dtmax) &
-!$acc private(kdotv,deltat)
+!$acc& private(kdotv,deltat)
       do k=2,npm-1
         do j=2,ntm-1
           kdotv = MAX(ABS(vt(j,k)),ABS(vt(j+1,k)))*dt_i(j) &
@@ -6184,7 +6168,7 @@ end subroutine
 !
 ! 05/17/2022, RC+MS, Version 0.8.0:
 !   - Added implementation of the WENO3 advection scheme (-fm 3).
-!   - Bug fix for time-step calculation.
+!   - BUG FIX: time-step calculation.
 !
 ! 05/20/2022, RC+MS, Version 0.9.0:
 !   - vrun has been changed to an integer to select which validation
@@ -6192,12 +6176,18 @@ end subroutine
 !   - Added Guassian blob initial validation condition (-vrun 2).
 !   - Added -vt_const to allow adding a constant velocity in theta
 !     in km/s (used for validation runs).
-!   - Fixed GPU issue with -vrun 1 initial condition.
+!   - BUG FIX: GPU issue with -vrun 1 initial condition.
 !
 ! 06/07/2022, RC+MS, Version 0.10.0:
-!   - Bug fix for WENO3 scheme.
+!   - BUG FIX: WENO3 coef fix for non-uniform grids.
 !   - Added new validation run IC.
 !   - Added new rotated rigid velocity option for testing purposes.
+!
+! 06/20/2022, RC, Version 0.11.0:
+!   - Added additional diagnostics in history output:
+!     - Northern and southern polar fluxes (+ & -) and areas.
+!     - Equatorial and axial dipole strengths.
+!   - Made fluxes in history output in Mx.
 !
 !-----------------------------------------------------------------------
 !
