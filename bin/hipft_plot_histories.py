@@ -43,8 +43,8 @@ def run(args):
   fluxm_ps = np.array(hist_sol['SPOLE_FLUX_NEGATIVE'])
   area_ps = np.array(hist_sol['SPOLE_AREA'])
   
-  eq_dipole = np.array(hist_sol['AX_DIPOLE'])
-  ax_dipole = np.array(hist_sol['EQ_DIPOLE'])
+  ax_dipole = np.array(hist_sol['AX_DIPOLE'])
+  eq_dipole = np.array(hist_sol['EQ_DIPOLE'])
 
   brmin = np.array(hist_sol['BR_MIN'])
   brmax = np.array(hist_sol['BR_MAX'])
