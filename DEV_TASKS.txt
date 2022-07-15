@@ -6,11 +6,6 @@ DEV TASKS FOR HIPFT:
  - Add initial dump time option
  - Make python script to generate hipft history diagnostics from a series of hipft output maps
    (can then use to get polar fluxes as function of lat limit, etc.)
- - Implement time-dept flow input in same manner as magnetic field input
-   - Meta data csv file read
-   - Time step setting based on input cadence
-   - Reading data and setting flow - activate re-calc of CFL, etc.
-     (Linear interp in time between inputs?)
  - Add MPI code from Miko to allow multiple realizations
    - Basic multi-map 3D data across ranks
    - Make some parameters 1D arrays to allow instance variations
@@ -24,6 +19,10 @@ DEV TASKS FOR HIPFT:
 
  - Update history plot script to allow UT time input for HipFT time "0"
    for use with plot axis (and add plot axis format options)
+
+ - Write script to generate butterfly diagram from series of HipFT output maps.
+   Can use initial UT time and map output text file to get times.
+   Need to do average of CR (so find idx range for each one) and add to diagram map.
 
 
 

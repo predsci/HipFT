@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.11.0'
-      character(*), parameter :: cdate='06/20/2022'
+      character(*), parameter :: cvers='0.12.0'
+      character(*), parameter :: cdate='07/15/2022'
 !
 end module
 !#######################################################################
@@ -163,7 +163,7 @@ module input_parameters
 ! ****** Output map cadence ********
 !
       integer        :: output_map_idx_cadence = 0
-      real(r_typ)    :: output_map_time_cadence = 0.0
+      real(r_typ)    :: output_map_time_cadence = zero
 !
 ! ****** Restarts ********
 !
@@ -178,8 +178,8 @@ module input_parameters
 !
 ! ****** Timestep ********
 !
-      real(r_typ)    :: dt_max_increase_fac = 0.0_r_typ
-      real(r_typ)    :: dt_min = 1.0e-16_r_typ
+      real(r_typ)    :: dt_max_increase_fac = zero
+      real(r_typ)    :: dt_min = 1.0e-15_r_typ
       real(r_typ)    :: dt_max = huge(one)
 !
 ! ****** Algorithm options.
@@ -188,7 +188,7 @@ module input_parameters
 !
 ! ****** Analysis options.
 !
-      real(r_typ) :: pole_flux_lat_limit = 25.0_r_typ
+      real(r_typ) :: pole_flux_lat_limit = 30.0_r_typ
 !
 !-----------------------------------------------------------------------
 !
@@ -198,23 +198,18 @@ module input_parameters
 !
       logical :: advance_flow = .false.
 !
-! ****** Flow files (currently static).
-!
-      character(512) :: flow_vt_filename = ' '
-      character(512) :: flow_vp_filename = ' '
-!
 ! ****** Add a rigid rotation vp velocity (km/s) of omega*sin(theta).
 !
-      real(r_typ)    :: flow_vp_rigid_omega = 0.
+      real(r_typ)    :: flow_vp_rigid_omega = zero
 !
 ! ****** Add a rigid rotation velocity (km/s) of omega for a rigid
 ! ****** rotation through the poles.
 !
-      real(r_typ)    :: flow_rigid_omega = 0.
+      real(r_typ)    :: flow_rigid_omega = zero
 !
 ! ****** Add a constant vt velocity (km/s).
 !
-      real(r_typ)    :: flow_vt_const = 0.
+      real(r_typ)    :: flow_vt_const = zero
 !
 ! ****** Attenuate the veolcity based on the value of Br.
 ! ****** This causes flow to be updated each step.
@@ -227,17 +222,23 @@ module input_parameters
       integer :: flow_dr_model = 0
       integer :: flow_mf_model = 0
 !
+! ****** Time dependent flows from file (used for conflow).
+!
+      logical :: use_flow_from_files = .false.
+      character(512) :: flow_list_filename = ' '
+      character(512) :: flow_root_dir = '.'
+!
 ! ****** Algorithm options.
 !        Can set upwind to central differencing by also setting UPWIND=0.
 ! ****** 1: FE+Upwind.
 ! ****** 2: RK3TVD+Upwind.
 ! ****** 3: RK3TVD+WENO3.
 !
-      integer :: flow_num_method = 2
+      integer :: flow_num_method = 3
 !
 ! ****** Upwind coefficient.
 !
-      real(r_typ) :: upwind = 1._r_typ
+      real(r_typ) :: upwind = one
 !
 !-----------------------------------------------------------------------
 !
@@ -260,7 +261,7 @@ module input_parameters
       integer :: diffusion_num_method = 3
 !
 ! ****** Set number of diffusion subcycles per flow step.
-! ****** For diffusion-only runs with RKG2/(RKL2), set to ~30/(60).
+! ****** For diffusion-only runs with RKG2(RKL2), set to ~30(60).
 ! ****** For flow+diffusion runs, this usually can be ~1.
 !
       integer :: diffusion_subcycles = 30
@@ -409,7 +410,6 @@ module fields
 !
       implicit none
 !
-!  [RMC] Make f->br??
       real(r_typ), dimension(:,:), allocatable :: f
       real(r_typ), dimension(:,:), allocatable :: fold
       real(r_typ), dimension(:,:), allocatable :: fval_u0
@@ -439,6 +439,29 @@ module data_assimilation
                      map_times_requested_ut_str, map_times_actual_ut_str
 !
       character(512), dimension(:), allocatable :: map_files_rel_path
+!
+end module
+!#######################################################################
+module flow_from_files
+!
+      use number_types
+!
+      implicit none
+!
+      integer :: num_flows_in_list = 0
+      integer :: current_flow_input_idx = 1
+      real(r_typ) :: time_of_next_input_flow = 0.
+!
+      real(r_typ) :: flow_time_initial_hr
+!
+      real(r_typ), dimension(:), allocatable :: flow_times_actual_ut_jd
+      real(r_typ), dimension(:), allocatable :: flow_times_actual_ut_jd0
+!
+      character(512), dimension(:), allocatable :: flow_files_rel_path_t
+      character(512), dimension(:), allocatable :: flow_files_rel_path_p
+!
+      real(r_typ), dimension(:,:), allocatable :: flow_from_file_vt_old
+      real(r_typ), dimension(:,:), allocatable :: flow_from_file_vp_old
 !
 end module
 !#######################################################################
@@ -776,13 +799,15 @@ subroutine setup
       call set_unchanging_quantities
 !
       if (assimilate_data) call load_data_assimilation
+!
+      if (use_flow_from_files) call load_flow_from_files
 
       call create_and_open_output_log_files
 !
       call analysis_step
 !
       if (output_map_idx_cadence .gt. 0 .or. &
-         output_map_time_cadence .gt. 0.0) then
+          output_map_time_cadence .gt. 0.) then
         output_current_map = .true.
       end if
 !
@@ -1774,13 +1799,13 @@ subroutine analysis_step
 !
 ! ****** Set equatorial dipole strength.
 !
-      eqd1 = three_quarter*pi*eqd1
-      eqd2 = three_quarter*pi*eqd2
+      eqd1 = three_quarter*pi_i*eqd1
+      eqd2 = three_quarter*pi_i*eqd2
       h_eq_dipole = SQRT(eqd1**2 + eqd2**2)
 !
 ! ****** Set axial dipole strength.
 !
-      h_ax_dipole = three_quarter*pi*h_ax_dipole
+      h_ax_dipole = three_quarter*pi_i*h_ax_dipole
 !
 ! ****** Set fluxes to be in units of Mx
 !
@@ -1792,10 +1817,10 @@ subroutine analysis_step
       h_fluxm_ps = rsun_cm2*h_fluxm_ps
 !
 ! ****** Set polar areas to be in units of cm.
-!  
+!
       h_area_pn = rsun_cm2*h_area_pn
       h_area_ps = rsun_cm2*h_area_ps
-!      
+!
       wtime_analysis = wtime_analysis + (wtime() - t1)
 !
 end subroutine
@@ -1865,35 +1890,38 @@ subroutine update_flow
 !
       if (flow_needs_updating) then
 !
-!       Assume no more updates needed.  If time-dept flow,
-!       this will be set to true each time after this.
+!       Assume no more updates needed.  If needed,
+!       this will be set to true.
         flow_needs_updating = .false.
 !       Since the flow is changing, we need to update time step.
         timestep_flow_needs_updating = .true.
         timestep_needs_updating = .true.
 !
+! ***** Reset flows.
+!
         do concurrent (k=1:npm,j=1:nt)
           vt(j,k) = 0.
         enddo
-!
         do concurrent (k=1:np,j=1:ntm)
           vp(j,k) = 0.
         enddo
 !
-! ***** Add in flow from file (this should save current state and check
-!       if a new one is needed/interp to avoid tons of I/O.
+! ***** Add in flow from files. Note this overwrites,
+! ***** so needs to be called first!
 !
-!        call add_flow_from_file
+        if (use_flow_from_files) then
+          call add_flow_from_files
+          flow_needs_updating = .true.
+        end if
 !
-! ***** Add in flow from ConFlow algorithm.
+! ***** Add in flows from ConFlow algorithm.
+!       TO BE DEV: if (flow_from_conflow) call add_flow_from_conflow (metadata_structure,flow_array)
 !
-!        call add_flow_from_conflow (metadata_structure,flow_array)
-!
-! ***** Add in meridianal flow model.
+! ***** Add in analytic meridianal flow model.
 !
         if (flow_mf_model.eq.1) call add_flow_meridianal_aft
 !
-! ***** Add in differential rotation model.
+! ***** Add in analytic differential rotation model.
 !
         if (flow_dr_model.eq.1) call add_flow_differential_rotation_aft
 !
@@ -1913,7 +1941,7 @@ subroutine update_flow
           enddo
         end if
 !
-! ***** Add in rigid rotation velocity through the poles.
+! ***** Add in rotated rigid rotation velocity.
 !
         if (flow_rigid_omega .ne. 0.) then
           vrigid_pole = flow_rigid_omega*km_s_to_rs_hr
@@ -2032,7 +2060,7 @@ subroutine update_flow
 !
 end subroutine
 !#######################################################################
-subroutine add_flow_from_file
+subroutine add_flow_from_files
 !
 !-----------------------------------------------------------------------
 !
@@ -2040,7 +2068,14 @@ subroutine add_flow_from_file
 !
 !-----------------------------------------------------------------------
 !
+      use number_types
       use input_parameters
+      use flow_from_files
+      use fields
+      use globals
+      use mesh
+      use output, ONLY : pout
+      use read_2d_file_interface
 !
 !-----------------------------------------------------------------------
 !
@@ -2048,11 +2083,204 @@ subroutine add_flow_from_file
 !
 !-----------------------------------------------------------------------
 !
-  ! [] THESE DO NOT WORK WITH GPU AND SHOULD BE ADDING TO FLOW
-  ! [] (NOT OVERWRITE)  NEED TO FIX THIS!
-      if (flow_vt_filename.ne.' ') call load_vt
+      integer :: ierr = 0
+      real(r_typ), dimension(:,:), allocatable :: new_flow_t,new_flow_p
+      real(r_typ), dimension(:), allocatable :: s1,s2,s1ext,s2ext
+      real(r_typ), dimension(:,:), allocatable :: vext
+      real(r_typ) :: pole
+      integer :: ln1,ln2,i,j
+      character(1024) :: flowfile_t = ' '
+      character(1024) :: flowfile_p = ' '
 !
-      if (flow_vp_filename.ne.' ') call load_vp
+!-----------------------------------------------------------------------
+!
+     if (time .ge. time_of_next_input_flow) then
+!
+! ****** Read the flow data.
+!
+       flowfile_t = TRIM(flow_root_dir)//"/"&
+                  //TRIM(flow_files_rel_path_t(current_flow_input_idx))
+
+       flowfile_p = TRIM(flow_root_dir)//"/"&
+                  //TRIM(flow_files_rel_path_p(current_flow_input_idx))
+!
+! ****** VT (NT,NPM) ******
+!
+       call read_2d_file (flowfile_t,ln1,ln2,new_flow_t,s1,s2,ierr)
+       deallocate(s1)
+       deallocate(s2)
+!$acc enter data copyin (new_flow_t)
+!
+! ****** copy, transpose, and convert units.
+!
+       do concurrent (i=1:nt,j=1:npm1)
+         vt(i,j) = m_s_to_rs_hr*new_flow_t(j,i)
+       enddo
+       ! Set phi ghost cell.
+       do concurrent (i=1:nt)
+         vt(i,npm) = vt(i,2)
+       enddo
+!$acc exit data delete (new_flow_t)
+       deallocate(new_flow_t)
+!
+! ****** VP (NTM,NP)
+!
+       call read_2d_file (flowfile_p,ln1,ln2,new_flow_p,s1,s2,ierr)
+       deallocate(s1)
+       deallocate(s2)
+!$acc enter data copyin (new_flow_p)
+!
+! ****** copy, transpose, and convert units.
+!.
+       do concurrent (i=1:ntm,j=1:np)
+         vp(i,j) = m_s_to_rs_hr*new_flow_p(j,i)
+       enddo
+!$acc exit data delete (new_flow_p)
+       deallocate(new_flow_p)
+!
+! ******  TODO:  Add error checking here (make sure scales match run
+!                until interp is added)
+!
+! ****** Update position in map list and next map time.
+!
+       current_flow_input_idx = current_flow_input_idx + 1
+!
+! ****** If there are no more flow files to load, loop back to
+!        the beginning (use index 2 to avoid dt=0 situation).
+!
+       if (current_flow_input_idx .gt. num_flows_in_list) then
+         current_flow_input_idx = 2
+         flow_times_actual_ut_jd(:) = flow_times_actual_ut_jd0(:) &
+                                      + time/twentyfour
+       end if
+!
+       time_of_next_input_flow = twentyfour * &
+                       flow_times_actual_ut_jd(current_flow_input_idx) &
+                     - flow_time_initial_hr
+!
+! ****** Save read flows.  This is needed because one might be
+! ****** attenuating velocity when its not yet time to read a new file.
+! ****** In that case, v[tp] would be set to 0.  Instead, set to
+! ****** old value below.
+!
+       do concurrent (i=1:nt,j=1:npm)
+         flow_from_file_vt_old(i,j) = vt(i,j)
+       enddo
+!
+       do concurrent (i=1:ntm,j=1:np)
+         flow_from_file_vp_old(i,j) = vp(i,j)
+       enddo
+!
+     else
+!
+! ****** Set to last read in flow since its not time to change.
+!
+       do concurrent (i=1:nt,j=1:npm)
+         vt(i,j) = flow_from_file_vt_old(i,j)
+       enddo
+!
+       do concurrent (i=1:ntm,j=1:np)
+         vp(i,j) = flow_from_file_vp_old(i,j)
+       enddo
+!
+     end if
+!
+end subroutine
+!#######################################################################
+subroutine load_flow_from_files
+!
+!-----------------------------------------------------------------------
+!
+! ****** Load flow_from_files
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use input_parameters
+      use globals
+      use output
+      use mesh
+      use flow_from_files
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      integer :: io = 0
+      integer :: i,j,k
+      character(*), parameter :: &
+                    FMT = '(F11.5,1X,A11,1X,A11)'
+!
+!-----------------------------------------------------------------------
+!
+! ****** Open file list of input maps.
+!
+      OPEN (unit=IO_DATA_IN,file=flow_list_filename, &
+            form="FORMATTED",status='old')
+!
+! ****** Get the number of entries in the list (skip first row)
+!
+      num_flows_in_list = -1
+      do
+        READ (IO_DATA_IN,'(a)',iostat=io)
+        if (io/=0) exit
+        num_flows_in_list = num_flows_in_list + 1
+      enddo
+      REWIND (IO_DATA_IN)
+!
+! ****** Allocate space to store the list.
+!
+      allocate(flow_times_actual_ut_jd     (num_flows_in_list))
+      allocate(flow_times_actual_ut_jd0    (num_flows_in_list))
+      allocate(flow_files_rel_path_t       (num_flows_in_list))
+      allocate(flow_files_rel_path_p       (num_flows_in_list))
+!
+! ****** Read the list (skip first row).
+!
+      READ (IO_DATA_IN,*)
+      do i=1,num_flows_in_list
+        READ (IO_DATA_IN,FMT) flow_times_actual_ut_jd0(i),    &
+                              flow_files_rel_path_t(i),       &
+                              flow_files_rel_path_p(i)
+      enddo
+      flow_times_actual_ut_jd(:) = flow_times_actual_ut_jd0(:)
+      CLOSE (IO_DATA_IN)
+!
+! ******* Initialize flow time.
+!
+      flow_time_initial_hr = twentyfour*flow_times_actual_ut_jd(1)
+!
+      current_flow_input_idx = 1
+!
+      time_of_next_input_flow = 0.
+!
+! ****** Allocate arrays to store old flows.
+!
+      allocate (flow_from_file_vt_old(nt,npm))
+      allocate (flow_from_file_vp_old(ntm,np))
+!$acc enter data create (flow_from_file_vt_old,flow_from_file_vp_old)
+!
+      do concurrent (k=1:npm,j=1:nt)
+        flow_from_file_vt_old(j,k) = 0.
+      enddo
+      do concurrent (k=1:np,j=1:ntm)
+        flow_from_file_vp_old(j,k) = 0.
+      enddo
+!
+! ******* Print some diagnostics.
+!
+      if (verbose) then
+        write (*,*)
+        write (*,*) 'FLOWS FROM FILE'
+        write (*,*) 'Number of flows in flow list: ', &
+                     num_flows_in_list
+        write (*,*) 'File name of first theta flow file:     ', &
+                     trim(flow_files_rel_path_t(1))
+        write (*,*) 'File name of first phi flow file:     ', &
+                     trim(flow_files_rel_path_p(1))
+      end if
 !
 end subroutine
 !#######################################################################
@@ -2142,7 +2370,7 @@ subroutine load_data_assimilation
 !
 ! ******* Initialize assimilation time.
 !
-      map_time_initial_hr = twentyfour*map_times_requested_ut_jd(1)
+      map_time_initial_hr = twentyfour*map_times_actual_ut_jd(1)
 !
       current_map_input_idx = 1
 !
@@ -2271,7 +2499,7 @@ subroutine update_field
          assimilate_data=.false.
        else
          time_of_next_input_map =                                     &
-          twentyfour*map_times_requested_ut_jd(current_map_input_idx) &
+          twentyfour*map_times_actual_ut_jd(current_map_input_idx) &
           - map_time_initial_hr
        end if
 !
@@ -2292,6 +2520,7 @@ subroutine update_timestep
       use globals
       use output
       use data_assimilation
+      use flow_from_files
 !
 !-----------------------------------------------------------------------
 !
@@ -2359,6 +2588,16 @@ subroutine update_timestep
         if (time + dtime_global .ge. time_of_next_input_map) then
           dtime_global = time_of_next_input_map - time
           timestep_needs_updating = .true.
+        end if
+      end if
+!
+! ****** Check for next flow input time, cut dt to match exactly.
+!
+      if (use_flow_from_files) then
+        if (time + dtime_global .ge. time_of_next_input_flow) then
+          dtime_global = time_of_next_input_flow - time
+          timestep_needs_updating = .true.
+          flow_needs_updating = .true.
         end if
       end if
 !
@@ -4502,172 +4741,6 @@ subroutine load_source
 !
 end subroutine
 !#######################################################################
-subroutine load_vt
-!
-!-----------------------------------------------------------------------
-!
-! ****** Define the theta component of the flow.
-!
-! ****** This is read in from the file VT_FILE if it is not blank.
-!
-!-----------------------------------------------------------------------
-!
-      use number_types
-      use mesh
-      use fields
-      use input_parameters
-      use constants
-      use read_2d_file_interface
-!
-!-----------------------------------------------------------------------
-!
-      implicit none
-!
-!-----------------------------------------------------------------------
-!
-      integer :: k,ierr
-      real(r_typ) :: fn1,fs1
-!
-      integer :: nft,nfp
-      real(r_typ), dimension(:), allocatable :: tf,pf
-      real(r_typ), dimension(:,:), allocatable :: sf
-!
-!-----------------------------------------------------------------------
-!
-! ****** Read the vt file if it was specified.
-!
-        call read_2d_file (flow_vt_filename,nfp,nft,sf,pf,tf,ierr)
-        sf(:,:) = TRANSPOSE(sf(:,:))
-!
-! ****** Interpolate vt onto the half mesh (th,p).
-!
-        call interp2d (nft,nfp,tf,pf,sf,nt,npm,th,p,vt,ierr)
-! ****** Error exit: interpolation error.
-        if (ierr.ne.0) then
-          write (*,*)
-          write (*,*) '### ERROR in LOAD_VT:'
-          write (*,*) '### The scales in the vt file are'// &
-                        ' not monotonically increasing.'
-          write (*,*) 'File name: ',trim(flow_vt_filename)
-          call exit (1)
-        end if
-!
-! ****** Enforce periodicity.
-!
-        vt(:,  1)=vt(:,npm-1)
-        vt(:,npm)=vt(:,    2)
-!
-! ****** Set the pole value to only have an m=0 component.
-!
-        fn1=0.
-        fs1=0.
-        do k=2,npm-1
-          fn1=fn1+vt(   2,k)*dp(k)
-          fs1=fs1+vt(ntm1,k)*dp(k)
-        enddo
-        fn1=fn1*twopi_i
-        fs1=fs1*twopi_i
-!
-        vt( 1,:)=two*fn1-vt(   2,:)
-        vt(nt,:)=two*fs1-vt(ntm1,:)
-!
-        if (verbose) then
-          write (*,*)
-          write (*,*) 'The flow component vt was read in'// &
-                     ' from file: ',trim(flow_vt_filename)
-          write (*,*) 'Minimum value = ',minval(vt)
-          write (*,*) 'Maximum value = ',maxval(vt)
-        end if
-!
-        deallocate (sf)
-        deallocate (tf)
-        deallocate (pf)
-!
-end subroutine
-!#######################################################################
-subroutine load_vp
-!
-!-----------------------------------------------------------------------
-!
-! ****** Define the phi component of the flow.
-!
-! ****** This is read in from the file VP_FILE if it is not blank.
-!
-!-----------------------------------------------------------------------
-!
-      use number_types
-      use mesh
-      use fields
-      use input_parameters
-      use constants
-      use read_2d_file_interface
-!
-!-----------------------------------------------------------------------
-!
-      implicit none
-!
-!-----------------------------------------------------------------------
-!
-      integer :: k,ierr
-      real(r_typ) :: fn1,fs1
-!
-      integer :: nft,nfp
-      real(r_typ), dimension(:), allocatable :: tf,pf
-      real(r_typ), dimension(:,:), allocatable :: sf
-!
-!-----------------------------------------------------------------------
-!
-! ****** Read the vp file if it was specified.
-!
-        call read_2d_file (flow_vp_filename,nfp,nft,sf,pf,tf,ierr)
-        sf(:,:) = TRANSPOSE(sf(:,:))
-!
-! ****** Interpolate vp onto the correct mesh (t,ph).
-!
-        call interp2d (nft,nfp,tf,pf,sf,ntm,np,t,ph,vp,ierr)
-!
-        if (ierr.ne.0) then
-          write (*,*)
-          write (*,*) '### ERROR in LOAD_VP:'
-          write (*,*) '### The scales in the vp file are'// &
-                        ' not monotonically increasing.'
-          write (*,*) 'File name: ',trim(flow_vp_filename)
-          call exit (1)
-        end if
-!
-! ****** Enforce periodicity.
-!
-        vp(:, 1)=vp(:,npm1)
-        vp(:,np)=vp(:,   2)
-!
-! ****** Set the pole value to only have an m=0 component.
-!
-        fn1=0.
-        fs1=0.
-        do k=2,npm1
-          fn1=fn1+vp(    2,k)*dph(k)
-          fs1=fs1+vp(ntm-1,k)*dph(k)
-        enddo
-        fn1=fn1*twopi_i
-        fs1=fs1*twopi_i
-!
-        vp(  1,:)=two*fn1-vp(     2,:)
-        vp(ntm,:)=two*fs1-vp(ntm- 1,:)
-!
-        if (verbose) then
-          write (*,*)
-          write (*,*) 'The flow component vp was read in'// &
-                     ' from file: ',trim(flow_vp_filename)
-          write (*,*) 'Minimum value = ',minval(vp)
-          write (*,*) 'Maximum value = ',maxval(vp)
-        end if
-!
-        deallocate (sf)
-        deallocate (tf)
-        deallocate (pf)
-!
-end subroutine
-!#######################################################################
 subroutine add_flow_differential_rotation_aft
 !
 !-----------------------------------------------------------------------
@@ -5822,8 +5895,6 @@ subroutine read_input
       call defarg (GROUP_KA,'-omci','0','<val>')
       call defarg (GROUP_KA,'-omct','0.0','<val>')
       call defarg (GROUP_KA,'-uw','1.','<val>')
-      call defarg (GROUP_KA,'-vtfile','<none>','<file>')
-      call defarg (GROUP_KA,'-vpfile','<none>','<file>')
       call defarg (GROUP_KA,'-vpomega','0.','<val>')
       call defarg (GROUP_KA,'-vomega','0.','<val>')
       call defarg (GROUP_KA,'-vt_const','0.','<val>')
@@ -5840,6 +5911,9 @@ subroutine read_input
       call defarg (GROUP_K,'-assimilate_data',' ',' ')
       call defarg (GROUP_KA ,'-assimilate_data_map_list_filename','<none>','<file>')
       call defarg (GROUP_KA ,'-assimilate_data_map_root_dir','.','<dir>')
+      call defarg (GROUP_K,'-use_flow_from_files',' ',' ')
+      call defarg (GROUP_KA ,'-flow_list_filename','<none>','<file>')
+      call defarg (GROUP_KA ,'-flow_root_dir','.','<dir>')
 !
 ! ****** Parse the command line.
 !
@@ -5863,44 +5937,9 @@ subroutine read_input
         call delete_par (usage)
 !
         write (*,*)
-        write (*,*) '-time <#> Set the end time. (Default 1.0)'
+        write (*,*) '[RMC] Add help text here.'
         write (*,*)
-       write (*,*) 'Viscosity is set as: diffusion_coef_factor*(visc + visc_file '// &
-                    '+ visc_grid)'
-        write (*,*) ' '
-        write (*,*) ' -diffusion_coef_factor <#> (Overall multiplier, Default: 1.0)'
-        write (*,*) ' -visc <#> (Uniform viscosity)'
-        write (*,*) '           Default: If neither diffusion_coef_filename or '// &
-                        'diffusion_coef_grid set, 1, otherwise, 0.'
-        write (*,*) ' -diffusion_coef_filename <fname> (Read from file, Default: none)'
-        write (*,*) '                    The file must contain a 2D'// &
-                                      ' field with scales.'
-        write (*,*) '                    Any region outside the '// &
-                                        'domain is set to 0.'
-        write (*,*) ' -diffusion_coef_grid (Grid viscosity, Default: disabled)'
-        write (*,*) '           Defined by: visc_grid = dt^2 + '// &
-                                '(sin(t)*dt)^2'
-        write (*,*)
-        write (*,*) 'Source term can be specified using: -s <file>.'
-        write (*,*) '            (Default: none)'
-        write (*,*) '            The file must contain a 2D'// &
-                                ' field with scales.'
-        write (*,*) '            Any region outside the '// &
-                                'domain is set to 0.'
-        write (*,*) ' '
-        write (*,*)
-        write (*,*) 'The flow field is specified using'// &
-                    ' -vtfile and -vpfile.'// &
-                    '  Flow components that are not'
-        write (*,*) 'specified have zero values.'
-        write (*,*)
-        write (*,*) 'The upwind coefficient for the advective'// &
-                    ' advance can be set via -uw'
-        write (*,*) '(default=1.).'
-!
-        write (*,*) '-exp (Use old explicit algorithm for visc).'
-        write (*,*) '-vrun (Activate validation run, more details to follow)'
-        write (*,*) '-va (attenuate the velocity)'
+
         call exit (1)
 !
       end if
@@ -5984,23 +6023,7 @@ subroutine read_input
       call fetcharg ('-uw',set,arg)
       upwind=fpval(arg,'-uw')
 !
-! ****** File containing the theta component of the flow.
-!
-      call fetcharg ('-vtfile',set,arg)
-      if (set) then
-        flow_vt_filename = trim(arg)
-      else
-        flow_vt_filename = ' '
-      end if
-!
-! ****** File containing the phi component of the flow.
-!
-      call fetcharg ('-vpfile',set,arg)
-      if (set) then
-        flow_vp_filename = trim(arg)
-      else
-        flow_vp_filename = ' '
-      end if
+! ****** Flows.
 !
       call fetcharg ('-vpomega',set,arg)
       flow_vp_rigid_omega = fpval(arg,'-vpomega')
@@ -6060,18 +6083,42 @@ subroutine read_input
       call fetcharg ('-assimilate_data',set,arg)
       assimilate_data = set
 !
-      call fetcharg ('-assimilate_data_map_list_filename',set,arg)
-      if (set) then
-        assimilate_data_map_list_filename = trim(arg)
-      else
-        assimilate_data_map_list_filename = ' '
+      if (assimilate_data) then
+        call fetcharg ('-assimilate_data_map_list_filename',set,arg)
+        if (set) then
+          assimilate_data_map_list_filename = trim(arg)
+        else
+          assimilate_data_map_list_filename = ' '
+        end if
+!
+        call fetcharg ('-assimilate_data_map_root_dir',set,arg)
+        if (set) then
+          assimilate_data_map_root_dir = trim(arg)
+        else
+          assimilate_data_map_root_dir = '.'
+        end if
       end if
 !
-      call fetcharg ('-assimilate_data_map_root_dir',set,arg)
-      if (set) then
-        assimilate_data_map_root_dir = trim(arg)
-      else
-        assimilate_data_map_root_dir = '.'
+! ****** File based time-dept flows.
+!
+      call fetcharg ('-use_flow_from_files',set,arg)
+      use_flow_from_files = set
+!
+      if (use_flow_from_files) then
+!
+        call fetcharg ('-flow_list_filename',set,arg)
+        if (set) then
+          flow_list_filename = trim(arg)
+        else
+          flow_list_filename = ' '
+        end if
+!
+        call fetcharg ('-flow_root_dir',set,arg)
+        if (set) then
+          flow_root_dir = trim(arg)
+        else
+          flow_root_dir = '.'
+        end if
       end if
 !
 end subroutine
@@ -6079,7 +6126,7 @@ end subroutine
 !
 !-----------------------------------------------------------------------
 !
-! ****** Update log:
+! HIPFT Update log:
 !
 ! 05/24/2021, RC, Version 0.1.0:
 !   - Original version of the program.
@@ -6131,7 +6178,7 @@ end subroutine
 !   - Updated timestep setting so that outputs and data assimilation are
 !     always at exact times.
 !   - Updated I/O routines, including adding a 3D reader.
-!   - Updated default of dt_max_increase_fac to 0.0 (disabled).
+!   - DEFAULT CHANGE: Updated dt_max_increase_fac to 0.0 (disabled).
 !   - Updated text output of the run, including more information when
 !     using the verbose "-v" flag.
 !
@@ -6151,18 +6198,18 @@ end subroutine
 ! 04/11/2022, RC, Version 0.7.0:
 !   - Added the RK3TVD time-stepping scheme for advection.
 !     This is now the default.
-!   - Made the default splitting method to be Strang splitting.
-!     The "-strang" input flag is now "-nostrang" and disables
-!     strang splitting.
+!   - DEFAULT CHANGE: Made the default splitting method to be Strang
+!                     splitting. The "-strang" input flag is now
+!                     "-nostrang" and disables strang splitting.
 !   - Added "-fm" input flag to set advection numerical method.
 !     1) FE+UW  2) RK3TVD+UW  3) RK3TVD+WENO3 (coming soon).
 !   - Removed "-flowpoleavg".  No use case.
 !
 ! 04/29/2022, RC, Version 0.7.1:
 !   - BUG FIX: Changed staggering of the velocity.  Now, Vt is on the
-!     theta half mesh and the phi main mesh, while Vp is on the
-!     theta main mesh and the phi half mesh.  This avoids averaging in
-!     the advection operator (which was not being done).
+!              theta half mesh and the phi main mesh, while Vp is on the
+!              theta main mesh and the phi half mesh.  This avoids averaging
+!              in the advection operator (which was not being done).
 !   - BUG FIX: The diffusion_coef was not being averaged.
 !   - BUG FIX: Fixed issue when not outputting time-dept I/O.
 !
@@ -6188,6 +6235,25 @@ end subroutine
 !     - Northern and southern polar fluxes (+ & -) and areas.
 !     - Equatorial and axial dipole strengths.
 !   - Made fluxes in history output in Mx.
+!
+! 07/15/2022, RC, Version 0.12.0:
+!   - Added time dependent flows from file.
+!     Activate with input flag "-use_flow_from_files".
+!     Must set flag "-assimilate_data_map_root_dir" to the location
+!     of the flow files, and "-flow_list_filename" to the location
+!     of the csv file listing all files.  This file must be in a
+!     specific format which is currently output by the ConFlow code
+!     (see there for details). Note that "-flow" still needs to be active.
+!     The flow files for vt and vp are assumed to be on the correct
+!     staggered grids.
+!   - Removed vtfile and vpfile input options.  To use a static
+!     file-based flow, use the new time-dept flow_from_files with
+!     2 identical files.
+!   - DEFAULT CHANGE: Changed polar latitude limit for
+!                     analysis from 25 to 30 degrees.
+!   - BUG FIX: Data asssimilation was using "requested times" instead
+!              of "actual times".
+!   - BUG FIX: Fixed units of axial/equatorial dipole analysis output.
 !
 !-----------------------------------------------------------------------
 !
