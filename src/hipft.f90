@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.12.0'
-      character(*), parameter :: cdate='07/15/2022'
+      character(*), parameter :: cvers='0.12.1'
+      character(*), parameter :: cdate='07/25/2022'
 !
 end module
 !#######################################################################
@@ -657,7 +657,7 @@ program HIPFT
 !
       logical :: the_run_is_done
       real(r_typ) :: wtime
-      character(*), parameter :: FMT = '(a,i8,a,f12.6,a,f12.6,a,f12.6)'
+      character(*), parameter :: FMT = '(a,i10,a,f12.6,a,f12.6,a,f12.6)'
 !
 !-----------------------------------------------------------------------
 !
@@ -688,7 +688,7 @@ program HIPFT
         call update_step
 !
         if (verbose) then
-          write(*,FMT) 'Starting step: ',ntime,'  Time:',time,' /', &
+          write(*,FMT) 'Starting step: ',ntime,'  Time:',time,' / ', &
                         time_end,'  dt to use:',dtime_global
           flush(OUTPUT_UNIT)
         end if
@@ -2521,6 +2521,7 @@ subroutine update_timestep
       use output
       use data_assimilation
       use flow_from_files
+      use sts
 !
 !-----------------------------------------------------------------------
 !
@@ -2529,6 +2530,7 @@ subroutine update_timestep
 !-----------------------------------------------------------------------
 !
       real(r_typ) :: dtime_old, dt_mxup
+      logical :: time_step_changed = .false.
 !
 !-----------------------------------------------------------------------
 !
@@ -2543,6 +2545,7 @@ subroutine update_timestep
 ! ****** Default timestep is one giant step for remaining time.
 !
         dtime_global = time_end - time
+        time_step_changed = .true.
 !
         if (advance_flow.and.timestep_flow_needs_updating) then
           call get_flow_dtmax (dtmax_flow)
@@ -2579,6 +2582,7 @@ subroutine update_timestep
         if (time + dtime_global .ge. idx_out*output_map_time_cadence) then
           dtime_global = idx_out*output_map_time_cadence - time
           timestep_needs_updating = .true.
+          time_step_changed = .true.
         end if
       end if
 !
@@ -2588,6 +2592,7 @@ subroutine update_timestep
         if (time + dtime_global .ge. time_of_next_input_map) then
           dtime_global = time_of_next_input_map - time
           timestep_needs_updating = .true.
+          time_step_changed = .true.
         end if
       end if
 !
@@ -2598,6 +2603,7 @@ subroutine update_timestep
           dtime_global = time_of_next_input_flow - time
           timestep_needs_updating = .true.
           flow_needs_updating = .true.
+          time_step_changed = .true. 
         end if
       end if
 !
@@ -2606,13 +2612,13 @@ subroutine update_timestep
       if (time + dtime_global .ge. time_end) then
         dtime_global = time_end - time
         timestep_needs_updating = .false.
+        time_step_changed = .true.
       end if
 !
-! ****** Re-compute Euler diffusion time-step if needed.
+! ****** Make sure STS is recomputed if timestep has changed.
 !
-      if (advance_diffusion.and.timestep_diff_needs_updating) then
-        call get_dtime_diffusion_euler (dtime_diffusion_euler)
-        timestep_diff_needs_updating = .false.
+      if (advance_diffusion .and. time_step_changed) then
+        need_to_load_sts = .true.
       end if
 !
 end subroutine
@@ -3026,7 +3032,7 @@ subroutine get_dtime_diffusion_euler (dtime_exp)
 !
 !-----------------------------------------------------------------------
 !
-! ****** Get the explicit Euler time step limit for thermal conduction.
+! ****** Get the explicit Euler time step limit for diffusion.
 !
 !-----------------------------------------------------------------------
 !
@@ -3104,7 +3110,7 @@ subroutine diffusion_step_sts_cd (dtime_local)
 !
 !-----------------------------------------------------------------------
 !
-!     This only needs to happen more than once if dtime_local changes...
+!     This only needs to happen more than once if dtime_local changes.
 !
       if (need_to_load_sts) then
         if (diffusion_num_method.eq.2) then
@@ -3215,7 +3221,7 @@ subroutine load_sts_rkl2 (dtime_local)
 ! ****** Allocate super-time-step coefficent arrays.
 !
       if (need_to_load_sts.and..not.first) then
-!$acc exit data delete(sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
+!$acc exit data delete(sts_uj,sts_vj,sts_ubj,sts_gj)
         deallocate (sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
       end if
 !
@@ -3225,7 +3231,7 @@ subroutine load_sts_rkl2 (dtime_local)
         allocate (sts_ubj(sts_s))
         allocate (sts_gj(sts_s))
         allocate (sts_b(sts_s))
-!$acc enter data create(sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
+!$acc enter data create(sts_uj,sts_vj,sts_ubj,sts_gj)
         if (first) first=.false.
       end if
 !
@@ -3258,7 +3264,7 @@ subroutine load_sts_rkl2 (dtime_local)
         sts_gj(j) = (sts_b(j-1) - one)*sts_ubj(j)
       enddo
 !
-!$acc update device(sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
+!$acc update device(sts_uj,sts_vj,sts_ubj,sts_gj)
 !
       if (verbose) then
         write (*,*) '*** Diffusion: 2nd-order RKL2  ***'
@@ -3330,8 +3336,8 @@ subroutine load_sts_rkg2 (dtime_local)
 ! ****** Allocate super-time-step coefficent arrays.
 !
       if (need_to_load_sts.and..not.first) then
-!$acc exit data delete(sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
-        deallocate (sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
+!$acc exit data delete(sts_uj,sts_vj,sts_ubj,sts_gj)
+        deallocate (sts_uj,sts_vj,sts_ubj,sts_gj)
       end if
 !
       if (need_to_load_sts) then
@@ -3340,7 +3346,7 @@ subroutine load_sts_rkg2 (dtime_local)
         allocate (sts_ubj(sts_s))
         allocate (sts_gj(sts_s))
         allocate (sts_b(sts_s))
-!$acc enter data create(sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
+!$acc enter data create(sts_uj,sts_vj,sts_ubj,sts_gj)
         if (first) first=.false.
       end if
 !
@@ -3372,7 +3378,7 @@ subroutine load_sts_rkg2 (dtime_local)
         sts_ubj(j) = sts_uj(j)*w
         sts_gj(j) = (half*j*(j + one)*sts_b(j-1) - one)*sts_ubj(j)
       enddo
-!$acc update device(sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
+!$acc update device(sts_uj,sts_vj,sts_ubj,sts_gj)
 !
       if (verbose) then
         write (*,*) '*** Diffusion: 2nd-order RKG2  ***'
@@ -4365,6 +4371,8 @@ subroutine load_diffusion
       use input_parameters
       use constants
       use read_2d_file_interface
+      use globals
+      use sts
 !
 !-----------------------------------------------------------------------
 !
@@ -4478,6 +4486,10 @@ subroutine load_diffusion
 !$acc enter data copyin(diffusion_coef)
 !
       call load_diffusion_matrix
+!
+! ****** Get stable explicit Euler timestep.
+!
+      call get_dtime_diffusion_euler (dtime_diffusion_euler)
 !
 end subroutine
 !#######################################################################
@@ -6061,7 +6073,7 @@ subroutine read_input
 ! ****** Set number of STS sub-cycles per flow step.
 !
       call fetcharg ('-diffusion_subcycles',set,arg)
-      diffusion_subcycles = intval(arg,'-diffusion_subcycles')
+      if (set) diffusion_subcycles = intval(arg,'-diffusion_subcycles')
 !
       call fetcharg ('-nostrang',set,arg)
       if (set) strang_splitting = .false.
@@ -6254,6 +6266,10 @@ end subroutine
 !   - BUG FIX: Data asssimilation was using "requested times" instead
 !              of "actual times".
 !   - BUG FIX: Fixed units of axial/equatorial dipole analysis output.
+!
+! 07/25/2022, RC, Version 0.12.1:
+!   - BUG FIX:  Diffusion STS factors were not being recomputed when  
+!               the time step changed.
 !
 !-----------------------------------------------------------------------
 !
