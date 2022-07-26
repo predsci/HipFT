@@ -2603,7 +2603,7 @@ subroutine update_timestep
           dtime_global = time_of_next_input_flow - time
           timestep_needs_updating = .true.
           flow_needs_updating = .true.
-          time_step_changed = .true. 
+          time_step_changed = .true.
         end if
       end if
 !
@@ -3337,7 +3337,7 @@ subroutine load_sts_rkg2 (dtime_local)
 !
       if (need_to_load_sts.and..not.first) then
 !$acc exit data delete(sts_uj,sts_vj,sts_ubj,sts_gj)
-        deallocate (sts_uj,sts_vj,sts_ubj,sts_gj)
+        deallocate (sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
       end if
 !
       if (need_to_load_sts) then
@@ -6268,7 +6268,7 @@ end subroutine
 !   - BUG FIX: Fixed units of axial/equatorial dipole analysis output.
 !
 ! 07/25/2022, RC, Version 0.12.1:
-!   - BUG FIX:  Diffusion STS factors were not being recomputed when  
+!   - BUG FIX:  Diffusion STS factors were not being recomputed when
 !               the time step changed.
 !
 !-----------------------------------------------------------------------
