@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.12.1'
-      character(*), parameter :: cdate='07/25/2022'
+      character(*), parameter :: cvers='0.13.0'
+      character(*), parameter :: cdate='07/28/2022'
 !
 end module
 !#######################################################################
@@ -432,8 +432,7 @@ module data_assimilation
 !
       real(r_typ) :: map_time_initial_hr
 !
-      real(r_typ), dimension(:), allocatable :: &
-                     map_times_requested_ut_jd, map_times_actual_ut_jd
+      real(r_typ), dimension(:), allocatable :: map_times_actual_ut_jd
 !
       character(19), dimension(:), allocatable :: &
                      map_times_requested_ut_str, map_times_actual_ut_str
@@ -709,8 +708,8 @@ program HIPFT
 !
         call output_step
 !
-        write(*,FMT) 'Completed step: ',ntime,'  Time:',time,' /', &
-                      time_end,'  dt used:',dtime_global
+        write(*,FMT) 'Completed step: ',ntime,'  Time: ',time,' / ', &
+                      time_end,'  dt: ',dtime_global
         flush(OUTPUT_UNIT)
 !
 ! ****** Check if the run is done.
@@ -1647,7 +1646,7 @@ subroutine analysis_step
 !
       real(r_typ) :: t1, wtime
       real(r_typ) :: sumfval2, fv, fv2, eqd1, eqd2
-      real(r_typ) :: tav, da_t, da_p, sn_t, d_t, cs_t, cs_p
+      real(r_typ) :: tav, da_t, da_p, sn_t, d_t, cs_t, cs_p, sn_p
       real(r_typ), dimension(:,:), allocatable :: fval
       integer :: i, j
 !
@@ -1756,6 +1755,7 @@ subroutine analysis_step
             da_p=dp(i)
           end if
           cs_p = cos(p(i))
+          sn_p = sin(p(i))
 !
           fv = f(j,i)*da_t*da_p
 !
@@ -1789,9 +1789,10 @@ subroutine analysis_step
 !
 ! ****** Dipoles.
 !
-          eqd1 = eqd1 + f(j,i)*sn_t*cs_p*d_t*da_p
-          eqd2 = eqd2 + f(j,i)*cs_t*cs_p*d_t*da_p
-          h_ax_dipole = h_ax_dipole + f(j,i)*cs_t*d_t*da_p
+          eqd1 = eqd1 + f(j,i)*sn_t*cs_p*da_t*da_p
+          eqd2 = eqd2 + f(j,i)*sn_t*sn_p*da_t*da_p
+!
+          h_ax_dipole = h_ax_dipole + f(j,i)*cs_t*da_t*da_p
 !
         enddo
       enddo
@@ -2329,7 +2330,7 @@ subroutine load_data_assimilation
       integer :: io = 0
       integer :: i
       character(*), parameter :: &
-                             FMT = '(F11.5,1X,F11.5,1X,A19,1X,A19,1X,A)'
+                             FMT = '(A19,1X,A19,1X,F13.5,1X,A)'
 !
 !-----------------------------------------------------------------------
 !
@@ -2350,7 +2351,6 @@ subroutine load_data_assimilation
 !
 ! ****** Allocate space to store the list.
 !
-      allocate(map_times_requested_ut_jd  (num_maps_in_list))
       allocate(map_times_actual_ut_jd     (num_maps_in_list))
       allocate(map_times_requested_ut_str (num_maps_in_list))
       allocate(map_times_actual_ut_str    (num_maps_in_list))
@@ -2360,10 +2360,9 @@ subroutine load_data_assimilation
 !
       READ (IO_DATA_IN,*)
       do i=1,num_maps_in_list
-        READ (IO_DATA_IN,FMT) map_times_requested_ut_jd(i),  &
-                              map_times_actual_ut_jd(i),     &
-                              map_times_requested_ut_str(i), &
-                              map_times_actual_ut_str(i),    &
+        READ (IO_DATA_IN,FMT) map_times_requested_ut_str(i),  &
+                              map_times_actual_ut_str(i),     &
+                              map_times_actual_ut_jd(i),      &
                               map_files_rel_path(i)
       enddo
       CLOSE (IO_DATA_IN)
@@ -2380,12 +2379,12 @@ subroutine load_data_assimilation
 !
       if (verbose) then
         write (*,*)
-        write (*,*) 'DATA ASSIMILATION'
+        write (*,*) 'DATA ASSIMILATION LOADED'
         write (*,*) 'Number of maps in map list: ', &
                      num_maps_in_list
-        write (*,*) 'Start date (actual):     ', &
+        write (*,*) 'Start date:     ', &
                      trim(map_times_actual_ut_str(1))
-        write (*,*) 'End   date (actual):     ', &
+        write (*,*) 'End   date:     ', &
                      trim(map_times_actual_ut_str(num_maps_in_list))
         write (*,*) 'File name of first map:     ', &
                      trim(map_files_rel_path(1))
@@ -6270,6 +6269,11 @@ end subroutine
 ! 07/25/2022, RC, Version 0.12.1:
 !   - BUG FIX:  Diffusion STS factors were not being recomputed when
 !               the time step changed.
+!
+! 07/28/2022, RC, Version 0.13.0:
+!   - Updated data assimilation loading to reflect changes in
+!     OFTpy's file list format.
+!   - BUG FIX: Fixed integral in axial and equatorial dipole strength.
 !
 !-----------------------------------------------------------------------
 !
