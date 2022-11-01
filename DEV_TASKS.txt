@@ -1,12 +1,9 @@
 DEV TASKS FOR HIPFT:
 
- - Add namelist for input instead of (or combined with) command line
- - Remove parse module if no longer needed after namelist implementation
- - Add interleaved data input vs. output option
+ - Add interleaved data input vs. output option (?)
  - Add initial dump time option
- - Make python script to generate hipft history diagnostics from a series of hipft output maps
-   (can then use to get polar fluxes as function of lat limit, etc.)
- - Add MPI code from Miko to allow multiple realizations
+ - Cleanup python script to generate hipft history diagnostics from a series of hipft output maps
+ - Add MPI to allow multiple realizations
    - Basic multi-map 3D data across ranks
    - Make some parameters 1D arrays to allow instance variations
      (With conflow, may be multiple flow map file sets, or with later

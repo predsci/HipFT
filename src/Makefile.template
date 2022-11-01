@@ -2,7 +2,7 @@ FC = mpif90
 
 FFLAGS = <FFLAGS> -I<HDF5_INCLUDE_DIR>
 
-OBJS = zm_parse.o hipft.o
+OBJS = hipft.o
 
 LDFLAGS = -L<HDF5_LIB_DIR> <HDF5_LIB_FLAGS>
 
@@ -13,9 +13,6 @@ all: $(OBJS)
 clean:
 	rm -f hipft 2>/dev/null
 	rm -f *.mod *.o 2>/dev/null
-
-zm_parse.o: zm_parse.f
-	$(FC) -c $(FFLAGS) $<
 
 hipft.o: hipft.f90
 	$(FC) -c $(FFLAGS) $<

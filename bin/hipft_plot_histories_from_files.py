@@ -7,12 +7,6 @@ from astropy.time import Time
 import os
 
 #history_sol.dat
-#history_num.dat
-
-# - Add skip option
-# - Add initial UT time and plot by year, MM/YY, etc.
-# - Add ability to compare two runs...
-
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -22,6 +16,12 @@ def argParsing():
     dest='valrun',
     action='store_true',
     default=False,
+    required=False)
+
+  parser.add_argument('-file',
+    help='File location',
+    dest='file',
+    default='history_sol.dat',
     required=False)
 
   parser.add_argument('-utstart',
@@ -49,8 +49,7 @@ def run(args):
   area_fac=1e-21
 
   # Read the data:
-  hist_sol = pd.read_table('history_sol.dat',header=0,sep='\s+')
-  hist_num = pd.read_table('history_num.dat',header=0,sep='\s+')
+  hist_sol = pd.read_table(args.file,header=0,sep='\s+')
   
   step  = np.array(hist_sol['STEP'])
   time  = np.array(hist_sol['TIME'])
@@ -73,12 +72,6 @@ def run(args):
   brabsmin = np.array(hist_sol['BR_ABS_MIN'])
   valerr = np.array(hist_sol['VALIDATION_ERR_CVRMSD'])
 
-  dtime = np.array(hist_num['DTIME'])
-  dtime_advection_stable = np.array(hist_num['DTIME_ADV_STB'])
-  dtime_advection_used = np.array(hist_num['DTIME_ADV_USED'])
-  dtime_diffusion_stable = np.array(hist_num['DTIME_DIFF_STB'])
-  dtime_diffusion_used = np.array(hist_num['DTIME_DIFF_USED'])
-  n_sts_iter_per_step = np.array(hist_num['N_DIFF_PER_STEP'])
 
   #Compute derived quantities:
   flux_tot_un = np.abs(fluxp) + np.abs(fluxm)
@@ -99,7 +92,7 @@ def run(args):
   tc = 'k'
   dpi=120
   
-  tfac = 1/24.0
+  tfac = 1
   
 #
 # ****** Total flux imbalance.

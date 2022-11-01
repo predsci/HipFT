@@ -1,0 +1,138 @@
+&hipft_input_parameters
+!
+  verbose = .false.
+!
+  initial_map_filename = 'br_input.h5'
+  output_map_root_filename = 'hipft_brmap'
+  output_map_directory = 'output_maps'
+!
+! ****** Number of realizations ********
+!
+  n_realizations = 1
+!
+! ****** Validation Mode ********
+!
+  validation_run = 0
+!
+! ****** Output map cadence and type ********
+!
+  output_map_idx_cadence = 0
+  output_map_time_cadence = 0.0
+  output_map_2d = .true.
+!
+! ****** Restarts ********
+!
+  restart_run = .false.
+  restart_file = ' '
+!
+! ****** Time ********
+!
+  time_end = one
+!
+! ****** Timestep ********
+!
+  dt_max_increase_fac = 0.0
+  dt_min = 1.0e-15
+  dt_max = huge(one)
+!
+! ****** Algorithm options.
+!
+  strang_splitting = .true.
+!
+! ****** Analysis options.
+!
+  pole_flux_lat_limit = 30.0
+!
+!-----------------------------------------------------------------------
+!
+! ****** FLOWS ********
+!
+! ****** Activate the flow advance.
+!
+  advance_flow = .false.
+!
+! ****** Add a rigid rotation vp velocity (km/s) of omega*sin(theta).
+!
+  flow_vp_rigid_omega = 0.0
+!
+! ****** Add a rigid rotation velocity (km/s) of omega for a rigid
+! ****** rotation through the poles.
+!
+  flow_rigid_omega = 0.0
+!
+! ****** Add a constant vt velocity (km/s).
+!
+  flow_vt_const = 0.0
+!
+! ****** Attenuate the veolcity based on the value of Br.
+! ****** This causes flow to be updated each step.
+!
+  flow_attenuate = .false.
+!
+! ****** Built-in differential roation and meridianal flow models.
+! ****** For each, setting "1" sets the model/params used in the AFT code.
+!
+  flow_dr_model = 0
+  flow_mf_model = 0
+!
+! ****** Time dependent flows from file (used for conflow).
+!
+  use_flow_from_files = .false.
+  flow_list_filename = ' '
+  flow_root_dir = '.'
+!
+! ****** Algorithm options.
+!        Can set upwind to central differencing by also setting UPWIND=0.
+! ****** 1: FE+Upwind.
+! ****** 2: RK3TVD+Upwind.
+! ****** 3: RK3TVD+WENO3.
+!
+  flow_num_method = 3
+!
+! ****** Upwind coefficient.
+!
+  upwind = one
+!
+!-----------------------------------------------------------------------
+!
+! ****** DIFFUSION ********
+!
+  advance_diffusion = .false.
+!
+  diffusion_coef_constant = 0.0
+  diffusion_coef_filename = ' '
+  diffusion_coef_grid = .false.
+  diffusion_coef_factor = 7.43162901307967e-09
+!
+! ****** Algorithm options.
+!
+! ****** Select diffusion algorithm.
+! ******   1: Explicit Euler (1st-order)
+! ******   2: Explicit RKL2 Super Time-stepping (2nd-order)
+! ******   3: Explicit RKG2 Super Time-stepping (2nd-order)
+!
+  diffusion_num_method = 3
+!
+! ****** Set number of diffusion subcycles per flow step.
+! ****** For diffusion-only runs with RKG2(RKL2), set to ~30(60).
+! ****** For flow+diffusion runs, this usually can be ~1.
+!
+  diffusion_subcycles = 30
+!
+!-----------------------------------------------------------------------
+!
+! ****** SOURCES ********
+!
+  advance_source = .false.
+  source_filename = ' '
+!
+!-----------------------------------------------------------------------
+!
+! ****** DATA ASSIMILATION ********
+!
+  assimilate_data = .false.
+  assimilate_data_map_list_filename = ' '
+  assimilate_data_map_root_dir = '.'
+/
+
+
