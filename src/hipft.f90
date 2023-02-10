@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.15.0'
-      character(*), parameter :: cdate='11/22/2022'
+      character(*), parameter :: cvers='0.16.0'
+      character(*), parameter :: cdate='02/10/2023'
 !
 end module
 !#######################################################################
@@ -3228,6 +3228,7 @@ subroutine update_timestep
           dtime_global = (time_start+idx_out*output_map_time_cadence) - time
           dtime_reason = 'output'
           timestep_needs_updating = .true.
+          timestep_flow_needs_updating = .true.
           time_step_changed = .true.
         end if
       end if
@@ -3239,6 +3240,7 @@ subroutine update_timestep
           dtime_global = time_of_next_input_map - time
           dtime_reason = 'dataassim'
           timestep_needs_updating = .true.
+          timestep_flow_needs_updating = .true.
           time_step_changed = .true.
         end if
       end if
@@ -3251,6 +3253,7 @@ subroutine update_timestep
           dtime_reason = 'flowfile'
           timestep_needs_updating = .true.
           flow_needs_updating = .true.
+          timestep_flow_needs_updating = .true.
           time_step_changed = .true.
         end if
       end if
@@ -7072,6 +7075,9 @@ end subroutine
 ! 11/22/2022, MS+RC, Version 0.15.0:
 !   - Added MPI to parallelize across realizations.
 !
+! 02/10/2023, RC, Version 0.16.0:
+!   - BUG FIX: Advection time step was not being recalculated when
+!              it should have been in some cases.
 !-----------------------------------------------------------------------
 !
 !#######################################################################
