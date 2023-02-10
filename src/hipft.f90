@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.14.0'
-      character(*), parameter :: cdate='11/01/2022'
+      character(*), parameter :: cvers='0.15.0'
+      character(*), parameter :: cdate='11/22/2022'
 !
 end module
 !#######################################################################
@@ -177,6 +177,7 @@ module input_parameters
 !
 ! ****** Time ********
 !
+      real(r_typ)    :: time_start = zero
       real(r_typ)    :: time_end = one
       real(r_typ)    :: time_output_cadence = zero
       real(r_typ)    :: time_restart_cadence = zero
@@ -348,6 +349,7 @@ module globals
 ! ****** Current time-step.
 !
       real(r_typ) :: dtime_global = 0.
+      character(50) :: dtime_reason = ''
 !
 ! ****** Explicit Euler diffusion stable time-step and number of cycles.
 !
@@ -545,6 +547,7 @@ module timing
       implicit none
 !
       real(r_typ) :: wtime_tmp = 0.
+      real(r_typ) :: wtime_tmp_mpi = 0.
 !
       real(r_typ) :: wtime_setup = 0.
       real(r_typ) :: wtime_update = 0.
@@ -554,6 +557,7 @@ module timing
       real(r_typ) :: wtime_source = 0.
       real(r_typ) :: wtime_analysis = 0.
       real(r_typ) :: wtime_io = 0.
+      real(r_typ) :: wtime_mpi_overhead = 0.
 !
       real(r_typ) :: wtime_total = 0.
 !
@@ -645,6 +649,72 @@ module assimilate_new_data_interface
       end interface
 end module
 !#######################################################################
+module mpidefs
+!
+!-----------------------------------------------------------------------
+! ****** MPI variables, processor topology, and processor information.
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use mpi
+!
+      implicit none
+!
+! ****** Array of nr per rank.
+!
+      integer, dimension(:), allocatable :: nr_arr
+!
+! ****** Total number of processors.
+!
+      integer :: nproc
+!
+! ****** Total number of processors per node.
+!
+      integer :: nprocsh
+!
+! ****** Processor rank of this process in communicator
+! ****** MPI_COMM_WORLD.
+!
+      integer :: iprocw
+!
+! ****** Processor rank of this process in communicator
+! ****** comm_shared.
+!
+      integer :: iprocsh
+!
+! ****** Flag to designate that this is the processor with
+! ****** rank 0 in communicator MPI_COMM_WORLD.
+!
+      logical :: iamp0
+!
+! ****** Processor rank of this process in communicator
+! ****** comm_shared.
+!
+      integer :: iproc
+!
+! ****** Processor rank in communicator comm_shared for the
+! ****** processor that has rank 0 in MPI_COMM_WORLD.
+!
+      integer :: iproc0
+!
+! ****** Communicator over all shared processors on the node.
+!
+      integer :: comm_shared
+!
+! ****** Number type for REALs to be used in MPI calls.
+!
+      integer :: ntype_real
+!
+! ****** GPU device number for current rank.
+!
+      integer :: igpu
+!
+! ****** Broadcast sizes
+!
+      integer :: flow_t_size,flow_p_size
+!
+      end module
+!#######################################################################
 program HIPFT
 !
 !-----------------------------------------------------------------------
@@ -652,6 +722,7 @@ program HIPFT
       use number_types
       use input_parameters
       use globals
+      use mpidefs
       use timing
 !
 !-----------------------------------------------------------------------
@@ -661,14 +732,14 @@ program HIPFT
 !-----------------------------------------------------------------------
 !
       logical :: the_run_is_done
-      real(r_typ) :: wtime
-      character(*), parameter :: FMT = '(a,i10,a,f12.6,a,f12.6,a,f12.6)'
+      character(*), parameter :: &
+                           FMT = '(a,i10,a,f12.6,a,f12.6,a,f12.6,a,a,a)'
 !
 !-----------------------------------------------------------------------
 !
-! ****** Start wall clock timer.
+! ****** Initialize MPI.
 !
-      wtime_tmp = wtime()
+      call initialize_mpi
 !
 ! ****** Set up and initialize the run.
 !
@@ -676,10 +747,12 @@ program HIPFT
 !
 ! ****** START MAIN LOOP ********************************************
 !
-      write (*,*)
-      write (*,*) '>running'
-      write (*,*)
-      flush(OUTPUT_UNIT)
+      if (iamp0) then
+        write (*,*)
+        write (*,*) '>running'
+        write (*,*)
+        flush(OUTPUT_UNIT)
+      end if
 !
       do
 !
@@ -692,9 +765,10 @@ program HIPFT
 !
         call update_step
 !
-        if (verbose) then
+        if (verbose .and. iamp0) then
           write(*,FMT) 'Starting step: ',ntime,'  Time:',time,' / ', &
-                        time_end,'  dt to use:',dtime_global
+                        time_end,'  dt to use:',dtime_global, &
+                        ' (',TRIM(dtime_reason),')'
           flush(OUTPUT_UNIT)
         end if
 !
@@ -714,9 +788,12 @@ program HIPFT
 !
         call output_step
 !
-        write(*,FMT) 'Completed step: ',ntime,'  Time: ',time,' / ', &
-                      time_end,'  dt: ',dtime_global
-        flush(OUTPUT_UNIT)
+        if (iamp0) then
+          write(*,FMT) 'Completed step: ',ntime,'  Time: ',time,' / ', &
+                        time_end,'  dt: ',dtime_global, &
+                        ' (',TRIM(dtime_reason),')'
+          flush(OUTPUT_UNIT)
+        end if
 !
 ! ****** Check if the run is done.
 !
@@ -732,13 +809,179 @@ program HIPFT
 !
 ! ****** Get wall-clock time.
 !
-      wtime_total = wtime() - wtime_tmp
+      wtime_total = MPI_Wtime() - wtime_total
 !
 ! ****** Write out time profiling.
 !
       call write_timing
 !
+! ****** End the run.
+!
+      call endrun (.false.)
+!
 end program HIPFT
+!#######################################################################
+subroutine endrun (ifstop)
+!
+!-----------------------------------------------------------------------
+!
+! ****** End the run and exit the code.
+!
+!-----------------------------------------------------------------------
+!
+      use mpidefs
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      logical :: ifstop
+!
+!-----------------------------------------------------------------------
+!
+! ****** MPI error return.
+!
+      integer :: ierr = 0
+!
+!-----------------------------------------------------------------------
+!
+! ****** Exit MPI gracefully.
+!
+      call MPI_Finalize (ierr)
+!
+! ****** Call the STOP statement if requested.
+!
+      if (ifstop) stop
+!
+end subroutine
+!#######################################################################
+subroutine set_local_number_of_realizations
+!
+!
+!-----------------------------------------------------------------------
+! ****** Set number of realizations per MPI rank
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use mesh
+      use input_parameters
+      use mpidefs
+      use timing
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      integer :: ierr
+!
+!-----------------------------------------------------------------------
+!
+      nr = FLOOR(REAL(n_realizations,r_typ)/REAL(nproc,r_typ))
+!
+      if (nr*nproc .lt. n_realizations) then
+        write(*,*)
+        write(*,*) 'Warning!! Load imbalance detected.'
+        write(*,*)
+        if (iamp0) then
+          nr = nr + 1
+        elseif (mod(n_realizations,iprocsh) .gt. iprocsh) then
+          nr = nr + 1
+        end if
+      end if
+!
+      if (iamp0) then
+        allocate (nr_arr(0:nproc-1))
+      end if
+      wtime_tmp_mpi = MPI_Wtime()
+      call MPI_Gather(nr,1,MPI_INT,nr_arr,1,MPI_INT,0,MPI_COMM_WORLD,ierr)
+      wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+!
+      if (iamp0) then
+!$acc enter data create(nr_arr)
+      end if
+!
+end subroutine
+!#######################################################################
+subroutine initialize_mpi
+!
+!-----------------------------------------------------------------------
+!
+! ****** Initialize MPI.
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use input_parameters
+      use mpidefs
+      use timing
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+! ****** MPI error return.
+!
+      integer :: ierr,tcheck
+!
+!-----------------------------------------------------------------------
+!
+      call MPI_Init_thread (MPI_THREAD_FUNNELED,tcheck,ierr)
+!
+! ****** Start wall clock timer.
+!
+      wtime_total = MPI_Wtime()
+      wtime_tmp_mpi = wtime_total
+!
+! ****** Get the total number of processors.
+!
+      call MPI_Comm_size (MPI_COMM_WORLD,nproc,ierr)
+!
+! ****** Get the index (rank) of the local processor in
+! ****** communicator MPI_COMM_WORLD in variable IPROCW.
+!
+      call MPI_Comm_rank (MPI_COMM_WORLD,iprocw,ierr)
+!
+! ****** Create a shared communicator for all ranks in the node.
+!
+      call MPI_Comm_split_type (MPI_COMM_WORLD,MPI_COMM_TYPE_SHARED, &
+                                0,MPI_INFO_NULL,comm_shared,ierr)
+!
+! ****** Get the total number of processors in node.
+!
+      call MPI_Comm_size (comm_shared,nprocsh,ierr)
+!
+! ****** Get the index (rank) of the local processor in the local node.
+!
+      call MPI_Comm_rank (comm_shared,iprocsh,ierr)
+!
+! ****** Set the flag to designate whether this processor
+! ****** has rank 0 in communicator MPI_COMM_WORLD.
+!
+      if (iprocw .eq. 0) then
+        iamp0 = .true.
+      else
+        iamp0 = .false.
+      end if
+!
+! ****** Set the number type for communicating REAL
+! ****** numbers in MPI calls.
+!
+      ntype_real = MPI_REAL8
+!
+! ****** Set the GPU device number based on the shared rank.
+! ****** This assumes the code was launched with 1 MPI rank per GPU.
+!
+!$acc set device_num(iprocsh)
+!
+      wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+!
+end subroutine
 !#######################################################################
 subroutine setup
 !
@@ -749,11 +992,13 @@ subroutine setup
 !-----------------------------------------------------------------------
 !
       use number_types
+      use mpidefs
       use input_parameters
       use timing
       use fields
       use mesh
       use output
+      use globals, ONLY : time
 !
 !-----------------------------------------------------------------------
 !
@@ -761,13 +1006,12 @@ subroutine setup
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ) :: wtime
       integer :: ierr
       character(512) :: cmd
 !
 !-----------------------------------------------------------------------
 !
-      wtime_tmp = wtime()
+      wtime_tmp = MPI_Wtime()
 !
       call read_input_file
 !
@@ -775,11 +1019,13 @@ subroutine setup
 !
       if (output_map_idx_cadence.gt.0 .or.     &
           output_map_time_cadence.gt.0.0) then
-        cmd = 'mkdir -p '//trim(output_map_directory)
-        call EXECUTE_COMMAND_LINE (cmd,exitstat=ierr)
-        if (ierr.ne.0) then
-          write (*,*) '### Could not make output subdirectory, using ./'
-          output_map_directory = '.'
+        if (iamp0) then
+          cmd = 'mkdir -p '//trim(output_map_directory)
+          call EXECUTE_COMMAND_LINE (cmd,exitstat=ierr)
+          if (ierr.ne.0) then
+            write (*,*) '### Could not make output subdirectory, using ./'
+            output_map_directory = '.'
+          end if
         end if
       end if
 !
@@ -789,6 +1035,7 @@ subroutine setup
          stop
       else
         call load_initial_condition
+        time = time_start
       end if
 !
 ! ****** Allocate flow arrays.
@@ -806,8 +1053,9 @@ subroutine setup
       if (assimilate_data) call load_data_assimilation
 !
       if (use_flow_from_files) call load_flow_from_files
-
-      call create_and_open_output_log_files
+!      RMC:  For now, only have rank 0 do this.  Eventually, all ranks need to
+!            create files for each realization they have...
+      if (iamp0) call create_and_open_output_log_files
 !
       call analysis_step
 !
@@ -818,9 +1066,9 @@ subroutine setup
 !
       call output_step
 !
-      call write_welcome_message
+      if (iamp0) call write_welcome_message
 !
-      wtime_setup = wtime() - wtime_tmp
+      wtime_setup = MPI_Wtime() - wtime_tmp
 !
 end subroutine
 !#######################################################################
@@ -871,6 +1119,8 @@ subroutine wrap_it_up
 !-----------------------------------------------------------------------
 !
       use number_types
+      use mpidefs
+      use timing
       use input_parameters
 !
 !-----------------------------------------------------------------------
@@ -879,20 +1129,33 @@ subroutine wrap_it_up
 !
 !-----------------------------------------------------------------------
 !
+      integer :: ierr
+!
+!-----------------------------------------------------------------------
+!
 ! ****** Write the final Br map.
 !
       call write_map (trim(output_map_root_filename)//'_final.h5')
-      write(*,*) ' '
-      write(*,*) 'Final 2D data written out to ', &
-                   trim(output_map_root_filename)//'_final.h5'
+!
+      if (iamp0) then
+        write(*,*) ' '
+        write(*,*) 'Final 2D data written out to ', &
+                     trim(output_map_root_filename)//'_final.h5'
 !
 !     output_final_restart?
 !
-      write(*,*)
-      write(*,*) "Run completed at:"
-      call timestamp
-      write(*,*)
-      flush(OUTPUT_UNIT)
+        write(*,*)
+        write(*,*) "Run completed at:"
+        call timestamp
+        write(*,*)
+        flush(OUTPUT_UNIT)
+      end if
+!
+!****** Synchronize all MPI ranks to get accurate wall clock time.
+!
+      wtime_tmp_mpi = MPI_Wtime()
+      call MPI_Barrier(MPI_COMM_WORLD,ierr)
+      wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
 !
 end subroutine
 !#######################################################################
@@ -905,6 +1168,8 @@ subroutine write_timing
 !-----------------------------------------------------------------------
 !
       use timing
+      use number_types
+      use mpidefs
 !
 !-----------------------------------------------------------------------
 !
@@ -912,25 +1177,114 @@ subroutine write_timing
 !
 !-----------------------------------------------------------------------
 !
+! ****** Timing buffers.
+!
+      integer, parameter :: lbuf=10
+      real(r_typ), dimension(lbuf) :: sbuf
+      real(r_typ), dimension(lbuf,0:nproc-1) :: tbuf
+!
+! ****** Timing statistics.
+!
+      real(r_typ), dimension(lbuf) :: tmin,tmax,tavg,tsdev
+!
+!-----------------------------------------------------------------------
+!
+      integer :: ierr,irank
       character(*), parameter :: FMT = '(a20,f20.2)'
 !
 !-----------------------------------------------------------------------
 !
-      write(*,"(a40)") repeat("-", 40)
-      write(*,FMT) "Wall clock time:   ",wtime_total
-      write(*,"(a40)") repeat("-", 40)
-      write(*,FMT) "--> Setup:         ",wtime_setup
-      write(*,FMT) "--> Update:        ",wtime_update
-      write(*,FMT) "--> Flux transport:",wtime_flux_transport
-      write(*,FMT) "    --> Advecton:  ",wtime_flux_transport_advection
-      write(*,FMT) "    --> Diffusion  ",wtime_flux_transport_diffusion
-      write(*,FMT) "    --> Source:    ",wtime_source
-      write(*,FMT) "--> Analysis:      ",wtime_analysis
-      write(*,FMT) "--> I/O:           ",wtime_io
-      write(*,"(a40)") repeat("-", 40)
 !
-      write(*,*)
-      flush(OUTPUT_UNIT)
+! ****** Gather the timing information for all processors into TBUF.
+!
+      sbuf(1) = wtime_total
+      sbuf(2) = wtime_setup
+      sbuf(3) = wtime_update
+      sbuf(4) = wtime_flux_transport
+      sbuf(5) = wtime_flux_transport_advection
+      sbuf(6) = wtime_flux_transport_diffusion
+      sbuf(7) = wtime_source
+      sbuf(8) = wtime_analysis
+      sbuf(9) = wtime_io
+      sbuf(10) = wtime_mpi_overhead
+!
+      call MPI_Allgather (sbuf,lbuf,ntype_real,       &
+                          tbuf,lbuf,ntype_real,MPI_COMM_WORLD,ierr)
+!
+! ****** Calculate the timing statistics.
+!
+      tavg=sum(tbuf,dim=2)/nproc
+      tmin=minval(tbuf,dim=2)
+      tmax=maxval(tbuf,dim=2)
+!
+      tsdev(:)=0.
+!
+      do irank=0,nproc-1
+        tsdev(:)=tsdev(:)+(tbuf(:,irank)-tavg(:))**2
+      enddo
+!
+      tsdev(:)=sqrt(tsdev(:)/nproc)
+!
+      if (iamp0) then
+!
+        do irank=0,nproc-1
+          write(*,"(a40)") repeat("-", 40)
+          write(*,*)
+          write (*,*) 'Processor id = ',irank
+          write(*,*)
+          write(*,"(a40)") repeat("-", 40)
+          write(*,FMT) "Wall clock time:   ",tbuf(1,irank)
+          write(*,"(a40)") repeat("-", 40)
+          write(*,FMT) "--> Setup:         ",tbuf(2,irank)
+          write(*,FMT) "--> Update:        ",tbuf(3,irank)
+          write(*,FMT) "--> Flux transport:",tbuf(4,irank)
+          write(*,FMT) "    --> Advecton:  ",tbuf(5,irank)
+          write(*,FMT) "    --> Diffusion  ",tbuf(6,irank)
+          write(*,FMT) "    --> Source:    ",tbuf(7,irank)
+          write(*,FMT) "--> Analysis:      ",tbuf(8,irank)
+          write(*,FMT) "--> I/O:           ",tbuf(9,irank)
+          write(*,FMT) "--> MPI overhead:  ",tbuf(10,irank)
+          write(*,"(a40)") repeat("-", 40)
+          write(*,*)
+        enddo
+!
+        write (*,*)
+        write (*,"(a40)") repeat("-", 40)
+        write (*,*)
+        write (*,*) 'Average times:'
+        write (*,*) '-------------'
+        write (*,*)
+        write (*,300) 'Avg         Min         Max      S. Dev'
+        write (*,300) '---         ---         ---      ------'
+        write (*,400) 'Wall clock time:        ', &
+                     tavg(1),tmin(1),tmax(1),tsdev(1)
+        write (*,400) '--> Setup:              ', &
+                     tavg(2),tmin(2),tmax(2),tsdev(2)
+        write (*,400) '--> Update:             ', &
+                     tavg(3),tmin(3),tmax(3),tsdev(3)
+        write (*,400) '--> Flux transport:     ', &
+                     tavg(4),tmin(4),tmax(4),tsdev(4)
+        write (*,400) '    --> Advecton:       ', &
+                     tavg(5),tmin(5),tmax(5),tsdev(5)
+        write (*,400) '    --> Diffusion       ', &
+                     tavg(6),tmin(6),tmax(6),tsdev(6)
+        write (*,400) '    --> Source:         ', &
+                     tavg(7),tmin(7),tmax(7),tsdev(7)
+        write (*,400) '--> Analysis:           ', &
+                     tavg(8),tmin(8),tmax(8),tsdev(8)
+        write (*,400) '--> I/O:                ', &
+                    tavg(9),tmin(9),tmax(9),tsdev(9)
+        write (*,400) '--> MPI overhead:       ', &
+                    tavg(10),tmin(10),tmax(10),tsdev(10)
+!
+  300   format (1x,33x,a)
+  400   format (1x,a,4f12.3)
+!
+        write (*,*)
+        write(*,"(a40)") repeat("-", 40)
+        write (*,*)
+        flush(OUTPUT_UNIT)
+      end if
 !
 end subroutine
 !#######################################################################
@@ -1052,6 +1406,7 @@ subroutine write_welcome_message
       write (*,*) '        San Diego, California, USA 92121'
       write (*,*)''
       write (*,*)''
+      write (*,*) 'Start time = ',time
       write (*,*) 'End time = ',time_end
       write (*,*)
       write (*,*) 'Number of t mesh points = ',ntm
@@ -1082,6 +1437,7 @@ subroutine load_initial_condition
 !-----------------------------------------------------------------------
 !
       use number_types
+      use mpidefs
       use input_parameters
       use mesh
       use fields
@@ -1089,6 +1445,7 @@ subroutine load_initial_condition
       use read_2d_file_interface
       use output
       use constants
+      use timing
 !
 !-----------------------------------------------------------------------
 !
@@ -1096,12 +1453,16 @@ subroutine load_initial_condition
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ), dimension(:), allocatable :: fn1,fs1,fn2,fs2
-      real(r_typ), dimension(:,:,:), allocatable :: f_local
-      real(r_typ), dimension(:,:), allocatable :: f_tmp2d
-      real(r_typ), dimension(:), allocatable :: s1,s2,s3
-      integer :: n1,n2,n3,ierr,i,j,k
       real(r_typ), parameter :: val2_g_width = 0.03_r_typ
+!
+!-----------------------------------------------------------------------
+!
+      integer :: n1,n2,n3,ierr,i,j,k,lsbuf, irank
+      integer, dimension(:), allocatable :: displ,lbuf
+      real(r_typ), dimension(:), allocatable :: fn1,fs1,fn2,fs2
+      real(r_typ), dimension(:,:,:), allocatable :: f_local,gout
+      real(r_typ), dimension(:,:), allocatable :: f_tmp2d
+      real(r_typ), dimension(:), allocatable :: s1,s2,s3,s3t,tfout,gfout
 !
 !-----------------------------------------------------------------------
 !
@@ -1112,9 +1473,27 @@ subroutine load_initial_condition
 !
 ! ****** Read the initial magnetic map.
 !
-      call read_2d_file (initial_map_filename,n1,n2,f_tmp2d,s1,s2,ierr)
+      if (iamp0) then
+        call read_2d_file (initial_map_filename,n1,n2,f_tmp2d,s1,s2,ierr)
+      endif
 !
-      n3 = n_realizations
+      wtime_tmp_mpi = MPI_Wtime()
+      call MPI_Bcast (n1,1,ntype_real,0,MPI_COMM_WORLD,ierr)
+      call MPI_Bcast (n2,1,ntype_real,0,MPI_COMM_WORLD,ierr)
+      wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+      if (.not.iamp0) then
+        allocate (s1(n1))
+        allocate (s2(n2))
+        allocate (f_tmp2d(n1,n2))
+      endif
+      wtime_tmp_mpi = MPI_Wtime()
+      call MPI_Bcast (f_tmp2d,n1*n2,ntype_real,0,MPI_COMM_WORLD,ierr)
+      call MPI_Bcast (s1,n1,ntype_real,0,MPI_COMM_WORLD,ierr)
+      call MPI_Bcast (s2,n2,ntype_real,0,MPI_COMM_WORLD,ierr)
+      wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+!
+      call set_local_number_of_realizations
+      n3 = nr
       allocate (f_local(n1,n2,n3))
 
       do i=1,n3
@@ -1122,7 +1501,9 @@ subroutine load_initial_condition
       enddo
 !
       allocate (s3(n3))
-      s3 = (/ (I, I = 1, n3) /)
+      do i=1,n3
+        s3(i)=real(i,r_typ)
+      enddo
 !
       if (validation_run .eq. 1) then
 !
@@ -1136,11 +1517,11 @@ subroutine load_initial_condition
 !$acc enter data create (f_local,fval_u0,f_tmp2d)
 !$acc enter data copyin (s1,s2)
         do i=1,n3
-          call tesseral_spherical_harmonic (0,6,s1,s2,n1,n2,n3,f_tmp2d)
+          call tesseral_spherical_harmonic (0,6,s1,s2,n1,n2,f_tmp2d)
           do concurrent(k=1:n2,j=1:n1)
             f_local(j,k,i) = f_tmp2d(j,k)
           enddo
-          call tesseral_spherical_harmonic (5,6,s1,s2,n1,n2,n3,f_tmp2d)
+          call tesseral_spherical_harmonic (5,6,s1,s2,n1,n2,f_tmp2d)
           do concurrent(k=1:n2,j=1:n1)
             fval_u0(j,k,i) = f_tmp2d(j,k)
           enddo
@@ -1151,14 +1532,52 @@ subroutine load_initial_condition
         fval_u0(:,:,:) = 1000.0_r_typ*(f_local(:,:,:) +                  &
                               sqrt(14.0_r_typ/11.0_r_typ)*fval_u0(:,:,:))
 !
-        if (output_map_2d.and.n3.eq.1) then
-          call write_2d_file(                                           &
-              (trim(output_map_root_filename)//'_initial_0.h5')       &
-                             ,n1,n2,fval_u0(:,:,1),s1,s2,ierr)
+        if (output_map_2d.and.n_realizations.eq.1) then
+          call write_2d_file(                                        &
+               (trim(output_map_root_filename)//'_initial_0.h5')      &
+                         ,n1,n2,fval_u0(:,:,1),s1,s2,ierr)
         else
-          call write_3d_file(                                           &
-              (trim(output_map_root_filename)//'_initial_0.h5')       &
-                             ,n1,n2,n3,fval_u0,s1,s2,s3,ierr)
+!
+          wtime_tmp_mpi = MPI_Wtime()
+!
+          lsbuf=n1*n2*n3
+          allocate (tfout(lsbuf))
+          tfout(:)=reshape(fval_u0(:,:,:),(/lsbuf/))
+          if (iamp0) then
+            allocate (gfout(n1*n2*n_realizations))
+            allocate (displ(0:nproc-1))
+            allocate (lbuf(0:nproc-1))
+            displ(0)=0
+            do irank=0,nproc-1
+              lbuf(irank)=n1*n2*nr_arr(irank)
+            enddo
+            do irank=1,nproc-1
+              displ(irank)=displ(irank-1)+lbuf(irank-1)
+            enddo
+          end if
+!
+          call MPI_Gatherv (tfout,lsbuf,ntype_real,gfout,lbuf,       &
+                            displ,ntype_real,0,MPI_COMM_WORLD,ierr)
+          deallocate(tfout)
+          wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+!
+          if (iamp0) then
+            allocate (s3t(n_realizations))
+            allocate (gout(n1,n2,n_realizations))
+            do i=1,n_realizations
+              s3t(i)=real(i,r_typ)
+            enddo
+            gout=reshape(gfout(:),(/n1,n2,n_realizations/))
+            call write_3d_file(                                        &
+                (trim(output_map_root_filename)//'_initial_0.h5')      &
+                               ,n1,n2,n_realizations,gout,s1,s2,s3t,ierr)
+            deallocate (gout)
+            deallocate (gfout)
+            deallocate (displ)
+            deallocate (lbuf)
+            deallocate (s3t)
+          end if
+!
         endif
 !
         f_local(:,:,:) = fval_u0(:,:,:)
@@ -1169,14 +1588,51 @@ subroutine load_initial_condition
         fout(:,:,:) = fval_u0(:,:,:)*exp(-42.0_r_typ*diffusion_coef_constant* &
                                      diffusion_coef_factor*time_end)
 !
-        if (output_map_2d.and.n3.eq.1) then
+        if (output_map_2d.and.n_realizations.eq.1) then
           call write_2d_file(                                           &
                (trim(output_map_root_filename)//'_final_analytic.h5') &
                             ,n1,n2,fout(:,:,1),s1,s2,ierr)
         else
-          call write_3d_file(                                           &
-               (trim(output_map_root_filename)//'_final_analytic.h5') &
-                            ,n1,n2,n3,fout,s1,s2,s3,ierr)
+!
+          wtime_tmp_mpi = MPI_Wtime()
+          lsbuf=n1*n2*n3
+          allocate (tfout(lsbuf))
+          tfout(:)=reshape(fout(:,:,:),(/lsbuf/))
+          if (iamp0) then
+            allocate (gfout(n1*n2*n_realizations))
+            allocate (displ(0:nproc-1))
+            allocate (lbuf(0:nproc-1))
+            displ(0)=0
+            do irank=0,nproc-1
+              lbuf(irank)=n1*n2*nr_arr(irank)
+            enddo
+            do irank=1,nproc-1
+              displ(irank)=displ(irank-1)+lbuf(irank-1)
+            enddo
+          end if
+!
+          call MPI_Gatherv (tfout,lsbuf,ntype_real,gfout,lbuf,       &
+                    displ,ntype_real,0,MPI_COMM_WORLD,ierr)
+          deallocate(tfout)
+          wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+!
+          if (iamp0) then
+            allocate (s3t(n_realizations))
+            allocate (gout(n1,n2,n_realizations))
+            do i=1,n_realizations
+              s3t(i)=real(i,r_typ)
+            enddo
+            gout=reshape(gfout(:),(/n1,n2,n_realizations/))
+            call write_3d_file(                                        &
+                (trim(output_map_root_filename)//'_final_analytic.h5')      &
+                               ,n1,n2,n_realizations,gout,s1,s2,s3t,ierr)
+            deallocate (gout)
+            deallocate (gfout)
+            deallocate (displ)
+            deallocate (lbuf)
+            deallocate (s3t)
+          end if
+!
         endif
 !
         deallocate (fout)
@@ -1216,7 +1672,6 @@ subroutine load_initial_condition
 !
       ntm1 = n2
       npm1 = n1
-      nr = n3
 !
 ! ****** Allocate main mesh grid arrays and data array with extended
 ! ****** phi grid.
@@ -1459,6 +1914,7 @@ subroutine output_step
 !-----------------------------------------------------------------------
 !
       use input_parameters
+      use mpidefs
       use timing
       use globals
       use mesh
@@ -1470,13 +1926,13 @@ subroutine output_step
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ) :: t1,wtime
+      real(r_typ) :: t1
 !
 !-----------------------------------------------------------------------
 !
-      t1 = wtime()
-!
-      call output_histories
+      t1 = MPI_Wtime()
+! RMC: This should eventually be for all ranks to write out all realizations.
+      if (iamp0) call output_histories
 !
       call output_map
 !
@@ -1484,7 +1940,7 @@ subroutine output_step
 !
 !     call output_restart
 !
-      wtime_io = wtime_io + (wtime() - t1)
+      wtime_io = wtime_io + (MPI_Wtime() - t1)
 !
 end subroutine
 !#######################################################################
@@ -1584,7 +2040,7 @@ subroutine output_map
       end if
 !
       if (output_map_time_cadence .gt. 0.0) then
-        if (time .ge. idx_out*output_map_time_cadence) then
+        if (time .ge. time_start+idx_out*output_map_time_cadence) then
           output_current_map = .true.
         end if
       end if
@@ -1634,11 +2090,13 @@ subroutine write_map (fname)
 !
 !-----------------------------------------------------------------------
 !
-      use input_parameters, ONLY : output_map_2d
+      use input_parameters, ONLY : output_map_2d,n_realizations
       use number_types
       use output
+      use mpidefs
       use fields, ONLY : f
       use mesh, ONLY : t,npm,ntm,nr
+      use timing
 !
 !-----------------------------------------------------------------------
 !
@@ -1648,8 +2106,10 @@ subroutine write_map (fname)
 !
       character(*) :: fname
       integer :: ierr = 0
-      integer :: i
-      integer, dimension(:), allocatable :: rscale
+      integer :: i, lsbuf, irank
+      integer, dimension(:), allocatable :: displ,lbuf
+      real(r_typ), dimension(:), allocatable :: gfout,tfout,rscale
+      real(r_typ), dimension(:,:,:), allocatable :: gout
 !
 !-----------------------------------------------------------------------
 !
@@ -1668,13 +2128,48 @@ subroutine write_map (fname)
         fout(:,:,i) = TRANSPOSE(f(:,1:npm-1,i))
       enddo
 !
-        if (output_map_2d.and.nr.eq.1) then
+        if (output_map_2d.and.n_realizations.eq.1) then
           call write_2d_file (fname,npm-1,ntm,fout(:,:,1),pout,t,ierr)
         else
-          allocate (rscale(nr))
-          rscale = (/ (I, I = 1, nr) /)
-          call write_3d_file (fname,npm-1,ntm,nr,fout,pout,t,rscale,ierr)
-          deallocate (rscale)
+!
+          wtime_tmp_mpi = MPI_Wtime()
+          lsbuf=(npm-1)*ntm*nr
+          allocate (tfout(lsbuf))
+          tfout(:)=reshape(fout(:,:,:),(/lsbuf/))
+          if (iamp0) then
+            allocate (gfout((npm-1)*ntm*n_realizations))
+            allocate (displ(0:nproc-1))
+            allocate (lbuf(0:nproc-1))
+            displ(0)=0
+            do irank=0,nproc-1
+              lbuf(irank)=(npm-1)*ntm*nr_arr(irank)
+            enddo
+            do irank=1,nproc-1
+              displ(irank)=displ(irank-1)+lbuf(irank-1)
+            enddo
+          end if
+!
+          call MPI_Gatherv (tfout,lsbuf,ntype_real,gfout,lbuf,       &
+                    displ,ntype_real,0,MPI_COMM_WORLD,ierr)
+          deallocate(tfout)
+          wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+!
+          if (iamp0) then
+            allocate (rscale(n_realizations))
+            do i=1,n_realizations
+              rscale(i) = real(i,r_typ)
+            enddo
+            allocate (gout((npm-1),ntm,n_realizations))
+            gout=reshape(gfout(:),(/(npm-1),ntm,n_realizations/))
+            call write_3d_file(fname,npm-1,ntm,n_realizations,gout,pout,t,   &
+                               rscale,ierr)
+            deallocate (gout)
+            deallocate (gfout)
+            deallocate (displ)
+            deallocate (lbuf)
+            deallocate (rscale)
+          end if
+!
         endif
 !
       if (ierr.ne.0) then
@@ -1683,7 +2178,7 @@ subroutine write_map (fname)
         write (*,*) '### Could not write the output data set!'
         write (*,*) 'IERR: ',ierr
         write (*,*) 'File name: ', fname
-        call exit (1)
+        call endrun(.true.)
       end if
 !
       deallocate (fout)
@@ -1699,6 +2194,7 @@ subroutine analysis_step
 !-----------------------------------------------------------------------
 !
       use input_parameters
+      use mpidefs
       use timing
       use globals
       use mesh
@@ -1710,7 +2206,7 @@ subroutine analysis_step
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ) :: t1, wtime
+      real(r_typ) :: t1
       real(r_typ) :: sumfval2, fv, fv2, eqd1, eqd2
       real(r_typ) :: tav, da_t, da_p, sn_t, d_t, cs_t, cs_p, sn_p
       real(r_typ), dimension(:,:,:), allocatable :: fval
@@ -1718,7 +2214,7 @@ subroutine analysis_step
 !
 !-----------------------------------------------------------------------
 !
-      t1 = wtime()
+      t1 = MPI_Wtime()
 !
 ! ****** If running validation, compute current exact solution.
 !
@@ -1892,7 +2388,7 @@ subroutine analysis_step
       h_area_pn = rsun_cm2*h_area_pn
       h_area_ps = rsun_cm2*h_area_ps
 !
-      wtime_analysis = wtime_analysis + (wtime() - t1)
+      wtime_analysis = wtime_analysis + (MPI_Wtime() - t1)
 !
 end subroutine
 !#######################################################################
@@ -1904,6 +2400,7 @@ subroutine update_step
 !
 !-----------------------------------------------------------------------
 !
+      use mpidefs
       use input_parameters
       use timing
 !
@@ -1913,11 +2410,11 @@ subroutine update_step
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ) :: t1,wtime
+      real(r_typ) :: t1
 !
 !-----------------------------------------------------------------------
 !
-      t1 = wtime()
+      t1 = MPI_Wtime()
 !
       if (advance_flow)    call update_flow
       if (advance_source)  call update_source
@@ -1925,7 +2422,7 @@ subroutine update_step
 !
       call update_timestep
 !
-      wtime_update = wtime_update + (wtime() - t1)
+      wtime_update = wtime_update + (MPI_Wtime() - t1)
 !
 end subroutine
 !#######################################################################
@@ -2033,9 +2530,9 @@ subroutine update_flow
             p12 = cp**4+2*cp**2
             vt(j,k,i) = vt(j,k,i)+(-((p1+(p2+p3+p4)*sign(one,sth(j))    &
                   +p5+p6+p7+p8)*p9)/SQRT(p10+p11-p12))
-            if ((abs(vt(j,k,i))>10**5) .or. (abs(vt(j,k,i))<-10**-5)) then
+            if ((abs(vt(j,k,i))>10.0**5) .or. (abs(vt(j,k,i))<-10.0**(-5))) then
               vt(j,k,i)=0
-            endif
+            end if
           enddo
           do concurrent (i=1:nr,k=1:np,j=1:ntm)
             cph = cos(ph(k))
@@ -2044,11 +2541,11 @@ subroutine update_flow
             p3 = (2*cph**3*st(j)-2*st(j)*cph)*ct(j)
             p4 = cph**4+2*cph**2
             vp(j,k,i) = vp(j,k,i)- p1/SQRT(p2+p3-p4)
-            if ((abs(vp(j,k,i))>10**5) .or. (abs(vp(j,k,i))<-10**-5)) then
+            if ((abs(vp(j,k,i))>10.0**5) .or. (abs(vp(j,k,i))<-10.0**(-5))) then
               vp(j,k,i)=0
-            endif
+            end if
          end do
-        endif
+        end if
 !
 ! ***** Attenuate velocity based on Br.
 !
@@ -2057,6 +2554,7 @@ subroutine update_flow
 ! ****** Need to interpolate f at half-mesh point.
 !
           do concurrent (i=1:nr,k=2:npm-1,j=2:nt-1)
+! RMC: Should maybe use max(|br|) here instead of avg?
             br_avg = half*(f(j-1,k,i) + f(j,k,i))
             vt(j,k,i) = vt(j,k,i)*(one - tanh(abs(br_avg)*fivehundred_i))
           enddo
@@ -2111,12 +2609,12 @@ subroutine update_flow
 !
 ! ****** Attenuate pole value to set new v bc (f has same val for all pole pts, use 1)
 !
-        do concurrent (i=1:nr)
-          vt_npole(i) = vt_npole(i)*twopi_i*(one - tanh(f(1,1,i)*fivehundred_i))
-          vt_spole(i) = vt_spole(i)*twopi_i*(one - tanh(f(ntm,1,i)*fivehundred_i))
-          vp_npole(i) = vp_npole(i)*twopi_i*(one - tanh(f(1,1,i)*fivehundred_i))
-          vp_spole(i) = vp_spole(i)*twopi_i*(one - tanh(f(ntm,1,i)*fivehundred_i))
-        enddo
+          do concurrent (i=1:nr)
+            vt_npole(i) = vt_npole(i)*twopi_i*(one - tanh(f(1,1,i)*fivehundred_i))
+            vt_spole(i) = vt_spole(i)*twopi_i*(one - tanh(f(ntm,1,i)*fivehundred_i))
+            vp_npole(i) = vp_npole(i)*twopi_i*(one - tanh(f(1,1,i)*fivehundred_i))
+            vp_spole(i) = vp_spole(i)*twopi_i*(one - tanh(f(ntm,1,i)*fivehundred_i))
+          enddo
 !
 ! ****** Now set the pole:
 !
@@ -2170,9 +2668,10 @@ subroutine add_flow_from_files
       use flow_from_files
       use fields
       use globals
+      use mpidefs
       use mesh
-      use output, ONLY : pout
       use read_2d_file_interface
+      use timing
 !
 !-----------------------------------------------------------------------
 !
@@ -2182,9 +2681,8 @@ subroutine add_flow_from_files
 !
       integer :: ierr = 0
       real(r_typ), dimension(:,:), allocatable :: new_flow_t,new_flow_p
-      real(r_typ), dimension(:), allocatable :: s1,s2,s1ext,s2ext
-      real(r_typ) :: pole
-      integer :: ln1,ln2,ln3,i,j,k
+      real(r_typ), dimension(:), allocatable :: s1,s2
+      integer :: ln1,ln2,i,j,k
       character(1024) :: flowfile_t = ' '
       character(1024) :: flowfile_p = ' '
 !
@@ -2202,9 +2700,18 @@ subroutine add_flow_from_files
 !
 ! ****** VT (NT,NPM) ******
 !
-       call read_2d_file (flowfile_t,ln1,ln2,new_flow_t,s1,s2,ierr)
-       deallocate(s1)
-       deallocate(s2)
+       if (iamp0) then
+         call read_2d_file (flowfile_t,ln1,ln2,new_flow_t,s1,s2,ierr)
+         deallocate(s1)
+         deallocate(s2)
+       endif
+!
+       wtime_tmp_mpi = MPI_Wtime()
+       if (.not.iamp0) then
+        allocate (new_flow_t(npm1,nt))
+       endif
+       call MPI_Bcast (new_flow_t,flow_t_size,ntype_real,0,MPI_COMM_WORLD,ierr)
+       wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
 !$acc enter data copyin (new_flow_t)
 !
 ! ****** copy, transpose, and convert units.
@@ -2221,9 +2728,18 @@ subroutine add_flow_from_files
 !
 ! ****** VP (NTM,NP)
 !
-       call read_2d_file (flowfile_p,ln1,ln2,new_flow_p,s1,s2,ierr)
-       deallocate(s1)
-       deallocate(s2)
+       if (iamp0) then
+         call read_2d_file (flowfile_p,ln1,ln2,new_flow_p,s1,s2,ierr)
+         deallocate(s1)
+         deallocate(s2)
+       endif
+!
+       wtime_tmp_mpi = MPI_Wtime()
+       if (.not.iamp0) then
+        allocate (new_flow_p(np,ntm1))
+       endif
+       call MPI_Bcast (new_flow_p,flow_p_size,ntype_real,0,MPI_COMM_WORLD,ierr)
+       wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
 !$acc enter data copyin (new_flow_p)
 !
 ! ****** copy, transpose, and convert units.
@@ -2234,17 +2750,19 @@ subroutine add_flow_from_files
 !$acc exit data delete (new_flow_p)
        deallocate(new_flow_p)
 !
-! ******  TODO: Add error checking here (make sure scales match run
-!               until interp is added)
+! ******  TODO:  Add error checking here (make sure scales match run
+!                until interp is added)
 !
 ! ****** Update position in map list and next map time.
 !
        current_flow_input_idx = current_flow_input_idx + 1
+       if (verbose) print*, 'FlowIdx:',current_flow_input_idx
 !
 ! ****** If there are no more flow files to load, loop back to
 !        the beginning (use index 2 to avoid dt=0 situation).
 !
        if (current_flow_input_idx .gt. num_flows_in_list) then
+         if (verbose) print*, 'Resetting FlowIdx to 2'
          current_flow_input_idx = 2
          flow_times_actual_ut_jd(:) = flow_times_actual_ut_jd0(:) &
                                       + time/twentyfour
@@ -2341,16 +2859,17 @@ subroutine load_flow_from_files
                               flow_files_rel_path_t(i),       &
                               flow_files_rel_path_p(i)
       enddo
-      flow_times_actual_ut_jd(:) = flow_times_actual_ut_jd0(:)
+      flow_times_actual_ut_jd(:) = flow_times_actual_ut_jd0(:) &
+                                   + time_start/twentyfour
       CLOSE (IO_DATA_IN)
 !
 ! ******* Initialize flow time.
 !
-      flow_time_initial_hr = twentyfour*flow_times_actual_ut_jd(1)
+      flow_time_initial_hr = twentyfour*flow_times_actual_ut_jd0(1)
 !
       current_flow_input_idx = 1
 !
-      time_of_next_input_flow = 0.
+      time_of_next_input_flow = time_start
 !
 ! ****** Allocate arrays to store old flows.
 !
@@ -2463,12 +2982,19 @@ subroutine load_data_assimilation
       CLOSE (IO_DATA_IN)
 !
 ! ******* Initialize assimilation time.
+!  RMC: This only works for exact times!  If inbetween files,
+!       need to interpolate two assimilation frames, or modify
+!       start_time?
 !
       map_time_initial_hr = twentyfour*map_times_actual_ut_jd(1)
 !
-      current_map_input_idx = 1
+      i = MINLOC(ABS( (twentyfour*map_times_actual_ut_jd(:) &
+                       - map_time_initial_hr)               &
+                      - time_start),1)
 !
-      time_of_next_input_map = 0.
+      current_map_input_idx = i
+!
+      time_of_next_input_map = time_start
 !
 ! ******* Print some diagnostics.
 !
@@ -2483,6 +3009,8 @@ subroutine load_data_assimilation
                      trim(map_times_actual_ut_str(num_maps_in_list))
         write (*,*) 'File name of first map:     ', &
                      trim(map_files_rel_path(1))
+        write (*,*) 'File name of first used map:     ', &
+                     trim(map_files_rel_path(i))
       end if
 !
 end subroutine
@@ -2536,12 +3064,14 @@ subroutine update_field
 !
       use number_types
       use input_parameters
+      use mpidefs
       use globals
       use output
       use mesh
       use read_3d_file_interface
       use assimilate_new_data_interface
       use data_assimilation
+      use timing
 !
 !-----------------------------------------------------------------------
 !
@@ -2562,10 +3092,26 @@ subroutine update_field
 !
 ! ****** Read the map data.
 !
-       mapfile = TRIM(assimilate_data_map_root_dir)//"/"&
-                 //TRIM(map_files_rel_path(current_map_input_idx))
+       if (iamp0) then
+         mapfile = TRIM(assimilate_data_map_root_dir)//"/"&
+                   //TRIM(map_files_rel_path(current_map_input_idx))
 !
-       call read_3d_file (mapfile,ln1,ln2,nslices,new_data2d,s1,s2,s3,ierr)
+         call read_3d_file (mapfile,ln1,ln2,nslices,new_data2d,s1,s2,s3,ierr)
+         deallocate(s1)
+         deallocate(s2)
+         deallocate(s3)
+       endif
+!
+       wtime_tmp_mpi = MPI_Wtime()
+       call MPI_Bcast (ln1,1,ntype_real,0,MPI_COMM_WORLD,ierr)
+       call MPI_Bcast (ln2,1,ntype_real,0,MPI_COMM_WORLD,ierr)
+       call MPI_Bcast (nslices,1,ntype_real,0,MPI_COMM_WORLD,ierr)
+!
+       if (.not.iamp0) allocate (new_data2d(ln1,ln2,nslices))
+!
+       call MPI_Bcast (new_data2d,ln1*ln2*nslices,ntype_real,0,MPI_COMM_WORLD,ierr)
+       wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+
 !
 ! ******  TODO:  Add error checking here (make sure scales match run
 !                until interp is added)
@@ -2585,9 +3131,6 @@ subroutine update_field
 !
 !$acc exit data delete(new_data)
        deallocate(new_data)
-       deallocate(s1)
-       deallocate(s2)
-       deallocate(s3)
 !
 ! ****** Update position in map list and next map time.
 !
@@ -2646,10 +3189,12 @@ subroutine update_timestep
 ! ****** Default timestep is one giant step for remaining time.
 !
         dtime_global = time_end - time
+        dtime_reason = 'end'
         time_step_changed = .true.
 !
         if (advance_flow.and.timestep_flow_needs_updating) then
           call get_flow_dtmax (dtmax_flow)
+          dtime_reason = 'flowcfl'
           timestep_flow_needs_updating = .false.
         else
           dtmax_flow = huge(one)
@@ -2672,7 +3217,6 @@ subroutine update_timestep
           write (*,*) 'Warning! Time step is smaller than DTMIN!'
         end if
 !
-        if (verbose) write (*,*) 'Stable timestep: ',dtime_global
         timestep_needs_updating = .false.
 !
       end if
@@ -2680,8 +3224,9 @@ subroutine update_timestep
 ! ****** Check for next output time, cut dt to match exactly.
 !
       if (output_map_time_cadence .gt. 0.0) then
-        if (time + dtime_global .ge. idx_out*output_map_time_cadence) then
-          dtime_global = idx_out*output_map_time_cadence - time
+        if (time + dtime_global .ge. (time_start+idx_out*output_map_time_cadence)) then
+          dtime_global = (time_start+idx_out*output_map_time_cadence) - time
+          dtime_reason = 'output'
           timestep_needs_updating = .true.
           time_step_changed = .true.
         end if
@@ -2692,6 +3237,7 @@ subroutine update_timestep
       if (assimilate_data) then
         if (time + dtime_global .ge. time_of_next_input_map) then
           dtime_global = time_of_next_input_map - time
+          dtime_reason = 'dataassim'
           timestep_needs_updating = .true.
           time_step_changed = .true.
         end if
@@ -2702,6 +3248,7 @@ subroutine update_timestep
       if (use_flow_from_files) then
         if (time + dtime_global .ge. time_of_next_input_flow) then
           dtime_global = time_of_next_input_flow - time
+          dtime_reason = 'flowfile'
           timestep_needs_updating = .true.
           flow_needs_updating = .true.
           time_step_changed = .true.
@@ -2712,6 +3259,7 @@ subroutine update_timestep
 !
       if (time + dtime_global .ge. time_end) then
         dtime_global = time_end - time
+        dtime_reason = 'end'
         timestep_needs_updating = .false.
         time_step_changed = .true.
       end if
@@ -2734,6 +3282,7 @@ subroutine flux_transport_step
 !-----------------------------------------------------------------------
 !
       use number_types
+      use mpidefs
       use input_parameters
       use globals
       use timing
@@ -2744,11 +3293,11 @@ subroutine flux_transport_step
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ) :: dtime_local, dtime_local_half, t1, wtime
+      real(r_typ) :: dtime_local, dtime_local_half, t1
 !
 !-----------------------------------------------------------------------
 !
-      t1 = wtime()
+      t1 = MPI_Wtime()
 !
       dtime_local = dtime_global
 !
@@ -2767,7 +3316,7 @@ subroutine flux_transport_step
         if (advance_diffusion) call diffusion_step (dtime_local)
       end if
 !
-      wtime_flux_transport = wtime_flux_transport + (wtime() - t1)
+      wtime_flux_transport = wtime_flux_transport + (MPI_Wtime() - t1)
 !
 end subroutine
 !#######################################################################
@@ -2780,6 +3329,7 @@ subroutine advection_step (dtime_local)
 !-----------------------------------------------------------------------
 !
       use number_types
+      use mpidefs
       use input_parameters
       use timing
       use globals
@@ -2791,11 +3341,11 @@ subroutine advection_step (dtime_local)
 !-----------------------------------------------------------------------
 !
       real(r_typ), INTENT(IN) :: dtime_local
-      real(r_typ) :: t1,wtime
+      real(r_typ) :: t1
 !
 !-----------------------------------------------------------------------
 !
-      t1 = wtime()
+      t1 = MPI_Wtime()
 !
       dtime_advection_used = dtime_local
 !
@@ -2808,7 +3358,7 @@ subroutine advection_step (dtime_local)
       end if
 !
       wtime_flux_transport_advection = wtime_flux_transport_advection &
-                                       + (wtime() - t1)
+                                       + (MPI_Wtime() - t1)
 !
 end subroutine
 !#######################################################################
@@ -2821,6 +3371,7 @@ subroutine diffusion_step (dtime_local)
 !-----------------------------------------------------------------------
 !
       use number_types
+      use mpidefs
       use input_parameters
       use timing
       use globals, ONLY : dtime_diffusion_used,time
@@ -2832,13 +3383,13 @@ subroutine diffusion_step (dtime_local)
 !-----------------------------------------------------------------------
 !
       real(r_typ), INTENT(IN) :: dtime_local
-      real(r_typ) :: dtime_local2,t1,wtime
+      real(r_typ) :: dtime_local2,t1
       real(r_typ) :: time_stepped,timetmp
       integer :: i
 !
 !-----------------------------------------------------------------------
 !
-      t1 = wtime()
+      t1 = MPI_Wtime()
 !
       time_stepped = 0.
 !
@@ -2867,14 +3418,15 @@ subroutine diffusion_step (dtime_local)
           timetmp = time
           time = time + time_stepped
           call analysis_step
-          call output_histories
+! RMC: Eventaully, all ranks should write out histories for all realizations.
+          if (iamp0) call output_histories
           time = timetmp
         end if
 !
       enddo
 !
       wtime_flux_transport_diffusion = wtime_flux_transport_diffusion &
-                                       + (wtime() - t1)
+                                       + (MPI_Wtime() - t1)
 !
 end subroutine
 !#######################################################################
@@ -2887,6 +3439,7 @@ subroutine source_step (dtime_local)
 !-----------------------------------------------------------------------
 !
       use number_types
+      use mpidefs
       use input_parameters
       use timing
 !
@@ -2897,15 +3450,15 @@ subroutine source_step (dtime_local)
 !-----------------------------------------------------------------------
 !
       real(r_typ), INTENT(IN) :: dtime_local
-      real(r_typ) :: t1,wtime
+      real(r_typ) :: t1
 !
 !-----------------------------------------------------------------------
 !
-      t1 = wtime()
+      t1 = MPI_Wtime()
 !
 ! ---> Add random flux, ARs, etc.
 !
-      wtime_source = wtime_source + (wtime() - t1)
+      wtime_source = wtime_source + (MPI_Wtime() - t1)
 !
 end subroutine
 !#######################################################################
@@ -3167,8 +3720,10 @@ subroutine get_dtime_diffusion_euler (dtime_exp)
 !-----------------------------------------------------------------------
 !
       use matrix_storage
+      use mpidefs
       use mesh
       use constants
+      use timing
 !
 !-----------------------------------------------------------------------
 !
@@ -3180,7 +3735,7 @@ subroutine get_dtime_diffusion_euler (dtime_exp)
 !
 !-----------------------------------------------------------------------
 !
-      integer :: i,j,k,d
+      integer :: i,j,k,d,ierr
       real(r_typ) :: max_eig,gersh_rad
 !
 !-----------------------------------------------------------------------
@@ -3212,6 +3767,11 @@ subroutine get_dtime_diffusion_euler (dtime_exp)
 ! *** Apply safety factor.
 !
       dtime_exp = safety*dtime_exp
+!
+      wtime_tmp_mpi = MPI_Wtime()
+      call MPI_Allreduce (MPI_IN_PLACE,dtime_exp,1,ntype_real,  &
+                          MPI_MIN,MPI_COMM_WORLD,ierr)
+      wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
 !
 end subroutine
 !#######################################################################
@@ -3534,6 +4094,7 @@ subroutine read_2d_file (fname,ln1,ln2,fin,s1,s2,ierr)
 !-----------------------------------------------------------------------
 !
       use number_types
+      use mpidefs
       use ds_def
       use timing
 !
@@ -3552,11 +4113,11 @@ subroutine read_2d_file (fname,ln1,ln2,fin,s1,s2,ierr)
 !
       type(ds) :: s
       integer :: ierr
-      real(r_typ) :: t1,wtime
+      real(r_typ) :: t1
 !
 !-----------------------------------------------------------------------
 !
-      t1 = wtime()
+      t1 = MPI_Wtime()
 !
 ! ****** Read the data.
 !
@@ -3568,7 +4129,7 @@ subroutine read_2d_file (fname,ln1,ln2,fin,s1,s2,ierr)
         write (*,*) '### Could not read the requested data set.'
         write (*,*) 'IERR (from RDHDF) = ',ierr
         write (*,*) 'File name: ',trim(fname)
-        call exit (1)
+        call endrun(.true.)
       end if
 !
 ! ****** Check that it is a 2D dataset.
@@ -3579,7 +4140,7 @@ subroutine read_2d_file (fname,ln1,ln2,fin,s1,s2,ierr)
         write (*,*) '### The file does not contain a 2D field.'
         write (*,*) '### Number of dimensions = ',s%ndim
         write (*,*) 'File name: ',trim(fname)
-        call exit (1)
+        call endrun(.true.)
       end if
 !
 ! ****** Check that the their are scales.
@@ -3589,7 +4150,7 @@ subroutine read_2d_file (fname,ln1,ln2,fin,s1,s2,ierr)
         write (*,*) '### ERROR in READ_2D_FILE:'
         write (*,*) '### The data set does not contain scales.'
         write (*,*) 'File name: ',trim(fname)
-        call exit (1)
+        call endrun(.true.)
       end if
 !
 ! ****** Get the resolution of the input map and set resolution for
@@ -3617,7 +4178,7 @@ subroutine read_2d_file (fname,ln1,ln2,fin,s1,s2,ierr)
       deallocate (s%scales(2)%f)
       deallocate (s%f)
 !
-      wtime_io = wtime_io + (wtime() - t1)
+      wtime_io = wtime_io + (MPI_Wtime() - t1)
 !
 end subroutine
 !#######################################################################
@@ -3631,6 +4192,7 @@ subroutine read_3d_file (fname,ln1,ln2,ln3,fin,s1,s2,s3,ierr)
 !-----------------------------------------------------------------------
 !
       use number_types
+      use mpidefs
       use ds_def
       use timing
 !
@@ -3649,11 +4211,11 @@ subroutine read_3d_file (fname,ln1,ln2,ln3,fin,s1,s2,s3,ierr)
 !
       type(ds) :: s
       integer :: ierr
-      real(r_typ) :: t1,wtime
+      real(r_typ) :: t1
 !
 !-----------------------------------------------------------------------
 !
-      t1 = wtime()
+      t1 = MPI_Wtime()
 !
 ! ****** Read the data.
 !
@@ -3665,7 +4227,7 @@ subroutine read_3d_file (fname,ln1,ln2,ln3,fin,s1,s2,s3,ierr)
         write (*,*) '### Could not read the requested data set.'
         write (*,*) 'IERR (from RDHDF) = ',ierr
         write (*,*) 'File name: ',trim(fname)
-        call exit (1)
+        call endrun(.true.)
       end if
 !
 ! ****** Check that it is a 3D dataset.
@@ -3676,7 +4238,7 @@ subroutine read_3d_file (fname,ln1,ln2,ln3,fin,s1,s2,s3,ierr)
         write (*,*) '### The file does not contain a 3D field.'
         write (*,*) '### Number of dimensions = ',s%ndim
         write (*,*) 'File name: ',trim(fname)
-        call exit (1)
+        call endrun(.true.)
       end if
 !
 ! ****** Check that the their are scales.
@@ -3686,7 +4248,7 @@ subroutine read_3d_file (fname,ln1,ln2,ln3,fin,s1,s2,s3,ierr)
         write (*,*) '### ERROR in READ_3D_FILE:'
         write (*,*) '### The data set does not contain scales.'
         write (*,*) 'File name: ',trim(fname)
-        call exit (1)
+        call endrun(.true.)
       end if
 !
 ! ****** Get the resolution of the input map and set resolution for
@@ -3718,7 +4280,7 @@ subroutine read_3d_file (fname,ln1,ln2,ln3,fin,s1,s2,s3,ierr)
       deallocate (s%scales(3)%f)
       deallocate (s%f)
 !
-      wtime_io = wtime_io + (wtime() - t1)
+      wtime_io = wtime_io + (MPI_Wtime() - t1)
 !
 end subroutine
 !#######################################################################
@@ -4271,6 +4833,7 @@ subroutine write_2d_file (fname,ln1,ln2,f,s1,s2,ierr)
 !-----------------------------------------------------------------------
 !
       use number_types
+      use mpidefs
       use ds_def
       use timing
 !
@@ -4285,7 +4848,7 @@ subroutine write_2d_file (fname,ln1,ln2,f,s1,s2,ierr)
       real(r_typ), dimension(ln1) :: s1
       real(r_typ), dimension(ln2) :: s2
       integer :: ln1,ln2
-      real(r_typ) :: t1,wtime
+      real(r_typ) :: t1
 !
 !-----------------------------------------------------------------------
 !
@@ -4294,7 +4857,7 @@ subroutine write_2d_file (fname,ln1,ln2,f,s1,s2,ierr)
 !
 !-----------------------------------------------------------------------
 !
-      t1 = wtime()
+      t1 = MPI_Wtime()
 !
 ! ****** Set the structure components.
 !
@@ -4331,7 +4894,7 @@ subroutine write_2d_file (fname,ln1,ln2,f,s1,s2,ierr)
       deallocate (s%scales(2)%f)
       deallocate (s%f)
 !
-      wtime_io = wtime_io + (wtime() - t1)
+      wtime_io = wtime_io + (MPI_Wtime() - t1)
 !
 end subroutine
 !#######################################################################
@@ -4412,6 +4975,7 @@ subroutine set_mesh
       use number_types
       use mesh
       use constants
+      use mpidefs
       use output, ONLY : pout
 !
 !-----------------------------------------------------------------------
@@ -4436,6 +5000,8 @@ subroutine set_mesh
       np = npm1 + 1
       ntm2 = ntm1 - 1
       npm2 = npm1 - 1
+      flow_t_size = npm1*nt
+      flow_p_size = np*ntm1
 !
 ! ****** Set "main mesh" compute resolution.
 ! ****** The phi direction has an extra point for a two-point overlap.
@@ -4466,7 +5032,7 @@ subroutine set_mesh
         write (*,*) 'Actual p range:'
         write (*,*) 'Min: ',p(1)
         write (*,*) 'Max: ',p(npm-1)
-        call exit (1)
+        call endrun(.true.)
       end if
 !
 ! ****** Allocate main mesh grid quantities.
@@ -4565,12 +5131,14 @@ subroutine load_diffusion
 !
       use number_types
       use mesh
+      use mpidefs
       use fields
       use input_parameters
       use constants
       use read_2d_file_interface
       use globals
       use sts
+      use timing
 !
 !-----------------------------------------------------------------------
 !
@@ -4602,7 +5170,22 @@ subroutine load_diffusion
 !
 ! ****** Load the diffusion coef into an array (assumes PT).
 !
-        call read_2d_file (diffusion_coef_filename,nfp,nft,f_tmp2d,pf,tf,ierr)
+        if (iamp0) then
+          call read_2d_file (diffusion_coef_filename,nfp,nft,f_tmp2d,pf,tf,ierr)
+        endif
+        wtime_tmp_mpi = MPI_Wtime()
+        call MPI_Bcast (nfp,1,ntype_real,0,MPI_COMM_WORLD,ierr)
+        call MPI_Bcast (nft,1,ntype_real,0,MPI_COMM_WORLD,ierr)
+        if (.NOT. iamp0) then
+          allocate (pf(nfp))
+          allocate (tf(nft))
+          allocate (f_tmp2d(nfp,nft))
+        endif
+        call MPI_Bcast (f_tmp2d,nfp*nft,ntype_real,0,MPI_COMM_WORLD,ierr)
+        call MPI_Bcast (pf,nfp,ntype_real,0,MPI_COMM_WORLD,ierr)
+        call MPI_Bcast (tf,nft,ntype_real,0,MPI_COMM_WORLD,ierr)
+        wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+!
         f_tmp2d(:,:) = TRANSPOSE(f_tmp2d(:,:))
         allocate(vf(nfp,nft,nr))
         do i=1,nr
@@ -4627,7 +5210,7 @@ subroutine load_diffusion
           write (*,*) '### The scales in the diffusion coef file'// &
                  ' are not monotonically increasing.'
           write (*,*) 'File name: ',trim(diffusion_coef_filename)
-          call exit (1)
+          call endrun(.true.)
         end if
 !
 ! ****** Enforce periodicity.
@@ -4889,10 +5472,12 @@ subroutine load_source
 !
       use number_types
       use mesh
+      use mpidefs
       use fields
       use input_parameters
       use constants
       use read_2d_file_interface
+      use timing
 !
 !-----------------------------------------------------------------------
 !
@@ -4921,7 +5506,22 @@ subroutine load_source
 !
         source(:,:,:) = 0.
 !
-        call read_2d_file (source_filename,nfp,nft,sf,pf,tf,ierr)
+        if (iamp0) then
+          call read_2d_file (source_filename,nfp,nft,sf,pf,tf,ierr)
+        endif
+        wtime_tmp_mpi = MPI_Wtime()
+        call MPI_Bcast (nfp,1,ntype_real,0,MPI_COMM_WORLD,ierr)
+        call MPI_Bcast (nft,1,ntype_real,0,MPI_COMM_WORLD,ierr)
+        if (.NOT. iamp0) then
+          allocate (pf(nfp))
+          allocate (tf(nft))
+          allocate (sf(nfp,nft))
+        endif
+        call MPI_Bcast (sf,nfp*nft,ntype_real,0,MPI_COMM_WORLD,ierr)
+        call MPI_Bcast (pf,nfp,ntype_real,0,MPI_COMM_WORLD,ierr)
+        call MPI_Bcast (tf,nft,ntype_real,0,MPI_COMM_WORLD,ierr)
+        wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+!
         sf(:,:) = TRANSPOSE(sf(:,:))
 !
 ! ****** Interpolate the source term onto the main mesh (t,p).
@@ -4937,7 +5537,7 @@ subroutine load_source
           write (*,*) '### The scales in the source term file are'// &
                         ' not monotonically increasing.'
           write (*,*) 'File name: ',trim(source_filename)
-          call exit (1)
+          call endrun(.true.)
         end if
 !
 ! ****** Enforce periodicity.
@@ -5096,9 +5696,11 @@ subroutine get_flow_dtmax (dtmaxflow)
 !-----------------------------------------------------------------------
 !
       use number_types
+      use mpidefs
       use mesh
       use fields, ONLY : vt,vp
       use constants
+      use timing
 !
 !-----------------------------------------------------------------------
 !
@@ -5110,7 +5712,7 @@ subroutine get_flow_dtmax (dtmaxflow)
 !
 !-----------------------------------------------------------------------
 !
-      integer :: i,j,k
+      integer :: i,j,k,ierr
       real(r_typ) :: kdotv,deltat,dtmax
 !
 !-----------------------------------------------------------------------
@@ -5132,6 +5734,10 @@ subroutine get_flow_dtmax (dtmaxflow)
 !$omp end parallel do
 !
       dtmaxflow = half*safety*dtmax
+      wtime_tmp_mpi = MPI_Wtime()
+      call MPI_Allreduce (MPI_IN_PLACE,dtmaxflow,1,ntype_real, &
+                          MPI_MIN,MPI_COMM_WORLD,ierr)
+      wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
 !
 end subroutine
 !#######################################################################
@@ -6240,6 +6846,7 @@ subroutine read_input_file
 !-----------------------------------------------------------------------
 !
       use input_parameters
+      use mpidefs
 !
 !-----------------------------------------------------------------------
 !
@@ -6263,7 +6870,7 @@ subroutine read_input_file
                diffusion_coef_factor,diffusion_num_method,             &
                diffusion_subcycles,advance_source,source_filename,     &
                assimilate_data,assimilate_data_map_list_filename,      &
-               assimilate_data_map_root_dir
+               assimilate_data_map_root_dir,time_start
 !
 !-----------------------------------------------------------------------
 !
@@ -6274,14 +6881,17 @@ subroutine read_input_file
 !
 ! ****** Read the input file.
 !
+! RMC: Could have just rank 0 read this and then broadcast to all other ranks.
       call ffopen (8,infile,'r',ierr)
 !
       if (ierr.ne.0) then
-        write (*,*)
-        write (*,*) '### ERROR in READ_INPUT_FILE:'
-        write (*,*) '### Could not open the input file.'
-        write (*,*) 'File name: ',trim(infile)
-        call exit (1)
+        if (iamp0) then
+          write (*,*)
+          write (*,*) '### ERROR in READ_INPUT_FILE:'
+          write (*,*) '### Could not open the input file.'
+          write (*,*) 'File name: ',trim(infile)
+          call endrun(.true.)
+        end if
       end if
 !
       read (8,hipft_input_parameters)
@@ -6290,10 +6900,22 @@ subroutine read_input_file
 ! ****** Check inputs for issues.
 !
       if (output_map_time_cadence.gt.0 .and. output_map_idx_cadence.gt.0) then
-        write(*,*) "ERROR!  Cannot use both output_map_time_cadence"
-        write(*,*) "        and output_map_idx_cadence at the same time!"
-        call wrap_it_up
-        STOP 1
+        if (iamp0) then
+          write(*,*) "ERROR!  Cannot use both output_map_time_cadence"
+          write(*,*) "        and output_map_idx_cadence at the same time!"
+        endif
+        call endrun (.true.)
+      end if
+!
+      if (nproc .gt. n_realizations) then
+        if (iamp0) then
+          write (*,*)
+          write (*,*) '### ERROR in SETUP:'
+          write (*,*) '### There are more MPI ranks than realizations.'
+          write (*,*) 'Number of MPI ranks    = ',nproc
+          write (*,*) 'Number of realizations = ',n_realizations
+        end if
+        call endrun (.true.)
       end if
 !
 end subroutine
@@ -6446,6 +7068,9 @@ end subroutine
 !     Currently, each realization is an identical computation.
 !     If using 1 realization, use output_map_2d to output 2D file
 !     instead of 3d file (currently 2d is default).
+!
+! 11/22/2022, MS+RC, Version 0.15.0:
+!   - Added MPI to parallelize across realizations.
 !
 !-----------------------------------------------------------------------
 !

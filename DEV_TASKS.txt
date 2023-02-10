@@ -1,5 +1,6 @@
 DEV TASKS FOR HIPFT:
 
+ - Make velocity attenuation a variable parameter across realizations.
  - Add interleaved data input vs. output option (?)
  - Add initial dump time option
  - Cleanup python script to generate hipft history diagnostics from a series of hipft output maps
