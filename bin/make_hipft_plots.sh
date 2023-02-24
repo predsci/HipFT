@@ -33,7 +33,7 @@ done
 
 ffmpeg -framerate 15 -i "movie%d.png" -pix_fmt yuv420p -c:a copy -crf 20 -r 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -codec:v libx264 "movie.mov"
 
-cp movie.mov ../${OUTFILE}.mov
+cp movie.mov ${OUTFILE}.mov
 
 cd ..
 rm -fr tmp

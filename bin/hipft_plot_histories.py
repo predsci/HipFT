@@ -51,7 +51,7 @@ def run(args):
   # Read the data:
   hist_sol = pd.read_table('history_sol.dat',header=0,sep='\s+')
   hist_num = pd.read_table('history_num.dat',header=0,sep='\s+')
-  
+
   step  = np.array(hist_sol['STEP'])
   time  = np.array(hist_sol['TIME'])
   fluxp = np.array(hist_sol['FLUX_POSITIVE'])
@@ -88,9 +88,9 @@ def run(args):
   flux_imb[flux_tot_un >= 1e-15] = 100.0*flux_tot_s[flux_tot_un >= 1e-15]/flux_tot_un[flux_tot_un >= 1e-15]
   pole_n_avg_field = (fluxp_pn+fluxm_pn)/area_pn
   pole_s_avg_field = (fluxp_ps+fluxm_ps)/area_ps
-  
+
   ###### PLOTTING ######
-  
+
   width = 0.6
   fsize = 25
   mksz = 15
@@ -98,9 +98,9 @@ def run(args):
   fc = 'w'
   tc = 'k'
   dpi=120
-  
+
   tfac = 1/24.0
-  
+
 #
 # ****** Total flux imbalance.
 #

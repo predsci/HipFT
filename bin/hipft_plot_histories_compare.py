@@ -117,7 +117,7 @@ def run(args):
   tc = 'k'
   dpi=120
 
-  tfac1 = 1.
+  tfac1 = 1/24.0
   tfac = 1/24.0
 
 #
@@ -127,8 +127,9 @@ def run(args):
   ax = plt.gca()
   h = plt.plot(time*tfac,flux_imb,'k-',linewidth=lsz,markersize=mksz)
   h1 = plt.plot(time1*tfac1,flux_imb1,'k.',linewidth=lsz,markersize=mksz1)
+  xmn = np.min(time*tfac)
   xmx = np.max(time*tfac)
-  plt.xlim(xmin=0,xmax=xmx)
+  plt.xlim(xmin=xmn,xmax=xmx)
   plt.title('Relative Flux Imbalance', {'fontsize': fsize, 'color': tc})
   plt.xlabel('Time (Days)', {'fontsize': fsize, 'color': tc})
   plt.ylabel('%', {'fontsize': fsize, 'color': tc})
@@ -147,8 +148,9 @@ def run(args):
   h2 = ax.plot(time*tfac,flux_fac*fluxp,'-',linewidth=lsz,color='Red',markersize=mksz)
   h1 = ax.plot(time1*tfac1,flux_fac1*np.abs(fluxm1),'.',linewidth=lsz,color='Blue',markersize=mksz1)
   h21 = ax.plot(time1*tfac1,flux_fac1*fluxp1,'.',linewidth=lsz,color='Red',markersize=mksz1)
+  xmn = np.min(time*tfac)
   xmx = np.max(time*tfac)
-  plt.xlim(xmin=0,xmax=xmx)
+  plt.xlim(xmin=xmn,xmax=xmx)
   plt.title('Total Positive and Negative Flux', {'fontsize': fsize, 'color': tc})
   plt.xlabel('Time (Days)', {'fontsize': fsize, 'color': tc})
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})
@@ -162,12 +164,14 @@ def run(args):
   plt.close('all')
 #
 # ****** Total unsigned flux.
-#   fig = plt.figure(num=None, figsize=(14, 7), dpi=dpi, facecolor=fc,frameon=True)
+#
+  fig = plt.figure(num=None, figsize=(14, 7), dpi=dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
   h = plt.plot(time*tfac,flux_fac*flux_tot_un,'k-',linewidth=lsz,markersize=mksz)
   h1 = plt.plot(time1*tfac1,flux_fac1*flux_tot_un1,'k.',linewidth=lsz,markersize=mksz1)
+  xmn = np.min(time*tfac)
   xmx = np.max(time*tfac)
-  plt.xlim(xmin=0,xmax=xmx)
+  plt.xlim(xmin=xmn,xmax=xmx)
   plt.title('Total Unsigned Flux', {'fontsize': fsize, 'color': tc})
   plt.xlabel('Time (Days)', {'fontsize': fsize, 'color': tc})
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})
@@ -179,12 +183,13 @@ def run(args):
   plt.close('all')
 #
 # ****** Total signed flux.
-#  fig = plt.figure(num=None, figsize=(14, 7), dpi=dpi, facecolor=fc,frameon=True)
+  fig = plt.figure(num=None, figsize=(14, 7), dpi=dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
   h = plt.plot(time*tfac,flux_fac*flux_tot_s,'b-',linewidth=lsz,markersize=mksz)
   h1 = plt.plot(time1*tfac1,flux_fac1*flux_tot_s1,'b.',linewidth=lsz,markersize=mksz1)
+  xmn = np.min(time*tfac)
   xmx = np.max(time*tfac)
-  plt.xlim(xmin=0,xmax=xmx)
+  plt.xlim(xmin=xmn,xmax=xmx)
   plt.title('Total Signed Flux', {'fontsize': fsize, 'color': tc})
   plt.xlabel('Time (Days)', {'fontsize': fsize, 'color': tc})
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})
@@ -196,11 +201,13 @@ def run(args):
   plt.close('all')  
 #
 # ****** Polar +/- fluxes.
-#  ymax = 1.1*np.amax([np.amax(np.abs(flux_fac*fluxp_pn)),np.amax(np.abs(flux_fac*fluxm_pn)),\
-#             np.amax(np.abs(flux_fac*fluxp_ps)),np.amax(np.abs(flux_fac*fluxm_ps))])
+#
+  ymax = 1.1*np.amax([np.amax(np.abs(flux_fac*fluxp_pn)),np.amax(np.abs(flux_fac*fluxm_pn)),\
+                      np.amax(np.abs(flux_fac*fluxp_ps)),np.amax(np.abs(flux_fac*fluxm_ps))])
   ymin = -ymax 
   fig = plt.figure(num=None, figsize=(14, 7), dpi=dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
+  xmn = np.min(time*tfac)
   xmx = np.max(time*tfac)
   h = plt.plot(time*tfac,flux_fac*fluxp_pn,'r-',linewidth=lsz,markersize=mksz)
   h2 = plt.plot(time*tfac,flux_fac*fluxm_pn,'b-',linewidth=lsz,markersize=mksz) 
@@ -210,7 +217,7 @@ def run(args):
   h21 = plt.plot(time1*tfac1,flux_fac1*fluxm_pn1,'b.',linewidth=lsz,markersize=mksz1)
   h31 = plt.plot(time1*tfac1,flux_fac1*fluxp_ps1,'.',color='firebrick',linewidth=lsz,markersize=mksz1)
   h41 = plt.plot(time1*tfac1,flux_fac1*fluxm_ps1,'.',color='navy',linewidth=lsz,markersize=mksz1)
-  plt.xlim(xmin=0,xmax=xmx)
+  plt.xlim(xmin=xmn,xmax=xmx)
   plt.ylim(ymin=ymin,ymax=ymax)
   plt.xlabel('Time (Days)', {'fontsize': fsize, 'color': tc})
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})
@@ -224,16 +231,18 @@ def run(args):
   plt.close('all')
 #
 # ****** Polar average field strengths.
-#  ymax = 1.1*np.amax([np.amax(np.abs(pole_n_avg_field)),np.amax(np.abs(pole_s_avg_field))])
+#
+  ymax = 1.1*np.amax([np.amax(np.abs(pole_n_avg_field)),np.amax(np.abs(pole_s_avg_field))])
   ymin = -ymax 
   fig = plt.figure(num=None, figsize=(14, 7), dpi=dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
+  xmn = np.min(time*tfac)
   xmx = np.max(time*tfac)
   h = plt.plot(time*tfac,pole_n_avg_field,'k-',linewidth=lsz,markersize=mksz)
   h2 = plt.plot(time*tfac,pole_s_avg_field,'b-',linewidth=lsz,markersize=mksz) 
   h1 = plt.plot(time1*tfac1,pole_n_avg_field1,'k.',linewidth=lsz,markersize=mksz1)
   h21 = plt.plot(time1*tfac1,pole_s_avg_field1,'b.',linewidth=lsz,markersize=mksz1)
-  plt.xlim(xmin=0,xmax=xmx)
+  plt.xlim(xmin=xmn,xmax=xmx)
   plt.ylim(ymin=ymin,ymax=ymax)
   plt.xlabel('Time (Days)', {'fontsize': fsize, 'color': tc})
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
@@ -247,12 +256,14 @@ def run(args):
   plt.close('all')
 #
 # ****** Min and max field.
-#  fig = plt.figure(num=None, figsize=(14, 7), dpi=dpi, facecolor=fc,frameon=True)
+#
+  fig = plt.figure(num=None, figsize=(14, 7), dpi=dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
   h = plt.plot(time*tfac,brmax,'b-',linewidth=lsz,markersize=mksz)
   h3 = plt.plot(time1*tfac1,brmax1,'b.',linewidth=lsz,markersize=mksz1)
+  xmn = np.min(time*tfac)
   xmx = np.max(time*tfac)
-  plt.xlim(xmin=0,xmax=xmx)
+  plt.xlim(xmin=xmn,xmax=xmx)
   plt.xlabel('Time (Days)', {'fontsize': fsize, 'color': tc})
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
   plt.title('Min and Max Br', {'fontsize': fsize, 'color': tc})
@@ -270,10 +281,11 @@ def run(args):
 #
   fig = plt.figure(num=None, figsize=(14, 7), dpi=dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
+  xmn = np.min(time*tfac)
   xmx = np.max(time*tfac)
   h = plt.plot(time*tfac,ax_dipole,'k-',linewidth=lsz,markersize=mksz)
   h1 = plt.plot(time1*tfac1,ax_dipole1,'k.',linewidth=lsz,markersize=mksz1)
-  plt.xlim(xmin=0,xmax=xmx)
+  plt.xlim(xmin=xmn,xmax=xmx)
   plt.xlabel('Time (Days)', {'fontsize': fsize, 'color': tc})
   plt.title('Axial Dipole Strength', {'fontsize': fsize, 'color': tc})
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
@@ -288,10 +300,11 @@ def run(args):
 #
   fig = plt.figure(num=None, figsize=(14, 7), dpi=dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
+  xmn = np.min(time*tfac)
   xmx = np.max(time*tfac)
   h = plt.plot(time*tfac,eq_dipole,'k-',linewidth=lsz,markersize=mksz)
   h1 = plt.plot(time1*tfac1,eq_dipole1,'k.',linewidth=lsz,markersize=mksz1)
-  plt.xlim(xmin=0,xmax=xmx)
+  plt.xlim(xmin=xmn,xmax=xmx)
   plt.xlabel('Time (Days)', {'fontsize': fsize, 'color': tc})
   plt.title('Equatorial Dipole Strength', {'fontsize': fsize, 'color': tc})
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})

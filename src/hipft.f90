@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.16.0'
-      character(*), parameter :: cdate='02/10/2023'
+      character(*), parameter :: cvers='0.17.0'
+      character(*), parameter :: cdate='02/23/2023'
 !
 end module
 !#######################################################################
@@ -98,7 +98,6 @@ module constants
       real(r_typ), parameter :: quarter = 0.25_r_typ
       real(r_typ), parameter :: twentyfour = 24.0_r_typ
       real(r_typ), parameter :: twentyfive = 25.0_r_typ
-      real(r_typ), parameter :: fivehundred_i = 0.002_r_typ
       real(r_typ), parameter :: three_quarter = 0.75_r_typ
       real(r_typ), parameter :: two_third = 0.66666666666666666_r_typ
       real(r_typ), parameter :: third = 0.33333333333333333_r_typ
@@ -153,8 +152,12 @@ module input_parameters
       logical        :: verbose = .false.
 !
       character(512) :: initial_map_filename = 'br_input.h5'
+!
       character(512) :: output_map_root_filename = 'hipft_brmap'
       character(512) :: output_map_directory = 'output_maps'
+!
+      character(512) :: output_flows_root_filename = 'hipft_flow'
+      character(512) :: output_flows_directory = 'output_flows'
 !
 ! ****** Number of realizations ********
 !
@@ -169,6 +172,7 @@ module input_parameters
       integer        :: output_map_idx_cadence = 0
       real(r_typ)    :: output_map_time_cadence = zero
       logical        :: output_map_2d = .true.
+      logical        :: output_flows = .false.
 !
 ! ****** Restarts ********
 !
@@ -221,6 +225,7 @@ module input_parameters
 ! ****** This causes flow to be updated each step.
 !
       logical    :: flow_attenuate = .false.
+      real(r_typ) :: flow_attenuate_value = 500.0_r_typ
 !
 ! ****** Built-in differential roation and meridianal flow models.
 ! ****** For each, setting "1" sets the model/params used in the AFT code.
@@ -317,7 +322,8 @@ module output
 !
       character(15) :: io_hist_num_filename = 'history_num.dat'
       character(15) :: io_hist_sol_filename = 'history_sol.dat'
-      character(19) :: io_map_output_list_filename = 'map_output_list.txt'
+      character(19) :: io_output_map_list_filename = 'output_map_list.txt'
+      character(20) :: io_output_flows_list_filename = 'output_flow_list.txt'
 !
       real(r_typ), dimension(:,:,:), allocatable :: fout
       real(r_typ), dimension(:), allocatable :: pout
@@ -369,6 +375,10 @@ module globals
 ! ****** Flag to indicate the flow needs updating.
 !
       logical :: flow_needs_updating = .true.
+!
+! ****** Flow attenuation term.
+!
+      real(r_typ) :: flow_attenuate_value_i = 0.002_r_typ
 !
 ! ****** Flag to indicate the time step needs updating.
 !
@@ -1026,6 +1036,14 @@ subroutine setup
             write (*,*) '### Could not make output subdirectory, using ./'
             output_map_directory = '.'
           end if
+          if (output_flows) then
+            cmd = 'mkdir -p '//trim(output_flows_directory)
+            call EXECUTE_COMMAND_LINE (cmd,exitstat=ierr)
+            if (ierr.ne.0) then
+              write (*,*) '### Could not make output subdirectory, using ./'
+              output_map_directory = '.'
+            end if
+          end if
         end if
       end if
 !
@@ -1348,7 +1366,7 @@ subroutine create_and_open_output_log_files
       if (output_map_idx_cadence.gt.0 .or.     &
           output_map_time_cadence.gt.0.0) then
 !
-        call FFOPEN (IO_MAP_OUT_LIST,io_map_output_list_filename,&
+        call FFOPEN (IO_MAP_OUT_LIST,io_output_map_list_filename,&
                      'rw',ierr)
 !
         write (IO_MAP_OUT_LIST,'(a10,a,a25,a,a)') &
@@ -1357,6 +1375,21 @@ subroutine create_and_open_output_log_files
                                'FILENAME'
 !
         close(IO_MAP_OUT_LIST)
+
+        if (output_flows) then
+!
+          call FFOPEN (IO_MAP_OUT_LIST,io_output_flows_list_filename,&
+                       'rw',ierr)
+!
+          write (IO_MAP_OUT_LIST,'(a10,a,a25,a,a)') &
+                                 'IDX',' ',&
+                                 'TIME',' ',&
+                                 'FILENAME'
+!
+          close(IO_MAP_OUT_LIST)
+!
+        end if
+!
       end if
 !
 end subroutine
@@ -1890,6 +1923,8 @@ subroutine set_unchanging_quantities
       use number_types
       use input_parameters
       use mesh
+      use constants
+      use globals
 !
 !-----------------------------------------------------------------------
 !
@@ -1902,6 +1937,8 @@ subroutine set_unchanging_quantities
       if (advance_diffusion) call load_diffusion
 !
       if (advance_flow.and.flow_num_method.eq.3) call load_weno
+!
+      if (flow_attenuate) flow_attenuate_value_i = one/flow_attenuate_value
 !
 end subroutine
 !#######################################################################
@@ -1931,12 +1968,11 @@ subroutine output_step
 !-----------------------------------------------------------------------
 !
       t1 = MPI_Wtime()
-! RMC: This should eventually be for all ranks to write out all realizations.
+! RMC: This should eventually be for all ranks
+!      to write out all realizations.
       if (iamp0) call output_histories
 !
       call output_map
-!
-!     call output_flow(?)
 !
 !     call output_restart
 !
@@ -2071,12 +2107,33 @@ subroutine output_map
 ! ****** Record output in output text file log.
 !
         call FFOPEN (IO_MAP_OUT_LIST, &
-                     io_map_output_list_filename,'a',ierr)
+                     io_output_map_list_filename,'a',ierr)
 !
         write (IO_MAP_OUT_LIST,FMT) idx_out,'   ',time,'    ', &
                                     trim(base_filename)
 !
         close(IO_MAP_OUT_LIST)
+!
+        if (output_flows) then
+!
+          base_filename = trim(output_flows_root_filename)// &
+                               '_vX_idx'//idx_str//'.h5'
+!
+! ****** Write out the flows.
+!
+          call write_flows (idx_str)
+!
+! ****** Record output in output text file log.
+!
+          call FFOPEN (IO_MAP_OUT_LIST, &
+                     io_output_flows_list_filename,'a',ierr)
+!
+          write (IO_MAP_OUT_LIST,FMT) idx_out,'   ',time,'    ', &
+                                      trim(base_filename)
+!
+          close(IO_MAP_OUT_LIST)
+!
+        end if
 !
       end if
 !
@@ -2128,49 +2185,49 @@ subroutine write_map (fname)
         fout(:,:,i) = TRANSPOSE(f(:,1:npm-1,i))
       enddo
 !
-        if (output_map_2d.and.n_realizations.eq.1) then
-          call write_2d_file (fname,npm-1,ntm,fout(:,:,1),pout,t,ierr)
-        else
+      if (output_map_2d.and.n_realizations.eq.1) then
+        call write_2d_file (fname,npm-1,ntm,fout(:,:,1),pout,t,ierr)
+      else
 !
-          wtime_tmp_mpi = MPI_Wtime()
-          lsbuf=(npm-1)*ntm*nr
-          allocate (tfout(lsbuf))
-          tfout(:)=reshape(fout(:,:,:),(/lsbuf/))
-          if (iamp0) then
-            allocate (gfout((npm-1)*ntm*n_realizations))
-            allocate (displ(0:nproc-1))
-            allocate (lbuf(0:nproc-1))
-            displ(0)=0
-            do irank=0,nproc-1
-              lbuf(irank)=(npm-1)*ntm*nr_arr(irank)
-            enddo
-            do irank=1,nproc-1
-              displ(irank)=displ(irank-1)+lbuf(irank-1)
-            enddo
-          end if
+        wtime_tmp_mpi = MPI_Wtime()
+        lsbuf=(npm-1)*ntm*nr
+        allocate (tfout(lsbuf))
+        tfout(:)=reshape(fout(:,:,:),(/lsbuf/))
+        if (iamp0) then
+          allocate (gfout((npm-1)*ntm*n_realizations))
+          allocate (displ(0:nproc-1))
+          allocate (lbuf(0:nproc-1))
+          displ(0)=0
+          do irank=0,nproc-1
+            lbuf(irank)=(npm-1)*ntm*nr_arr(irank)
+          enddo
+          do irank=1,nproc-1
+            displ(irank)=displ(irank-1)+lbuf(irank-1)
+          enddo
+        end if
 !
-          call MPI_Gatherv (tfout,lsbuf,ntype_real,gfout,lbuf,       &
-                    displ,ntype_real,0,MPI_COMM_WORLD,ierr)
-          deallocate(tfout)
-          wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+        call MPI_Gatherv (tfout,lsbuf,ntype_real,gfout,lbuf,       &
+                  displ,ntype_real,0,MPI_COMM_WORLD,ierr)
+        deallocate(tfout)
+        wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
 !
-          if (iamp0) then
-            allocate (rscale(n_realizations))
-            do i=1,n_realizations
-              rscale(i) = real(i,r_typ)
-            enddo
-            allocate (gout((npm-1),ntm,n_realizations))
-            gout=reshape(gfout(:),(/(npm-1),ntm,n_realizations/))
-            call write_3d_file(fname,npm-1,ntm,n_realizations,gout,pout,t,   &
-                               rscale,ierr)
-            deallocate (gout)
-            deallocate (gfout)
-            deallocate (displ)
-            deallocate (lbuf)
-            deallocate (rscale)
-          end if
+        if (iamp0) then
+          allocate (rscale(n_realizations))
+          do i=1,n_realizations
+            rscale(i) = real(i,r_typ)
+          enddo
+          allocate (gout((npm-1),ntm,n_realizations))
+          gout=reshape(gfout(:),(/(npm-1),ntm,n_realizations/))
+          call write_3d_file(fname,npm-1,ntm,n_realizations,gout,pout,t,   &
+                             rscale,ierr)
+          deallocate (gout)
+          deallocate (gfout)
+          deallocate (displ)
+          deallocate (lbuf)
+          deallocate (rscale)
+        end if
 !
-        endif
+      end if
 !
       if (ierr.ne.0) then
         write (*,*)
@@ -2178,6 +2235,188 @@ subroutine write_map (fname)
         write (*,*) '### Could not write the output data set!'
         write (*,*) 'IERR: ',ierr
         write (*,*) 'File name: ', fname
+        call endrun(.true.)
+      end if
+!
+      deallocate (fout)
+!
+end subroutine
+!#######################################################################
+subroutine write_flows (idx_str)
+!
+!-----------------------------------------------------------------------
+!
+! ****** Write out current flow fields to disk.
+!
+!-----------------------------------------------------------------------
+!
+      use input_parameters
+      use number_types
+      use output
+      use mpidefs
+      use fields, ONLY : vt,vp
+      use mesh
+      use timing
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      character(*) :: idx_str
+      character(512) :: full_filename
+      integer :: ierr = 0
+      integer :: i, lsbuf, irank
+      integer, dimension(:), allocatable :: displ,lbuf
+      real(r_typ), dimension(:), allocatable :: gfout,tfout,rscale
+      real(r_typ), dimension(:,:,:), allocatable :: gout
+!
+!-----------------------------------------------------------------------
+!
+!$acc update self(vt,vp)
+!
+      full_filename = trim(output_flows_directory)//'/'// &
+                      trim(output_flows_root_filename)// &
+                      '_vt_idx'//idx_str//'.h5'
+!
+! ****** Write out file in pt format.
+! ****** For Vt, need single point overlap in phi.
+!
+      allocate (fout(npm-1,nt,nr))
+!
+!   WARNING: -stdpar may eventually GPU-ize TRANSPOSE.
+!   For now, it probably in-lines so OK, and/or requires
+!   the tensor module to be explicitly used.
+!   For now, this should be computed on the CPU no matter what...
+!
+      do i=1,nr
+        fout(:,:,i) = TRANSPOSE(vt(:,1:npm1,i))
+      enddo
+!
+      if (n_realizations.eq.1) then
+        call write_2d_file (full_filename,npm1,nt,fout(:,:,1),pout,th,ierr)
+      else
+        write(*,*) 'SORRY!  Multiple realization flow output not yet implmented!'
+!        wtime_tmp_mpi = MPI_Wtime()
+!        lsbuf=(npm-1)*ntm*nr
+!        allocate (tfout(lsbuf))
+!        tfout(:)=reshape(fout(:,:,:),(/lsbuf/))
+!        if (iamp0) then
+!          allocate (gfout((npm-1)*ntm*n_realizations))
+!          allocate (displ(0:nproc-1))
+!          allocate (lbuf(0:nproc-1))
+!          displ(0)=0
+!          do irank=0,nproc-1
+!            lbuf(irank)=(npm-1)*ntm*nr_arr(irank)
+!          enddo
+!          do irank=1,nproc-1
+!            displ(irank)=displ(irank-1)+lbuf(irank-1)
+!          enddo
+!        end if
+!
+!        call MPI_Gatherv (tfout,lsbuf,ntype_real,gfout,lbuf,       &
+!                  displ,ntype_real,0,MPI_COMM_WORLD,ierr)
+!        deallocate(tfout)
+!        wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+!
+!        if (iamp0) then
+!          allocate (rscale(n_realizations))
+!          do i=1,n_realizations
+!            rscale(i) = real(i,r_typ)
+!          enddo
+!          allocate (gout((npm-1),ntm,n_realizations))
+!          gout=reshape(gfout(:),(/(npm-1),ntm,n_realizations/))
+!          call write_3d_file(fname,npm-1,ntm,n_realizations,gout,pout,t,   &
+!                             rscale,ierr)
+!          deallocate (gout)
+!          deallocate (gfout)
+!          deallocate (displ)
+!          deallocate (lbuf)
+!          deallocate (rscale)
+!        end if
+!
+      end if
+!
+      if (ierr.ne.0) then
+        write (*,*)
+        write (*,*) '### ERROR in WRITE_FLOWS:'
+        write (*,*) '### Could not write the output flow!'
+        write (*,*) 'IERR: ',ierr
+        write (*,*) 'File name: ', full_filename
+        call endrun(.true.)
+      end if
+!
+      deallocate (fout)
+
+      full_filename = trim(output_flows_directory)//'/'// &
+                      trim(output_flows_root_filename)// &
+                      '_vp_idx'//idx_str//'.h5'
+!
+! ****** Write out file in pt format.
+! ****** For Vp, write full 2-point overlap in phi.
+!
+      allocate (fout(np,ntm,nr))
+!
+!   WARNING: -stdpar may eventually GPU-ize TRANSPOSE.
+!   For now, it probably in-lines so OK, and/or requires
+!   the tensor module to be explicitly used.
+!   For now, this should be computed on the CPU no matter what...
+!
+      do i=1,nr
+        fout(:,:,i) = TRANSPOSE(vp(:,:,i))
+      enddo
+!
+      if (n_realizations.eq.1) then
+        call write_2d_file (full_filename,np,ntm,fout(:,:,1),p,t,ierr)
+      else
+        write(*,*) 'SORRY!  Multiple realization flow output not yet implmented!'
+!        wtime_tmp_mpi = MPI_Wtime()
+!        lsbuf=(npm-1)*ntm*nr
+!        allocate (tfout(lsbuf))
+!        tfout(:)=reshape(fout(:,:,:),(/lsbuf/))
+!        if (iamp0) then
+!          allocate (gfout((npm-1)*ntm*n_realizations))
+!          allocate (displ(0:nproc-1))
+!          allocate (lbuf(0:nproc-1))
+!          displ(0)=0
+!          do irank=0,nproc-1
+!            lbuf(irank)=(npm-1)*ntm*nr_arr(irank)
+!          enddo
+!          do irank=1,nproc-1
+!            displ(irank)=displ(irank-1)+lbuf(irank-1)
+!          enddo
+!        end if
+!
+!        call MPI_Gatherv (tfout,lsbuf,ntype_real,gfout,lbuf,       &
+!                  displ,ntype_real,0,MPI_COMM_WORLD,ierr)
+!        deallocate(tfout)
+!        wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+!
+!        if (iamp0) then
+!          allocate (rscale(n_realizations))
+!          do i=1,n_realizations
+!            rscale(i) = real(i,r_typ)
+!          enddo
+!          allocate (gout((npm-1),ntm,n_realizations))
+!          gout=reshape(gfout(:),(/(npm-1),ntm,n_realizations/))
+!          call write_3d_file(fname,npm-1,ntm,n_realizations,gout,pout,t,   &
+!                             rscale,ierr)
+!          deallocate (gout)
+!          deallocate (gfout)
+!          deallocate (displ)
+!          deallocate (lbuf)
+!          deallocate (rscale)
+!        end if
+!
+      end if
+!
+      if (ierr.ne.0) then
+        write (*,*)
+        write (*,*) '### ERROR in WRITE_FLOWS:'
+        write (*,*) '### Could not write the output flow!'
+        write (*,*) 'IERR: ',ierr
+        write (*,*) 'File name: ', full_filename
         call endrun(.true.)
       end if
 !
@@ -2556,12 +2795,12 @@ subroutine update_flow
           do concurrent (i=1:nr,k=2:npm-1,j=2:nt-1)
 ! RMC: Should maybe use max(|br|) here instead of avg?
             br_avg = half*(f(j-1,k,i) + f(j,k,i))
-            vt(j,k,i) = vt(j,k,i)*(one - tanh(abs(br_avg)*fivehundred_i))
+            vt(j,k,i) = vt(j,k,i)*(one - tanh(abs(br_avg)*flow_attenuate_value_i))
           enddo
 !
           do concurrent (i=1:nr,k=2:np-1,j=2:ntm-1)
             br_avg = half*(f(j,k-1,i) + f(j,k,i))
-            vp(j,k,i) = vp(j,k,i)*(one - tanh(abs(br_avg)*fivehundred_i))
+            vp(j,k,i) = vp(j,k,i)*(one - tanh(abs(br_avg)*flow_attenuate_value_i))
           enddo
 !
 ! ****** Set poles. Maybe not needed since field is weak at pole?
@@ -2610,10 +2849,10 @@ subroutine update_flow
 ! ****** Attenuate pole value to set new v bc (f has same val for all pole pts, use 1)
 !
           do concurrent (i=1:nr)
-            vt_npole(i) = vt_npole(i)*twopi_i*(one - tanh(f(1,1,i)*fivehundred_i))
-            vt_spole(i) = vt_spole(i)*twopi_i*(one - tanh(f(ntm,1,i)*fivehundred_i))
-            vp_npole(i) = vp_npole(i)*twopi_i*(one - tanh(f(1,1,i)*fivehundred_i))
-            vp_spole(i) = vp_spole(i)*twopi_i*(one - tanh(f(ntm,1,i)*fivehundred_i))
+            vt_npole(i) = vt_npole(i)*twopi_i*(one - tanh(f(1,1,i)*flow_attenuate_value_i))
+            vt_spole(i) = vt_spole(i)*twopi_i*(one - tanh(f(ntm,1,i)*flow_attenuate_value_i))
+            vp_npole(i) = vp_npole(i)*twopi_i*(one - tanh(f(1,1,i)*flow_attenuate_value_i))
+            vp_spole(i) = vp_spole(i)*twopi_i*(one - tanh(f(ntm,1,i)*flow_attenuate_value_i))
           enddo
 !
 ! ****** Now set the pole:
@@ -3088,66 +3327,70 @@ subroutine update_field
 !
 !-----------------------------------------------------------------------
 !
-     if (time .ge. time_of_next_input_map) then
+      if (time .ge. time_of_next_input_map) then
+        if (verbose) write(*,*) 'UPDATE_FIELD: Loading field IDX ',current_map_input_idx
+        if (verbose) write(*,*) 'UPDATE_FIELD: Time of next input0: ',time_of_next_input_map
 !
 ! ****** Read the map data.
 !
-       if (iamp0) then
-         mapfile = TRIM(assimilate_data_map_root_dir)//"/"&
-                   //TRIM(map_files_rel_path(current_map_input_idx))
+        if (iamp0) then
+          mapfile = TRIM(assimilate_data_map_root_dir)//"/"&
+                    //TRIM(map_files_rel_path(current_map_input_idx))
 !
-         call read_3d_file (mapfile,ln1,ln2,nslices,new_data2d,s1,s2,s3,ierr)
-         deallocate(s1)
-         deallocate(s2)
-         deallocate(s3)
-       endif
+          call read_3d_file (mapfile,ln1,ln2,nslices,new_data2d,s1,s2,s3,ierr)
+          deallocate(s1)
+          deallocate(s2)
+          deallocate(s3)
+        endif
 !
-       wtime_tmp_mpi = MPI_Wtime()
-       call MPI_Bcast (ln1,1,ntype_real,0,MPI_COMM_WORLD,ierr)
-       call MPI_Bcast (ln2,1,ntype_real,0,MPI_COMM_WORLD,ierr)
-       call MPI_Bcast (nslices,1,ntype_real,0,MPI_COMM_WORLD,ierr)
+        wtime_tmp_mpi = MPI_Wtime()
+        call MPI_Bcast (ln1,1,ntype_real,0,MPI_COMM_WORLD,ierr)
+        call MPI_Bcast (ln2,1,ntype_real,0,MPI_COMM_WORLD,ierr)
+        call MPI_Bcast (nslices,1,ntype_real,0,MPI_COMM_WORLD,ierr)
 !
-       if (.not.iamp0) allocate (new_data2d(ln1,ln2,nslices))
+        if (.not.iamp0) allocate (new_data2d(ln1,ln2,nslices))
 !
-       call MPI_Bcast (new_data2d,ln1*ln2*nslices,ntype_real,0,MPI_COMM_WORLD,ierr)
-       wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
-
+        call MPI_Bcast (new_data2d,ln1*ln2*nslices,ntype_real,0,MPI_COMM_WORLD,ierr)
+        wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
 !
-! ******  TODO:  Add error checking here (make sure scales match run
-!                until interp is added)
-       allocate(new_data(ln1,ln2,nslices,nr))
-       do i=1,nr
-         new_data(:,:,:,i) = new_data2d(:,:,:)
-       enddo
-       deallocate(new_data2d)
+! ******  TODO:  Add error checking here
+!               (make sure scales match run until interp is added)
+!
+        allocate(new_data(ln1,ln2,nslices,nr))
+        do i=1,nr
+          new_data(:,:,:,i) = new_data2d(:,:,:)
+        enddo
+        deallocate(new_data2d)
 !
 !$acc enter data copyin(new_data)
 !
 ! ****** Assimilate the data.
 !
-       call assimilate_new_data (new_data)
+        call assimilate_new_data (new_data)
 !
 ! ****** Clean up.
 !
 !$acc exit data delete(new_data)
-       deallocate(new_data)
+        deallocate(new_data)
 !
 ! ****** Update position in map list and next map time.
 !
-       current_map_input_idx = current_map_input_idx + 1
+        current_map_input_idx = current_map_input_idx + 1
 !
 ! ****** If there are no more data files to assimilate, don't
 ! ****** assimilate anymore.
 !
-       if (current_map_input_idx .gt. num_maps_in_list) then
-         assimilate_data=.false.
-       else
-         time_of_next_input_map =                                     &
-          twentyfour*map_times_actual_ut_jd(current_map_input_idx) &
-          - map_time_initial_hr
-       end if
+        if (current_map_input_idx .gt. num_maps_in_list) then
+          assimilate_data=.false.
+        else
+          time_of_next_input_map =                                     &
+           twentyfour*map_times_actual_ut_jd(current_map_input_idx) &
+           - map_time_initial_hr
+        end if
+
+        if (verbose) write(*,*) 'UPDATE_FIELD: Time of next input1: ',time_of_next_input_map
 !
-     end if
+      end if
 !
 end subroutine
 !#######################################################################
@@ -3185,36 +3428,53 @@ subroutine update_timestep
 ! ****** Save previous timestep.
 !
         dtime_old = dtime_global
+        if (verbose) write(*,*) 'UPDATE_TIMESTEP:  dtime_old=',dtime_old
 !
 ! ****** Default timestep is one giant step for remaining time.
 !
         dtime_global = time_end - time
-        dtime_reason = 'end'
+        if (verbose) write(*,*) 'UPDATE_TIMESTEP:  dtime_endrun=',dtime_global
+        dtime_reason = 'endrun'
         time_step_changed = .true.
 !
+! ****** Flow CFL time step limit.
+!
+        dtmax_flow = huge(one)
         if (advance_flow.and.timestep_flow_needs_updating) then
           call get_flow_dtmax (dtmax_flow)
-          dtime_reason = 'flowcfl'
           timestep_flow_needs_updating = .false.
-        else
-          dtmax_flow = huge(one)
+          if (verbose) write(*,*) 'UPDATE_TIMESTEP:  dtime_flow=',dtmax_flow
         end if
-        dtime_global = MIN(dtime_global,dtmax_flow)
+        if (dtmax_flow .lt. dtime_global) then
+          dtime_global = dtmax_flow
+          dtime_reason = 'flowcfl'
+          if (verbose) write(*,*) 'UPDATE_TIMESTEP:  dtime_flow=',dtime_global
+        end if
 !
-        ! Check for negative values with source?
+! ****** Timestep increase limit.
 !
-! ****** Check to make sure dtime_global doesnt go up too fast.
-!
+        dt_mxup = huge(one)
         if (dt_max_increase_fac.gt.0.and.dtime_old.gt.0.) then
           dt_mxup = (one + dt_max_increase_fac)*dtime_old
-        else
-          dt_mxup = huge(one)
+          if (verbose) write(*,*) 'UPDATE_TIMESTEP:  dtime_dtmxup=',dt_mxup
         end if
 !
-        dtime_global = MIN(dtime_global,dt_mxup,dt_max)
+        if (dt_mxup .lt. dtime_global) then
+          dtime_global = dt_mxup
+          dtime_reason = 'maxup'
+          if (verbose) write(*,*) 'UPDATE_TIMESTEP:  dtime_maxup=',dtime_global
+        end if
+!
+! ****** Maximum allowed timestep.
+!
+        if (dt_max .lt. dtime_global) then
+          dtime_global = dt_max
+          dtime_reason = 'dtmax'
+          if (verbose) write(*,*) 'UPDATE_TIMESTEP:  dtime_dtmax=',dtime_global
+        end if
 !
         if (dtime_global .lt. dt_min) then
-          write (*,*) 'Warning! Time step is smaller than DTMIN!'
+          write (*,*) 'UPDATE_TIMESTEP: Warning! Time step is smaller than DTMIN!'
         end if
 !
         timestep_needs_updating = .false.
@@ -3230,6 +3490,7 @@ subroutine update_timestep
           timestep_needs_updating = .true.
           timestep_flow_needs_updating = .true.
           time_step_changed = .true.
+          if (verbose) write(*,*) 'UPDATE_TIMESTEP:  dtime_output=',dtime_global
         end if
       end if
 !
@@ -3242,6 +3503,7 @@ subroutine update_timestep
           timestep_needs_updating = .true.
           timestep_flow_needs_updating = .true.
           time_step_changed = .true.
+          if (verbose) write(*,*) 'UPDATE_TIMESTEP:  dtime_assim=',dtime_global
         end if
       end if
 !
@@ -3255,6 +3517,7 @@ subroutine update_timestep
           flow_needs_updating = .true.
           timestep_flow_needs_updating = .true.
           time_step_changed = .true.
+          if (verbose) write(*,*) 'UPDATE_TIMESTEP:  dtime_nxtflow=',dtime_global
         end if
       end if
 !
@@ -3265,6 +3528,7 @@ subroutine update_timestep
         dtime_reason = 'end'
         timestep_needs_updating = .false.
         time_step_changed = .true.
+        if (verbose) write(*,*) 'UPDATE_TIMESTEP:  dtime_end=',dtime_global
       end if
 !
 ! ****** Make sure STS is recomputed if timestep has changed.
@@ -5117,8 +5381,8 @@ subroutine set_mesh
       dp_i(:) = one/dp(:)
 !
   ! ****** Set up output scale for phi (single point overlap)
-      allocate (pout(npm-1))
-      pout(:) = p(1:npm-1)
+      allocate (pout(npm1))
+      pout(:) = p(1:npm1)
 !
 !$acc enter data copyin (t,p,dt,dt_i,st,st_i,ct,dp,dp_i,th,ph, &
 !$acc&                   dth,dth_i,sth,sth_i,cth,dph,dph_i)
@@ -6873,7 +7137,8 @@ subroutine read_input_file
                diffusion_coef_factor,diffusion_num_method,             &
                diffusion_subcycles,advance_source,source_filename,     &
                assimilate_data,assimilate_data_map_list_filename,      &
-               assimilate_data_map_root_dir,time_start
+               assimilate_data_map_root_dir,time_start,output_flows,   &
+               output_flows_directory,flow_attenuate_value
 !
 !-----------------------------------------------------------------------
 !
@@ -7078,6 +7343,14 @@ end subroutine
 ! 02/10/2023, RC, Version 0.16.0:
 !   - BUG FIX: Advection time step was not being recalculated when
 !              it should have been in some cases.
+!
+! 02/23/2023, RC, Version 0.17.0:
+!   - Added new option OUTPUT_FLOWS which will output the flows
+!     at the same cadense as the maps.  Set OUTPUT_FLOWS_DIRECTORY
+!     to set the directory for the flows to go.
+!   - Added FLOW_ATTENUATE_VALUE input parameter to set the 
+!     flow attenuation saturation level.  The default is 500 Gauss.
+!
 !-----------------------------------------------------------------------
 !
 !#######################################################################
