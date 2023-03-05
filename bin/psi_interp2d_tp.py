@@ -1,10 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import h5py as h5
 import numpy as np
 import os
 import sys
 import signal
 import argparse
+import psihdf as ps
 
 def signal_handler(signal, frame):
   print('You pressed Ctrl+C! Stopping!')
@@ -58,38 +59,6 @@ def interp_3dcart_4pt(x1,x2,x3,x4,y1,y2,y3,y4,z1,z2,z3,z4,f1,f2,f3,f4,xv,yv,zv):
     return (value)
 
 
-def rdh5(h5_filename):
-    x = np.array([])
-    y = np.array([])
-    z = np.array([])
-    f = np.array([])
-    h5file = h5.File(h5_filename, 'r')
-    f = h5file['Data']
-    dims = f.shape
-    ndims = np.ndim(f)
-    #Get the scales if they exist:
-    for i in range(0,ndims):
-        if i == 0:
-            if (len(h5file['Data'].dims[0].keys())!=0):
-                x = h5file['Data'].dims[0][0]
-        elif i == 1:
-            if (len(h5file['Data'].dims[1].keys())!=0):
-                y = h5file['Data'].dims[1][0]
-        elif i == 2:
-            if (len(h5file['Data'].dims[2].keys())!=0):
-                z = h5file['Data'].dims[2][0]
-    x = np.array(x)
-    y = np.array(y)
-    z = np.array(z)
-    f = np.array(f)
-    h5file.close()
-    return (x,y,z,f)
-
-def rdhdf_2d(hdf_filename):
-    x,y,z,f = rdh5(hdf_filename)
-    return(x,y,f)
-
-
 def argParsing():
 
     parser = argparse.ArgumentParser(description='Interpolate 2D spherical surface variables to a set of provided theta,phi points.')
@@ -126,7 +95,7 @@ def main():
        print("ERROR.  You must supply the same number of theta and phi points.")
        exit(1)
 
-    xvec, yvec, data = rdhdf_2d(args.h5file)
+    xvec, yvec, data = ps.rdhdf_2d(args.h5file)
 
     # If the data is in tp format, transpose to pt:
     if (np.max(yvec) > 3.5):

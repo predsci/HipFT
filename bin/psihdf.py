@@ -124,7 +124,7 @@ def wrhdf_2d(hdf_filename,x,y,f):
     y = np.asarray(y)
     z = np.array([])
     f = np.asarray(f)
-    wrhdf(hdf_filename,y,x,z,f)
+    wrhdf(hdf_filename,x,y,z,f)
 
 
 def wrhdf_3d(hdf_filename,x,y,z,f):

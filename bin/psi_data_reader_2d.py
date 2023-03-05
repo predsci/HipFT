@@ -8,7 +8,7 @@ def argParsing():
     parser = argparse.ArgumentParser(description='Read PSI 2D hdf5 data.')
 
     parser.add_argument("psi_2d_hdf5_file_name",
-        help='Name of 2D PSI HDF5 file (e.g. rho001_tp.h5).')
+        help='Name of 2D PSI HDF5 file (e.g. br_photo.h5).')
 
     args = parser.parse_args()
 
