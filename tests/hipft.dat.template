@@ -15,10 +15,12 @@
   validation_run = 0
 !
 ! ****** Output map cadence and type ********
+! ****** Time cadence is in hours    ********
 !
   output_map_idx_cadence = 0
   output_map_time_cadence = 0.0
   output_map_2d = .true.
+  output_flows = .false.
 !
 ! ****** Restarts ********
 !
@@ -39,7 +41,7 @@
 !
   strang_splitting = .true.
 !
-! ****** Analysis options.
+! ****** Pole flux calculation latitude limit (degrees).
 !
   pole_flux_lat_limit = 30.0
 !
@@ -66,8 +68,10 @@
 !
 ! ****** Attenuate the veolcity based on the value of Br.
 ! ****** This causes flow to be updated each step.
+! ****** The attenuate value is the saturation level in Gauss.
 !
   flow_attenuate = .false.
+  flow_attenuate_value = 500.0
 !
 ! ****** Built-in differential roation and meridianal flow models.
 ! ****** For each, setting "1" sets the model/params used in the AFT code.

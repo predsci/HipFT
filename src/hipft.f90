@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.17.0'
-      character(*), parameter :: cdate='02/23/2023'
+      character(*), parameter :: cvers='0.17.1'
+      character(*), parameter :: cdate='03/01/2023'
 !
 end module
 !#######################################################################
@@ -161,7 +161,7 @@ module input_parameters
 !
 ! ****** Number of realizations ********
 !
-      integer :: n_realizations = 1
+      integer        :: n_realizations = 1
 !
 ! ****** Validation Mode ********
 !
@@ -238,6 +238,7 @@ module input_parameters
       logical :: use_flow_from_files = .false.
       character(512) :: flow_list_filename = ' '
       character(512) :: flow_root_dir = '.'
+      real(r_typ) :: flow_from_file_start_time_jd = zero
 !
 ! ****** Algorithm options.
 !        Can set upwind to central differencing by also setting UPWIND=0.
@@ -291,6 +292,7 @@ module input_parameters
       logical :: assimilate_data = .false.
       character(512) :: assimilate_data_map_list_filename = ' '
       character(512) :: assimilate_data_map_root_dir = '.'
+      real(r_typ) :: assimilate_data_start_time_jd = zero
 !
       integer, parameter :: IO_DATA_IN = 8
 !
@@ -5646,7 +5648,7 @@ subroutine set_lf_alpha
 !
 !-----------------------------------------------------------------------
 !
-! ****** Set Local Lax-Friedrichs alpha foruse with WENO3.
+! ****** Set Local Lax-Friedrichs alpha for use with WENO3.
 ! ****** This should be called any time the velocity field changes.
 !
 !-----------------------------------------------------------------------
@@ -5666,44 +5668,52 @@ subroutine set_lf_alpha
 !
 !-----------------------------------------------------------------------
 !
-! ****** Get alpha for theta:
+! ****** Get alpha for theta:  (ntm=ntm1=nt-1)
 !
-      do concurrent (i=1:nr,k=1:npm,j=3:ntm-1)
+      j = 1
+      do concurrent (i=1:nr,k=1:npm)
+        alpha_t(j,k,i) = MAX(ABS(vt(j  ,k,i)), &
+                             ABS(vt(j+1,k,i)), &
+                             ABS(vt(j+2,k,i)), &
+                             ABS(vt(j+3,k,i)))
+      enddo
+!
+      j = 2
+      do concurrent (i=1:nr,k=1:npm)
+        alpha_t(j,k,i) = MAX(ABS(vt(j-1,k,i)), &
+                             ABS(vt(j  ,k,i)), &
+                             ABS(vt(j+1,k,i)), &
+                             ABS(vt(j+2,k,i)), &
+                             ABS(vt(j+3,k,i)))
+      enddo
+!
+      do concurrent (i=1:nr,k=1:npm,j=3:nt-3)
+        alpha_t(j,k,i) = MAX(ABS(vt(j-2,k,i)), &
+                             ABS(vt(j-1,k,i)), &
+                             ABS(vt(j  ,k,i)), &
+                             ABS(vt(j+1,k,i)), &
+                             ABS(vt(j+2,k,i)), &
+                             ABS(vt(j+3,k,i)))
+      enddo
+!
+      j = nt-2
+      do concurrent (i=1:nr,k=1:npm)
         alpha_t(j,k,i) = MAX(ABS(vt(j-2,k,i)), &
                              ABS(vt(j-1,k,i)), &
                              ABS(vt(j  ,k,i)), &
                              ABS(vt(j+1,k,i)), &
                              ABS(vt(j+2,k,i)))
       enddo
-      j = 2
+!
+      j = nt-1
       do concurrent (i=1:nr,k=1:npm)
-        alpha_t(j,k,i) = MAX(ABS(vt(j-1,k,i)), &
-                             ABS(vt(j  ,k,i)), &
-                             ABS(vt(j+1,k,i)), &
-                             ABS(vt(j+2,k,i)))
-      enddo
-      j = 1
-      do concurrent (i=1:nr,k=1:npm)
-        alpha_t(j,k,i) = MAX(ABS(vt(j  ,k,i)), &
-                             ABS(vt(j+1,k,i)), &
-                             ABS(vt(j+2,k,i)))
-      enddo
-      j = ntm
-      do concurrent (i=1:nr,k=1:npm)
-        alpha_t(j,k,i) = MAX(ABS(vt(j  ,k,i)), &
+        alpha_t(j,k,i) = MAX(ABS(vt(j-2,k,i)), &
                              ABS(vt(j-1,k,i)), &
-                             ABS(vt(j-2,k,i)))
+                             ABS(vt(j  ,k,i)), &
+                             ABS(vt(j+1,k,i)))
       enddo
 !
-! ****** Get alpha for phi:
-!
-      do concurrent (i=1:nr,k=3:np-2,j=2:ntm-1)
-        alpha_p(j,k,i) = MAX(ABS(vp(j,k-2,i)), &
-                             ABS(vp(j,k-1,i)), &
-                             ABS(vp(j,k  ,i)), &
-                             ABS(vp(j,k+1,i)), &
-                             ABS(vp(j,k+2,i)))
-      enddo
+! ****** Get alpha for phi: (npm=np)
 !
       k = 2
       do concurrent (i=1:nr,j=2:ntm-1)
@@ -5711,16 +5721,37 @@ subroutine set_lf_alpha
                              ABS(vp(j,k-1 ,i)), &
                              ABS(vp(j,k   ,i)), &
                              ABS(vp(j,k+1 ,i)), &
-                             ABS(vp(j,k+2 ,i)))
+                             ABS(vp(j,k+2 ,i)), &
+                             ABS(vp(j,k+3 ,i)))
       enddo
 !
-      k = npm-1
+      do concurrent (i=1:nr,k=3:np-3,j=2:ntm-1)
+        alpha_p(j,k,i) = MAX(ABS(vp(j,k-2,i)), &
+                             ABS(vp(j,k-1,i)), &
+                             ABS(vp(j,k  ,i)), &
+                             ABS(vp(j,k+1,i)), &
+                             ABS(vp(j,k+2,i)), &
+                             ABS(vp(j,k+3,i)))
+      enddo
+!
+      k = np-2
       do concurrent (i=1:nr,j=2:ntm-1)
         alpha_p(j,k,i) = MAX(ABS(vp(j,k-2,i)), &
                              ABS(vp(j,k-1,i)), &
                              ABS(vp(j,k  ,i)), &
                              ABS(vp(j,k+1,i)), &
+                             ABS(vp(j,k+2,i)), &
                              ABS(vp(j,3  ,i)))
+      enddo
+!
+      k = np-1
+      do concurrent (i=1:nr,j=2:ntm-1)
+        alpha_p(j,k,i) = MAX(ABS(vp(j,k-2,i)), &
+                             ABS(vp(j,k-1,i)), &
+                             ABS(vp(j,k  ,i)), &
+                             ABS(vp(j,k+1,i)), &
+                             ABS(vp(j,3  ,i)), &
+                             ABS(vp(j,4  ,i)))
       enddo
 !
       call set_periodic_bc_3d (alpha_p,ntm,npm,nr)
@@ -7348,8 +7379,12 @@ end subroutine
 !   - Added new option OUTPUT_FLOWS which will output the flows
 !     at the same cadense as the maps.  Set OUTPUT_FLOWS_DIRECTORY
 !     to set the directory for the flows to go.
-!   - Added FLOW_ATTENUATE_VALUE input parameter to set the 
+!   - Added FLOW_ATTENUATE_VALUE input parameter to set the
 !     flow attenuation saturation level.  The default is 500 Gauss.
+!
+! 03/01/2023, RC, Version 0.17.1:
+!   - BUG FIX:  The WENO3 "alpha" was not taking the max velocity over
+!               a wide enough stencil.
 !
 !-----------------------------------------------------------------------
 !
