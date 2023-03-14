@@ -4,12 +4,12 @@ DEV TASKS FOR HIPFT:
  - Make other parameters 1D arrays to allow instance variations
      (With conflow, may be multiple flow map file sets, or with later
       auto-gen, seed or other conflow parameters)
-
- - Cleanup python script to generate hipft history diagnostics from a series of hipft output maps
+ - Have code output hsitory files for each realization.
+ - Cleanup the python script that generates hipft history diagnostics from a series of hipft output maps
  - Update history plot script to allow UT time input for HipFT time "0"
    for use with plot axis (and add plot axis format options)
- - Make better build mechanism (similar to pot3d)
- - Make testsuite and more examples
+ - Update history compare script to be more like MAS one (variable number of runs, etc).
+ - Make testsuite
  - Write documentation (mkdocs? git io?)
  - Write script to generate butterfly diagram from series of HipFT output maps.
    Can use initial UT time and map output text file to get times.

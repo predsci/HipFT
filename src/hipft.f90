@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.17.1'
-      character(*), parameter :: cdate='03/01/2023'
+      character(*), parameter :: cvers='0.17.2'
+      character(*), parameter :: cdate='03/14/2023'
 !
 end module
 !#######################################################################
@@ -511,6 +511,7 @@ end module
 module weno
 !
       use number_types
+      use constants, ONLY : ten,one
 !
       implicit none
 !
@@ -531,7 +532,7 @@ module weno
       real(r_typ), dimension(:,:,:), allocatable :: alpha_t
       real(r_typ), dimension(:,:,:), allocatable :: alpha_p
 !
-      real(r_typ), parameter :: weno_eps = 1.0e-6_r_typ
+      real(r_typ), parameter :: weno_eps = ten*SQRT(TINY(one))
 !
       real(r_typ) :: p0p,p1p,p0m,p1m
       real(r_typ) :: B0p,B1p,B0m,B1m
@@ -6459,8 +6460,8 @@ subroutine advection_operator_weno3 (ftemp,aop)
 !
         w0m = D_P_Tt(j-1) *(one/(weno_eps + B0m)**2)
         w1m = D_MC_Tt(j-1)*(one/(weno_eps + B1m)**2)
-        w0p = D_M_Tt(j) *(one/(weno_eps + B0p)**2)
-        w1p = D_CP_Tt(j)*(one/(weno_eps + B1p)**2)
+        w0p = D_M_Tt(j)   *(one/(weno_eps + B0p)**2)
+        w1p = D_CP_Tt(j)  *(one/(weno_eps + B1p)**2)
 !
         wm_sum = w0m + w1m
         wp_sum = w0p + w1p
@@ -6539,8 +6540,8 @@ subroutine advection_operator_weno3 (ftemp,aop)
 !
         w0m = D_P_Tp (k-1)*(one/(weno_eps + B0m)**2)
         w1m = D_MC_Tp(k-1)*(one/(weno_eps + B1m)**2)
-        w0p = D_M_Tp (k)*(one/(weno_eps + B0p)**2)
-        w1p = D_CP_Tp(k)*(one/(weno_eps + B1p)**2)
+        w0p = D_M_Tp (k)  *(one/(weno_eps + B0p)**2)
+        w1p = D_CP_Tp(k)  *(one/(weno_eps + B1p)**2)
 !
         wm_sum = w0m + w1m
         wp_sum = w0p + w1p
@@ -7385,6 +7386,11 @@ end subroutine
 ! 03/01/2023, RC, Version 0.17.1:
 !   - BUG FIX:  The WENO3 "alpha" was not taking the max velocity over
 !               a wide enough stencil.
+!
+! 03/14/2023, RC, Version 0.17.2:
+!   - BUG FIX:  The WENO3 "weno_eps" was too large for some use cases
+!               (specifically coronal hole advection) and could cause
+!               ringing. Changed it to be much smaller.
 !
 !-----------------------------------------------------------------------
 !

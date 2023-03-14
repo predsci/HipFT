@@ -7,14 +7,15 @@
 DATADIR=$1
 OUTFILE=$2
 
-DPI=92
+DPI=128
+LABEL="Gauss"
 
 mkdir $DATADIR/plots
 cd $DATADIR/plots
 
 for file in $(ls ../*.h5)
 do
-  plot2d -cmin -25 -cmax 25 -dpi $DPI -tp -ll -finegrid -unit_label Gauss $file -o "$(basename $file .h5).png"
+  plot2d -cmin -25 -cmax 25 -dpi $DPI -tp -ll -finegrid -unit_label $LABEL $file -o "$(basename $file .h5).png"
 done
 
 mkdir tmp
