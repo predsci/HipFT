@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.17.2'
-      character(*), parameter :: cdate='03/14/2023'
+      character(*), parameter :: cvers='0.18.0'
+      character(*), parameter :: cdate='03/15/2023'
 !
 end module
 !#######################################################################
@@ -290,9 +290,17 @@ module input_parameters
 ! ****** DATA ASSIMILATION ********
 !
       logical :: assimilate_data = .false.
+!
       character(512) :: assimilate_data_map_list_filename = ' '
       character(512) :: assimilate_data_map_root_dir = '.'
+!
       real(r_typ) :: assimilate_data_start_time_jd = zero
+!
+      logical :: assimilate_data_custom_from_mu = .false.
+      real(r_typ) :: assimilate_data_mu_power = 4.0_r_typ
+      real(r_typ) :: assimilate_data_mu_limit = 0.1_r_typ
+!
+      real(r_typ) :: assimilate_data_lat_limit = 0.
 !
       integer, parameter :: IO_DATA_IN = 8
 !
@@ -449,6 +457,9 @@ module data_assimilation
       integer :: num_maps_in_list = 0
       integer :: current_map_input_idx = 1
       real(r_typ) :: time_of_next_input_map = 0.
+!
+      integer :: assimilate_data_lat_limit_tidx0 = -1
+      integer :: assimilate_data_lat_limit_tidx1 = -1
 !
       real(r_typ) :: map_time_initial_hr
 !
@@ -3176,6 +3187,8 @@ subroutine load_data_assimilation
       use globals
       use output
       use data_assimilation
+      use constants
+      use mesh, ONLY : t,ntm
 !
 !-----------------------------------------------------------------------
 !
@@ -3184,7 +3197,7 @@ subroutine load_data_assimilation
 !-----------------------------------------------------------------------
 !
       integer :: io = 0
-      integer :: i
+      integer :: i,j
       character(*), parameter :: &
                              FMT = '(A19,1X,A19,1X,F13.5,1X,A)'
 !
@@ -3255,6 +3268,25 @@ subroutine load_data_assimilation
                      trim(map_files_rel_path(i))
       end if
 !
+      if (assimilate_data_lat_limit.gt.0) then
+!
+! ****** Find indices of latitude limit in main mesh tvec.
+!
+        do j=1,ntm
+          if (t(j).ge.assimilate_data_lat_limit*d2r .and.           &
+                          assimilate_data_lat_limit_tidx0.eq.-1) then
+            assimilate_data_lat_limit_tidx0 = j
+          end if
+        enddo
+        do j=ntm,1,-1
+          if (t(j).le.(pi-assimilate_data_lat_limit*d2r) .and.      &
+                          assimilate_data_lat_limit_tidx1.eq.-1) then
+            assimilate_data_lat_limit_tidx1 = j
+          end if
+        enddo
+!
+      end if
+!
 end subroutine
 !#######################################################################
 subroutine assimilate_new_data (new_data)
@@ -3262,7 +3294,7 @@ subroutine assimilate_new_data (new_data)
 !-----------------------------------------------------------------------
 !
 ! ****** Assimilate data.
-! ****** This assumes the uncertainty is in the second slice
+! ****** This assumes the uncertainty/weight is in the second slice
 !
 !-----------------------------------------------------------------------
 !
@@ -3325,47 +3357,79 @@ subroutine update_field
       real(r_typ), dimension(:,:,:,:), allocatable :: new_data
       real(r_typ), dimension(:,:,:), allocatable :: new_data2d
       real(r_typ), dimension(:), allocatable :: s1,s2,s3
-      integer :: ln1,ln2,nslices,i
+      integer :: npm_nd,ntm_nd,nslices,i,j,k,l
       character(1024) :: mapfile = ' '
 !
 !-----------------------------------------------------------------------
+!
+! ****** If it is time to load new data, read it from file.
 !
       if (time .ge. time_of_next_input_map) then
         if (verbose) write(*,*) 'UPDATE_FIELD: Loading field IDX ',current_map_input_idx
         if (verbose) write(*,*) 'UPDATE_FIELD: Time of next input0: ',time_of_next_input_map
 !
-! ****** Read the map data.
-!
         if (iamp0) then
           mapfile = TRIM(assimilate_data_map_root_dir)//"/"&
                     //TRIM(map_files_rel_path(current_map_input_idx))
 !
-          call read_3d_file (mapfile,ln1,ln2,nslices,new_data2d,s1,s2,s3,ierr)
+          call read_3d_file (mapfile,npm_nd,ntm_nd,nslices,new_data2d,s1,s2,s3,ierr)
           deallocate(s1)
           deallocate(s2)
           deallocate(s3)
         endif
 !
         wtime_tmp_mpi = MPI_Wtime()
-        call MPI_Bcast (ln1,1,ntype_real,0,MPI_COMM_WORLD,ierr)
-        call MPI_Bcast (ln2,1,ntype_real,0,MPI_COMM_WORLD,ierr)
+        call MPI_Bcast (npm_nd,1,ntype_real,0,MPI_COMM_WORLD,ierr)
+        call MPI_Bcast (ntm_nd,1,ntype_real,0,MPI_COMM_WORLD,ierr)
         call MPI_Bcast (nslices,1,ntype_real,0,MPI_COMM_WORLD,ierr)
 !
-        if (.not.iamp0) allocate (new_data2d(ln1,ln2,nslices))
+        if (.not.iamp0) allocate (new_data2d(npm_nd,ntm_nd,nslices))
 !
-        call MPI_Bcast (new_data2d,ln1*ln2*nslices,ntype_real,0,MPI_COMM_WORLD,ierr)
+        call MPI_Bcast (new_data2d,npm_nd*ntm_nd*nslices,ntype_real,0,MPI_COMM_WORLD,ierr)
         wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
 !
 ! ******  TODO:  Add error checking here
 !               (make sure scales match run until interp is added)
 !
-        allocate(new_data(ln1,ln2,nslices,nr))
-        do i=1,nr
-          new_data(:,:,:,i) = new_data2d(:,:,:)
+!$acc enter data copyin(new_data2d)
+        allocate(new_data(npm_nd,ntm_nd,nslices,nr))
+!$acc enter data create (new_data)
+        do concurrent(i=1:nr,j=1:nslices,k=1:ntm_nd,l=1:npm_nd)
+          new_data(l,k,j,i) = new_data2d(l,k,j)
         enddo
+!$acc exit data delete(new_data2d)
         deallocate(new_data2d)
 !
-!$acc enter data copyin(new_data)
+! ****** Modify the data based on user choices.
+! ****** Note:  The data is stored in slices defined as:
+! ******  [1] The data
+! ******  [2] The default uncertainty/weights (default is mu^4 with mu limit of 0.1?)
+! ******  [3] The "mu" value of the data (including negative values on back of Sun)
+!
+! ****** Make a custom uncertaintity map using mu.
+!
+        if (assimilate_data_custom_from_mu) then
+
+          do concurrent(i=1:nr,k=1:ntm_nd,l=1:npm_nd)
+            if (new_data(l,k,3,i).gt.assimilate_data_mu_limit) then
+              new_data(l,k,2,i) = new_data(l,k,3,i)**assimilate_data_mu_power
+            else
+              new_data(l,k,2,i) = zero
+            end if
+          enddo
+
+        end if
+!
+! ****** Apply a latitude limiter on data (solid cutoff for now).
+!
+        if (assimilate_data_lat_limit.gt.0) then
+          do concurrent(i=1:nr,k=1:assimilate_data_lat_limit_tidx0,l=1:npm_nd)
+            new_data(l,k,2,i) = zero
+          enddo
+          do concurrent(i=1:nr,k=assimilate_data_lat_limit_tidx1:ntm_nd,l=1:npm_nd)
+            new_data(l,k,2,i) = zero
+          enddo
+        end if
 !
 ! ****** Assimilate the data.
 !
@@ -7170,7 +7234,10 @@ subroutine read_input_file
                diffusion_subcycles,advance_source,source_filename,     &
                assimilate_data,assimilate_data_map_list_filename,      &
                assimilate_data_map_root_dir,time_start,output_flows,   &
-               output_flows_directory,flow_attenuate_value
+               output_flows_directory,flow_attenuate_value,            &
+               assimilate_data_custom_from_mu,                         &
+               assimilate_data_mu_power,assimilate_data_lat_limit,     &
+               assimilate_data_mu_limit
 !
 !-----------------------------------------------------------------------
 !
@@ -7391,6 +7458,18 @@ end subroutine
 !   - BUG FIX:  The WENO3 "weno_eps" was too large for some use cases
 !               (specifically coronal hole advection) and could cause
 !               ringing. Changed it to be much smaller.
+!
+! 03/15/2023, RC, Version 0.18.0:
+!   - Added ability to redefine the data assimilation weights based on
+!     a chosen power of mu.  Set assimilate_data_custom_from_mu=.true.
+!     to activate, and set assimilate_data_mu_power=<REAL> to the
+!     desired power of mu.
+!     Also added assimilate_data_mu_limit input parameter to set
+!     a cutoff for mu (default is 0.1).
+!   - Added an optional latitude limit on the data assimilation.
+!     To use, set assimilate_data_lat_limit=<REAL> to the
+!     latitude number of degrees from the pole to zero-out the
+!     assilation weights.
 !
 !-----------------------------------------------------------------------
 !

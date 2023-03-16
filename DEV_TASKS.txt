@@ -1,23 +1,40 @@
 DEV TASKS FOR HIPFT:
 
- - Make velocity attenuation a 1D array across realizations.
- - Make other parameters 1D arrays to allow instance variations
-     (With conflow, may be multiple flow map file sets, or with later
-      auto-gen, seed or other conflow parameters)
- - Have code output hsitory files for each realization.
+ - Make parameters 1D arrays to allow instance variations
+   This includes:
+   - Conflow: may be multiple flow map file sets, or with later auto-gen, seed or other conflow parameters
+   - Velocity attenuation level
+   - Data assimilation lat limit
+   - Data assimilation mu limit/ mu power
+   - Diffusion rate
+   - Analytic flow profile params (3 for meridianal, 3 for differential rotation)
+   - Algorithm? (UW vs WENO)?
+   
+ - Have code output history files for each realization.
+
  - Cleanup the python script that generates hipft history diagnostics from a series of hipft output maps
+   - Modify script to allow for realization cubes.
+
  - Update history plot script to allow UT time input for HipFT time "0"
    for use with plot axis (and add plot axis format options)
+
  - Update history compare script to be more like MAS one (variable number of runs, etc).
- - Make testsuite
+   - Make an automatic mode that compares a set of realizations?
+
+ - Make testsuite:  Small map versions of standard runs
+   - Add 64-bit output option for detaield comparisons?
+
  - Write documentation (mkdocs? git io?)
+
  - Write script to generate butterfly diagram from series of HipFT output maps.
    Can use initial UT time and map output text file to get times.
    Need to do average of CR (so find idx range for each one) and add to diagram map.
 
 LATER
  - Add interleaved data input vs. output option (?)
- - Add initial dump time option
+
+ - Add initial dump time option (may solve above?)
+
  - Add cross-linking of hipft and conflow for convective flow generation
    once conflow is in a good state (and GPU-compatible)
 
