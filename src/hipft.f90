@@ -354,6 +354,11 @@ module globals
 !
 !-----------------------------------------------------------------------
 !
+! ****** Main terminal output format string.
+!
+      character(*), parameter :: &
+        MAINFMT = '(a,i10,a,f12.6,a,f12.6,a,f12.6,a,a,a)'
+!
 ! ****** Current time.
 !
       real(r_typ) :: time = 0.
@@ -743,11 +748,12 @@ program HIPFT
 !
 !-----------------------------------------------------------------------
 !
-      use number_types
-      use input_parameters
-      use globals
-      use mpidefs
-      use timing
+      use iso_fortran_env,  ONLY : OUTPUT_UNIT
+      use globals,          ONLY : MAINFMT, ntime, time,              &
+                                   dtime_global, dtime_reason
+      use input_parameters, ONLY : time_end
+      use mpidefs,          ONLY : iamp0, MPI_Wtime
+      use timing,           ONLY : wtime_total
 !
 !-----------------------------------------------------------------------
 !
@@ -756,27 +762,21 @@ program HIPFT
 !-----------------------------------------------------------------------
 !
       logical :: the_run_is_done
-      character(*), parameter :: &
-                           FMT = '(a,i10,a,f12.6,a,f12.6,a,f12.6,a,a,a)'
 !
 !-----------------------------------------------------------------------
-!
-! ****** Initialize MPI.
-!
-      call initialize_mpi
 !
 ! ****** Set up and initialize the run.
 !
       call setup
 !
-! ****** START MAIN LOOP ********************************************
-!
       if (iamp0) then
         write (*,*)
         write (*,*) '>running'
         write (*,*)
-        flush(OUTPUT_UNIT)
+        FLUSH(OUTPUT_UNIT)
       end if
+!
+! ****** START MAIN LOOP ********************************************
 !
       do
 !
@@ -788,13 +788,6 @@ program HIPFT
 ! ****** flows and set/check the timestep.
 !
         call update_step
-!
-        if (verbose .and. iamp0) then
-          write(*,FMT) 'Starting step: ',ntime,'  Time:',time,' / ', &
-                        time_end,'  dt to use:',dtime_global, &
-                        ' (',TRIM(dtime_reason),')'
-          flush(OUTPUT_UNIT)
-        end if
 !
 ! ****** Evolve the field for one timestep.
 !
@@ -813,10 +806,10 @@ program HIPFT
         call output_step
 !
         if (iamp0) then
-          write(*,FMT) 'Completed step: ',ntime,'  Time: ',time,' / ', &
-                        time_end,'  dt: ',dtime_global, &
-                        ' (',TRIM(dtime_reason),')'
-          flush(OUTPUT_UNIT)
+          write(*,MAINFMT)                                            &
+            'Completed step: ',ntime,'  Time: ',time,' / ',           &
+            time_end,'  dt: ',dtime_global,' (',TRIM(dtime_reason),')'
+          FLUSH(OUTPUT_UNIT)
         end if
 !
 ! ****** Check if the run is done.
@@ -835,7 +828,7 @@ program HIPFT
 !
       wtime_total = MPI_Wtime() - wtime_total
 !
-! ****** Write out time profiling.
+! ****** Write out time profile.
 !
       call write_timing
 !
@@ -1035,6 +1028,10 @@ subroutine setup
 !
 !-----------------------------------------------------------------------
 !
+! ****** Initialize MPI.
+!
+      call initialize_mpi
+!
       wtime_tmp = MPI_Wtime()
 !
       call read_input_file
@@ -1098,7 +1095,12 @@ subroutine setup
 !
       call output_step
 !
-      if (iamp0) call write_welcome_message
+      if (iamp0) then
+        call write_welcome_message
+        write (*,*)
+        write (*,*) 'Setup complete.'
+        write (*,*)
+      end if
 !
       wtime_setup = MPI_Wtime() - wtime_tmp
 !
@@ -4156,7 +4158,7 @@ subroutine diffusion_step_sts_cd (dtime_local)
       allocate (ukm2(ntm,npm,nr))
 !$acc enter data create(u0,dty0,ykm1,ukm1,ukm2)
 !
-      call ax(f,dty0)
+      call diffusion_operator_cd (f,dty0)
 !
       do concurrent (el=1:nr,j=1:npm,i=1:ntm)
         u0(i,j,el) = f(i,j,el)
@@ -4169,7 +4171,7 @@ subroutine diffusion_step_sts_cd (dtime_local)
 !
       do k=2,sts_s
 !
-        call ax(ukm1,ykm1)
+        call diffusion_operator_cd (ukm1,ykm1)
 !
         do concurrent (el=1:nr,j=1:npm,i=1:ntm)
           f(i,j,el) =             sts_uj(k)*ukm1(i,j,el) + &
@@ -6148,7 +6150,7 @@ subroutine diffusion_step_euler_cd (dtime_local)
 !
       do i=1,n_stable_diffusion_cycles
 !
-        call ax (f,fold)
+        call diffusion_operator_cd (f,fold)
 !
         do concurrent (el=1:nr,k=1:npm,j=1:ntm)
           f(j,k,el) = f(j,k,el) + dtime_euler_used*fold(j,k,el)
@@ -6187,95 +6189,21 @@ subroutine advection_step_fe_upwind (dtime_local)
 !-----------------------------------------------------------------------
 !
       integer :: i,j,k
-      real(r_typ) :: cct,ccp
-      real(r_typ), dimension(:), allocatable :: fn,fs
-      real(r_typ), dimension(:,:,:), allocatable :: flux_t,flux_p
+      real(r_typ), dimension(:,:,:), allocatable :: aop
 !
 !-----------------------------------------------------------------------
 !
-! ****** Allocate temporary flux arrays on the half-mesh.
+      allocate (aop(ntm,npm,nr))
+!$acc enter data create(aop)
 !
-      allocate (flux_t(nt,npm,nr))
-      allocate (flux_p(ntm,np,nr))
-!$acc enter data create(flux_t,flux_p)
+      call advection_operator_upwind (f,aop)
 !
-      do concurrent (i=1:nr,k=1:npm,j=1:nt)
-        flux_t(j,k,i) = zero
+      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
+        f(j,k,i) = f(j,k,i) - dtime_local*aop(j,k,i)
       enddo
 !
-      do concurrent (i=1:nr,k=1:np,j=1:ntm)
-        flux_p(j,k,i) = zero
-      enddo
-!
-! ****** Compute the fluxes at the cell faces.
-!
-      do concurrent (i=1:nr,k=2:npm-1,j=2:ntm1)
-        cct = sign(upwind,vt(j,k,i))
-        flux_t(j,k,i) = vt(j,k,i)*half*((one-cct)*f(j,k,i)+(one+cct)*f(j-1,k,i))
-      enddo
-!
-      do concurrent (i=1:nr,k=2:npm1,j=2:ntm-1)
-        ccp = sign(upwind,vp(j,k,i))
-        flux_p(j,k,i) = vp(j,k,i)*half*((one-ccp)*f(j,k,i)+(one+ccp)*f(j,k-1,i))
-      enddo
-!
-! ****** Set periodicity of the flux (seam).
-!
-      call set_periodic_bc_3d (flux_t,nt,npm,nr)
-      call set_periodic_bc_3d (flux_p,ntm,np,nr)
-!
-! ****** Advect F by one time step.
-!
-      do concurrent (i=1:nr,k=2:npm-1,j=2:ntm-1)
-        f(j,k,i) = f(j,k,i) - dtime_local*( (  sth(j+1)*flux_t(j+1,k,i) &
-                                             - sth(j  )*flux_t(j  ,k,i) &
-                                            )*st_i(j)*dt_i(j)           &
-                                           +(  flux_p(j,k+1,i)          &
-                                             - flux_p(j,k  ,i)          &
-                                            )*st_i(j)*dp_i(k)           &
-                                          )
-      enddo
-!
-! ****** Advect the values at the poles.
-!
-      allocate (fn(nr))
-      allocate (fs(nr))
-!$acc enter data create(fn,fs)
-!
-      do concurrent (i=1:nr)
-        fn(i) = zero
-        fs(i) = zero
-      enddo
-!
-!$omp parallel do   collapse(2) default(shared)
-!$acc parallel loop collapse(2) default(present)
-        do i=1,nr
-          do k=2,npm-1
-!$omp atomic update
-!$acc atomic update
-            fn(i) = fn(i) + flux_t(   2,k,i)*dp(k)
-!$omp atomic update
-!$acc atomic update
-            fs(i) = fs(i) + flux_t(ntm1,k,i)*dp(k)
-          enddo
-        enddo
-!$omp end parallel do
-! ****** Note that the south pole needs a sign change since the
-! ****** theta flux direction is reversed.
-      do concurrent (i=1:nr,k=2:npm-1)
-        f(  1,k,i) = f(  1,k,i) - fn(i)*dtime_local*two*pi_i*dt_i(  1)
-        f(ntm,k,i) = f(ntm,k,i) + fs(i)*dtime_local*two*pi_i*dt_i(ntm)
-      enddo
-!
-! ****** Set periodic boundary condition.
-!
-      call set_periodic_bc_3d (f,ntm,npm,nr)
-!
-!$acc exit data delete(flux_t,flux_p,fn,fs)
-      deallocate (flux_t)
-      deallocate (flux_p)
-      deallocate (fn)
-      deallocate (fs)
+!$acc exit data delete(aop)
+      deallocate (aop)
 !
 end subroutine
 !#######################################################################
@@ -6323,14 +6251,14 @@ subroutine advection_step_rk3tvd_upwind (dtime_local)
 !
       call advection_operator_upwind (f1,aop)
       do concurrent (i=1:nr,k=1:npm,j=1:ntm)
-        f2(j,k,i) = three_quarter*f(j,k,i) + quarter*f1(j,k,i) &
+        f2(j,k,i) = three_quarter*f(j,k,i) + quarter*f1(j,k,i)        &
                                        - quarter*dtime_local*aop(j,k,i)
       enddo
 !
       call advection_operator_upwind (f2,aop)
       do concurrent (i=1:nr,k=1:npm,j=1:ntm)
-        f(j,k,i) = third*f(j,k,i) + two_third*f2(j,k,i) &
-                              - two_third*dtime_local*aop(j,k,i)
+        f(j,k,i) = third*f(j,k,i) + two_third*f2(j,k,i)               &
+                                  - two_third*dtime_local*aop(j,k,i)
       enddo
 !
 ! ****** Deallocate temporary arrays.
@@ -6746,7 +6674,7 @@ subroutine advection_step_rk3tvd_weno3 (dtime_local)
 !
 end subroutine
 !#######################################################################
-subroutine ax (x,y)
+subroutine diffusion_operator_cd (x,y)
 !
 !-----------------------------------------------------------------------
 !
