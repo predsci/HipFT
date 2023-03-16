@@ -137,6 +137,11 @@
   assimilate_data = .false.
   assimilate_data_map_list_filename = ' '
   assimilate_data_map_root_dir = '.'
+  assimilate_data_custom_from_mu = .false.
+  assimilate_data_mu_power = 4.0
+  assimilate_data_mu_limit = 0.1
+  assimilate_data_lat_limit = 0.
 /
-
-
+!
+! Describe run here!
+!
