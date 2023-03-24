@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.18.0'
-      character(*), parameter :: cdate='03/15/2023'
+      character(*), parameter :: cvers='0.18.1'
+      character(*), parameter :: cdate='03/24/2023'
 !
 end module
 !#######################################################################
@@ -117,15 +117,15 @@ module constants
       real(r_typ), parameter :: rsun_cm2 = 4.84416e21_r_typ
 !
       real(r_typ), parameter :: &
-                         diff_km2_s_to_rs2_s = 2.0643413925221e-12_r_typ
+                       diff_km2_s_to_rs2_s = 2.0643413925221e-12_r_typ
       real(r_typ), parameter :: &
-                         diff_km2_s_to_rs2_hr = 7.43162901307967e-09_r_typ
+                       diff_km2_s_to_rs2_hr = 7.43162901307967e-09_r_typ
       real(r_typ), parameter :: &
-                         km_s_to_rs_hr = 0.005172413793103448_r_typ
+                       km_s_to_rs_hr = 0.005172413793103448_r_typ
       real(r_typ), parameter :: &
-                         m_s_to_rs_hr = 5.172413793103448e-06_r_typ
+                       m_s_to_rs_hr = 5.172413793103448e-06_r_typ
       real(r_typ), parameter :: &
-                         km_s_to_rs_s = 1.4367816091954023e-06_r_typ
+                       km_s_to_rs_s = 1.4367816091954023e-06_r_typ
       real(r_typ), parameter :: output_flux_fac = 1.0e-21_r_typ
 !
       real(r_typ), parameter :: small_value = tiny(one)
@@ -154,10 +154,10 @@ module input_parameters
       character(512) :: initial_map_filename = 'br_input.h5'
 !
       character(512) :: output_map_root_filename = 'hipft_brmap'
-      character(512) :: output_map_directory = 'output_maps'
+      character(512) :: output_map_directory     = 'output_maps'
 !
       character(512) :: output_flows_root_filename = 'hipft_flow'
-      character(512) :: output_flows_directory = 'output_flows'
+      character(512) :: output_flows_directory     = 'output_flows'
 !
 ! ****** Number of realizations ********
 !
@@ -1327,11 +1327,13 @@ subroutine create_and_open_output_log_files
 !-----------------------------------------------------------------------
 !
 ! ****** Create and open output log files
-!
+!        This needs to loop over realizations!!!  [RMC]
 !-----------------------------------------------------------------------
 !
       use input_parameters
       use output
+      use constants
+      use mpidefs
 !
 !-----------------------------------------------------------------------
 !
@@ -1379,8 +1381,10 @@ subroutine create_and_open_output_log_files
 !
       close(IO_MAP_OUT_LIST)
 !
-      if (output_map_idx_cadence.gt.0 .or.     &
-          output_map_time_cadence.gt.0.0) then
+! ****** Only rank 0 writes the IO logs.
+!
+      if (iamp0 .and. ( output_map_idx_cadence.gt.zero .or.     &
+                       output_map_time_cadence.gt.zero)) then
 !
         call FFOPEN (IO_MAP_OUT_LIST,io_output_map_list_filename,&
                      'rw',ierr)
@@ -1455,21 +1459,24 @@ subroutine write_welcome_message
       write (*,*) '        San Diego, California, USA 92121'
       write (*,*)''
       write (*,*)''
-      write (*,*) 'Start time = ',time
-      write (*,*) 'End time = ',time_end
-      write (*,*)
-      write (*,*) 'Number of t mesh points = ',ntm
-      write (*,*) 'Number of p mesh points = ',npm-1
-      write (*,*)
-      if (advance_diffusion) then
-        write (*,'(a,f12.6,a)') ' Uniform diffusion = ', &
-                                       diffusion_coef_constant,' km^2/s'
-        write (*,*) ' Diffusion coefficient: '
-        write (*,'(a,f12.6,a)') '   Minimum value = ', &
-                  MINVAL(diffusion_coef/diffusion_coef_factor),' km^2/s'
-        write (*,'(a,f12.6,a)') '   Maximum value = ', &
-                  MAXVAL(diffusion_coef/diffusion_coef_factor),' km^2/s'
-      end if
+!
+! ****** [RMC] Update this with relevent info in a nice way.
+!
+!      write (*,*) 'Start time = ',time
+!      write (*,*) 'End time = ',time_end
+!      write (*,*)
+!      write (*,*) 'Number of t mesh points = ',ntm
+!      write (*,*) 'Number of p mesh points = ',npm-1
+!      write (*,*)
+!      if (advance_diffusion) then
+!        write (*,'(a,f12.6,a)') ' Uniform diffusion = ', &
+!                                       diffusion_coef_constant,' km^2/s'
+!        write (*,*) ' Diffusion coefficient: '
+!        write (*,'(a,f12.6,a)') '   Minimum value = ', &
+!                  MINVAL(diffusion_coef/diffusion_coef_factor),' km^2/s'
+!        write (*,'(a,f12.6,a)') '   Maximum value = ', &
+!                  MAXVAL(diffusion_coef/diffusion_coef_factor),' km^2/s'
+!      end if
       write(*,*)
       write(*,*) "Run started at: "
       call timestamp
@@ -5737,22 +5744,7 @@ subroutine set_lf_alpha
 !
 ! ****** Get alpha for theta:  (ntm=ntm1=nt-1)
 !
-      j = 1
-      do concurrent (i=1:nr,k=1:npm)
-        alpha_t(j,k,i) = MAX(ABS(vt(j  ,k,i)), &
-                             ABS(vt(j+1,k,i)), &
-                             ABS(vt(j+2,k,i)), &
-                             ABS(vt(j+3,k,i)))
-      enddo
-!
-      j = 2
-      do concurrent (i=1:nr,k=1:npm)
-        alpha_t(j,k,i) = MAX(ABS(vt(j-1,k,i)), &
-                             ABS(vt(j  ,k,i)), &
-                             ABS(vt(j+1,k,i)), &
-                             ABS(vt(j+2,k,i)), &
-                             ABS(vt(j+3,k,i)))
-      enddo
+! ****** Get inner points.
 !
       do concurrent (i=1:nr,k=1:npm,j=3:nt-3)
         alpha_t(j,k,i) = MAX(ABS(vt(j-2,k,i)), &
@@ -5763,17 +5755,27 @@ subroutine set_lf_alpha
                              ABS(vt(j+3,k,i)))
       enddo
 !
-      j = nt-2
+! ****** Edge cases.
+!
       do concurrent (i=1:nr,k=1:npm)
+        j = 1
+        alpha_t(j,k,i) = MAX(ABS(vt(j  ,k,i)), &
+                             ABS(vt(j+1,k,i)), &
+                             ABS(vt(j+2,k,i)), &
+                             ABS(vt(j+3,k,i)))
+        j = 2
+        alpha_t(j,k,i) = MAX(ABS(vt(j-1,k,i)), &
+                             ABS(vt(j  ,k,i)), &
+                             ABS(vt(j+1,k,i)), &
+                             ABS(vt(j+2,k,i)), &
+                             ABS(vt(j+3,k,i)))
+        j = nt-2
         alpha_t(j,k,i) = MAX(ABS(vt(j-2,k,i)), &
                              ABS(vt(j-1,k,i)), &
                              ABS(vt(j  ,k,i)), &
                              ABS(vt(j+1,k,i)), &
                              ABS(vt(j+2,k,i)))
-      enddo
-!
-      j = nt-1
-      do concurrent (i=1:nr,k=1:npm)
+        j = nt-1
         alpha_t(j,k,i) = MAX(ABS(vt(j-2,k,i)), &
                              ABS(vt(j-1,k,i)), &
                              ABS(vt(j  ,k,i)), &
@@ -5782,15 +5784,7 @@ subroutine set_lf_alpha
 !
 ! ****** Get alpha for phi: (npm=np)
 !
-      k = 2
-      do concurrent (i=1:nr,j=2:ntm-1)
-        alpha_p(j,k,i) = MAX(ABS(vp(j,np-2,i)), &
-                             ABS(vp(j,k-1 ,i)), &
-                             ABS(vp(j,k   ,i)), &
-                             ABS(vp(j,k+1 ,i)), &
-                             ABS(vp(j,k+2 ,i)), &
-                             ABS(vp(j,k+3 ,i)))
-      enddo
+! ****** Get inner points.
 !
       do concurrent (i=1:nr,k=3:np-3,j=2:ntm-1)
         alpha_p(j,k,i) = MAX(ABS(vp(j,k-2,i)), &
@@ -5801,18 +5795,24 @@ subroutine set_lf_alpha
                              ABS(vp(j,k+3,i)))
       enddo
 !
-      k = np-2
+! ****** Edge cases (periodic).
+!
       do concurrent (i=1:nr,j=2:ntm-1)
+        k = 2
+        alpha_p(j,k,i) = MAX(ABS(vp(j,np-2,i)), &
+                             ABS(vp(j,k-1 ,i)), &
+                             ABS(vp(j,k   ,i)), &
+                             ABS(vp(j,k+1 ,i)), &
+                             ABS(vp(j,k+2 ,i)), &
+                             ABS(vp(j,k+3 ,i)))
+        k = np-2
         alpha_p(j,k,i) = MAX(ABS(vp(j,k-2,i)), &
                              ABS(vp(j,k-1,i)), &
                              ABS(vp(j,k  ,i)), &
                              ABS(vp(j,k+1,i)), &
                              ABS(vp(j,k+2,i)), &
                              ABS(vp(j,3  ,i)))
-      enddo
-!
-      k = np-1
-      do concurrent (i=1:nr,j=2:ntm-1)
+        k = np-1
         alpha_p(j,k,i) = MAX(ABS(vp(j,k-2,i)), &
                              ABS(vp(j,k-1,i)), &
                              ABS(vp(j,k  ,i)), &
@@ -5820,6 +5820,9 @@ subroutine set_lf_alpha
                              ABS(vp(j,3  ,i)), &
                              ABS(vp(j,4  ,i)))
       enddo
+!
+! ****** By seaming the periodic dimension,
+! ****** the values for k=1 and k=npm (np) are set.
 !
       call set_periodic_bc_3d (alpha_p,ntm,npm,nr)
 !
@@ -6450,10 +6453,10 @@ subroutine advection_operator_weno3 (ftemp,aop)
         B0p = four*(D_C_CPt(j  )*(LP(j+1,k,i) - LP(j  ,k,i)))**2
         B1p = four*(D_C_MCt(j  )*(LP(j  ,k,i) - LP(j-1,k,i)))**2
 !
-        w0m = D_P_Tt(j-1) *(one/(weno_eps + B0m)**2)
-        w1m = D_MC_Tt(j-1)*(one/(weno_eps + B1m)**2)
-        w0p = D_M_Tt(j)   *(one/(weno_eps + B0p)**2)
-        w1p = D_CP_Tt(j)  *(one/(weno_eps + B1p)**2)
+        w0m = D_P_Tt(j-1) /(weno_eps + B0m)**2
+        w1m = D_MC_Tt(j-1)/(weno_eps + B1m)**2
+        w0p = D_M_Tt(j)   /(weno_eps + B0p)**2
+        w1p = D_CP_Tt(j)  /(weno_eps + B1p)**2
 !
         wm_sum = w0m + w1m
         wp_sum = w0p + w1p
@@ -6475,12 +6478,12 @@ subroutine advection_operator_weno3 (ftemp,aop)
       do concurrent (i=1:nr,k=1:npm)
 !
         cct=sign(upwind,vt(2,k,i))
-        flux_t(2,k,i) = vt(2,k,i)*half*((one-cct)*ftemp(2,k,i) &
-                                  + (one+cct)*ftemp(1,k,i))
+        flux_t(2,k,i) = vt(2,k,i)*half*((one - cct)*ftemp(2,k,i)      &
+                                      + (one + cct)*ftemp(1,k,i))
 !
         cct=sign(upwind,vt(ntm1,k,i))
-        flux_t(ntm1,k,i) = vt(ntm1,k,i)*half*((one-cct)*ftemp(ntm1,k,i) &
-                                        + (one+cct)*ftemp(ntm2,k,i))
+        flux_t(ntm1,k,i) = vt(ntm1,k,i)*half*((one - cct)*ftemp(ntm1,k,i) &
+                                            + (one + cct)*ftemp(ntm2,k,i))
 !
       enddo
 !
@@ -6530,10 +6533,10 @@ subroutine advection_operator_weno3 (ftemp,aop)
         B0p = four*(D_C_CPp(k  )*(LP(j,k+1,i) - LP(j,k  ,i)))**2
         B1p = four*(D_C_MCp(k  )*(LP(j,k  ,i) - LP(j,k-1,i)))**2
 !
-        w0m = D_P_Tp (k-1)*(one/(weno_eps + B0m)**2)
-        w1m = D_MC_Tp(k-1)*(one/(weno_eps + B1m)**2)
-        w0p = D_M_Tp (k)  *(one/(weno_eps + B0p)**2)
-        w1p = D_CP_Tp(k)  *(one/(weno_eps + B1p)**2)
+        w0m = D_P_Tp (k-1)/(weno_eps + B0m)**2
+        w1m = D_MC_Tp(k-1)/(weno_eps + B1m)**2
+        w0p = D_M_Tp (k)  /(weno_eps + B0p)**2
+        w1p = D_CP_Tp(k)  /(weno_eps + B1p)**2
 !
         wm_sum = w0m + w1m
         wp_sum = w0p + w1p
@@ -6637,16 +6640,15 @@ subroutine advection_step_rk3tvd_weno3 (dtime_local)
 !-----------------------------------------------------------------------
 !
       integer :: i,j,k
-      real(r_typ), dimension(:,:,:), allocatable :: f1,f2,aop
+      real(r_typ), dimension(:,:,:), allocatable :: f1,aop
 !
 !-----------------------------------------------------------------------
 !
 ! ****** Allocate temporary arrays for RK.
 !
       allocate (f1(ntm,npm,nr))
-      allocate (f2(ntm,npm,nr))
       allocate (aop(ntm,npm,nr))
-!$acc enter data create(f1,f2,aop)
+!$acc enter data create(f1,aop)
 !
       call advection_operator_weno3 (f,aop)
       do concurrent (i=1:nr,k=1:npm,j=1:ntm)
@@ -6655,21 +6657,20 @@ subroutine advection_step_rk3tvd_weno3 (dtime_local)
 !
       call advection_operator_weno3 (f1,aop)
       do concurrent (i=1:nr,k=1:npm,j=1:ntm)
-        f2(j,k,i) = three_quarter*f(j,k,i) + quarter*f1(j,k,i) &
+        f1(j,k,i) = three_quarter*f(j,k,i) + quarter*f1(j,k,i) &
                                            - quarter*dtime_local*aop(j,k,i)
       enddo
 !
-      call advection_operator_weno3 (f2,aop)
+      call advection_operator_weno3 (f1,aop)
       do concurrent (i=1:nr,k=1:npm,j=1:ntm)
-        f(j,k,i) = third*f(j,k,i) + two_third*f2(j,k,i) &
+        f(j,k,i) = third*f(j,k,i) + two_third*f1(j,k,i) &
                                   - two_third*dtime_local*aop(j,k,i)
       enddo
 !
 ! ****** Deallocate temporary arrays.
 !
-!$acc exit data delete(f1,f2,aop)
+!$acc exit data delete(f1,aop)
       deallocate (f1)
-      deallocate (f2)
       deallocate (aop)
 !
 end subroutine
@@ -7174,9 +7175,8 @@ subroutine read_input_file
 !
 !-----------------------------------------------------------------------
 !
-! ****** Read the input file.
+! ****** Read the input file (all MPI ranks read it).
 !
-! RMC: Could have just rank 0 read this and then broadcast to all other ranks.
       call ffopen (8,infile,'r',ierr)
 !
       if (ierr.ne.0) then
@@ -7185,8 +7185,8 @@ subroutine read_input_file
           write (*,*) '### ERROR in READ_INPUT_FILE:'
           write (*,*) '### Could not open the input file.'
           write (*,*) 'File name: ',trim(infile)
-          call endrun(.true.)
         end if
+        call endrun(.true.)
       end if
 !
       read (8,hipft_input_parameters)
@@ -7194,7 +7194,8 @@ subroutine read_input_file
 !
 ! ****** Check inputs for issues.
 !
-      if (output_map_time_cadence.gt.0 .and. output_map_idx_cadence.gt.0) then
+      if (output_map_time_cadence.gt.0            &
+          .and. output_map_idx_cadence.gt.0) then
         if (iamp0) then
           write(*,*) "ERROR!  Cannot use both output_map_time_cadence"
           write(*,*) "        and output_map_idx_cadence at the same time!"
@@ -7211,6 +7212,14 @@ subroutine read_input_file
           write (*,*) 'Number of realizations = ',n_realizations
         end if
         call endrun (.true.)
+      end if
+!
+! ****** Write the NAMELIST parameter values to file.
+!
+      if (iamp0) then
+        call ffopen (8,'hipft_run_parameters_used.dat','w',ierr)
+        write (8,hipft_input_parameters)
+        close (8)
       end if
 !
 end subroutine
@@ -7398,6 +7407,10 @@ end subroutine
 !     To use, set assimilate_data_lat_limit=<REAL> to the
 !     latitude number of degrees from the pole to zero-out the
 !     assilation weights.
+!
+! 03/24/2023, RC, Version 0.18.1:
+!   - Cleaned up some code.
+!   - Added writing of namelist parameters to file.
 !
 !-----------------------------------------------------------------------
 !
