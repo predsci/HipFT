@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.18.1'
-      character(*), parameter :: cdate='03/24/2023'
+      character(*), parameter :: cvers='0.19.0'
+      character(*), parameter :: cdate='04/21/2023'
 !
 end module
 !#######################################################################
@@ -377,6 +377,7 @@ module globals
       real(r_typ) :: dtime_diffusion_euler = 0.
       integer*8 :: n_stable_diffusion_cycles = 1
       real(r_typ) :: dtime_diffusion_used = 0.
+      logical :: auto_sc=.false.
 !
 ! ****** Explicit Euler advection stable time-step.
 !
@@ -463,8 +464,11 @@ module data_assimilation
       integer :: current_map_input_idx = 1
       real(r_typ) :: time_of_next_input_map = 0.
 !
-      integer :: assimilate_data_lat_limit_tidx0 = -1
-      integer :: assimilate_data_lat_limit_tidx1 = -1
+      integer, dimension(:), allocatable :: assimilate_data_lat_limit_tidx0_rvec
+      integer, dimension(:), allocatable :: assimilate_data_lat_limit_tidx1_rvec
+      real(r_typ), dimension(:), allocatable :: assimilate_data_lat_limit_rvec
+      real(r_typ), dimension(:), allocatable :: assimilate_data_mu_limit_rvec
+      real(r_typ), dimension(:), allocatable :: assimilate_data_mu_power_rvec
 !
       real(r_typ) :: map_time_initial_hr
 !
@@ -1067,6 +1071,10 @@ subroutine setup
         time = time_start
       end if
 !
+! ****** Initialize realization arrays.
+!
+      call set_realization_parameters
+!
 ! ****** Allocate flow arrays.
 !
       if (advance_flow) then
@@ -1082,9 +1090,8 @@ subroutine setup
       if (assimilate_data) call load_data_assimilation
 !
       if (use_flow_from_files) call load_flow_from_files
-!      RMC:  For now, only have rank 0 do this.  Eventually, all ranks need to
-!            create files for each realization they have...
-      if (iamp0) call create_and_open_output_log_files
+!
+      call create_and_open_output_log_files
 !
       call analysis_step
 !
@@ -1327,13 +1334,14 @@ subroutine create_and_open_output_log_files
 !-----------------------------------------------------------------------
 !
 ! ****** Create and open output log files
-!        This needs to loop over realizations!!!  [RMC]
+!
 !-----------------------------------------------------------------------
 !
       use input_parameters
       use output
       use constants
       use mpidefs
+      use mesh
 !
 !-----------------------------------------------------------------------
 !
@@ -1341,52 +1349,111 @@ subroutine create_and_open_output_log_files
 !
 !-----------------------------------------------------------------------
 !
-      integer :: ierr
+      integer :: ierr, n_real, istart, iend
+      character(23) :: io_hist_num_real_filename
+      character(23) :: io_hist_sol_real_filename
 !
 !-----------------------------------------------------------------------
 !
-      call FFOPEN (IO_HIST_NUM,io_hist_num_filename,'rw',ierr)
+      if (n_realizations == 1) then
+        call ffopen (IO_HIST_NUM,io_hist_num_filename,'rw',ierr)
 !
-      write (IO_HIST_NUM,'(a10,a,6(a22,a),a15)') &
-      'STEP',' ',&
-      'TIME',' ',&
-      'DTIME',' ',&
-      'DTIME_ADV_STB',' ',&
-      'DTIME_ADV_USED',' ',&
-      'DTIME_DIFF_STB',' ',&
-      'DTIME_DIFF_USED',' ',&
-      'N_DIFF_PER_STEP'
+        write (IO_HIST_NUM,'(a10,a,6(a22,a),a15)') &
+        'STEP',' ',&
+        'TIME',' ',&
+        'DTIME',' ',&
+        'DTIME_ADV_STB',' ',&
+        'DTIME_ADV_USED',' ',&
+        'DTIME_DIFF_STB',' ',&
+        'DTIME_DIFF_USED',' ',&
+        'N_DIFF_PER_STEP'
 !
-      close(IO_HIST_NUM)
+        close(IO_HIST_NUM)
 !
-      call FFOPEN (IO_HIST_SOL,io_hist_sol_filename,'rw',ierr)
+        call ffopen (IO_HIST_SOL,io_hist_sol_filename,'rw',ierr)
 !
-      write (IO_HIST_SOL,'(a10,a,15(a22,a))') &
-      'STEP',' ',&
-      'TIME',' ',&
-      'BR_MIN',' ',&
-      'BR_MAX',' ',&
-      'BR_ABS_MIN', ' ',&
-      'FLUX_POSITIVE',' ',&
-      'FLUX_NEGATIVE',' ',&
-      'NPOLE_FLUX_POSITIVE',' ',&
-      'NPOLE_FLUX_NEGATIVE',' ',&
-      'SPOLE_FLUX_POSITIVE',' ',&
-      'SPOLE_FLUX_NEGATIVE',' ',&
-      'NPOLE_AREA',' ',&
-      'SPOLE_AREA',' ',&
-      'EQ_DIPOLE',' ',&
-      'AX_DIPOLE',' ',&
-      'VALIDATION_ERR_CVRMSD'
+        write (IO_HIST_SOL,'(a10,a,15(a22,a))') &
+        'STEP',' ',&
+        'TIME',' ',&
+        'BR_MIN',' ',&
+        'BR_MAX',' ',&
+        'BR_ABS_MIN', ' ',&
+        'FLUX_POSITIVE',' ',&
+        'FLUX_NEGATIVE',' ',&
+        'NPOLE_FLUX_POSITIVE',' ',&
+        'NPOLE_FLUX_NEGATIVE',' ',&
+        'SPOLE_FLUX_POSITIVE',' ',&
+        'SPOLE_FLUX_NEGATIVE',' ',&
+        'NPOLE_AREA',' ',&
+        'SPOLE_AREA',' ',&
+        'EQ_DIPOLE',' ',&
+        'AX_DIPOLE',' ',&
+        'VALIDATION_ERR_CVRMSD'
 !
-      close(IO_MAP_OUT_LIST)
+        close(IO_HIST_SOL)
+!
+      else
+!
+        if (nr*nproc .lt. n_realizations) then
+          istart = 1 + n_realizations - (nproc-iprocsh)*nr
+          iend = n_realizations - (nproc-iprocsh-1)*nr
+        else
+          istart = 1 + iprocsh*nr
+          iend = istart + (nr - 1)
+        end if
+!
+        do n_real=istart,iend
+!
+          write(io_hist_num_real_filename,'(A13,I6.6,A4)') &
+              "history_num_r", n_real, ".dat"
+!
+          call ffopen (IO_HIST_NUM,io_hist_num_real_filename,'rw',ierr)
+!
+          write (IO_HIST_NUM,'(a10,a,6(a22,a),a15)') &
+          'STEP',' ',&
+          'TIME',' ',&
+          'DTIME',' ',&
+          'DTIME_ADV_STB',' ',&
+          'DTIME_ADV_USED',' ',&
+          'DTIME_DIFF_STB',' ',&
+          'DTIME_DIFF_USED',' ',&
+          'N_DIFF_PER_STEP'
+!
+          close(IO_HIST_NUM)
+!
+          write(io_hist_sol_real_filename,'(A13,I6.6,A4)') &
+              "history_sol_r", n_real, ".dat"
+!
+          call ffopen (IO_HIST_SOL,io_hist_sol_real_filename,'rw',ierr)
+!
+          write (IO_HIST_SOL,'(a10,a,15(a22,a))') &
+          'STEP',' ',&
+          'TIME',' ',&
+          'BR_MIN',' ',&
+          'BR_MAX',' ',&
+          'BR_ABS_MIN', ' ',&
+          'FLUX_POSITIVE',' ',&
+          'FLUX_NEGATIVE',' ',&
+          'NPOLE_FLUX_POSITIVE',' ',&
+          'NPOLE_FLUX_NEGATIVE',' ',&
+          'SPOLE_FLUX_POSITIVE',' ',&
+          'SPOLE_FLUX_NEGATIVE',' ',&
+          'NPOLE_AREA',' ',&
+          'SPOLE_AREA',' ',&
+          'EQ_DIPOLE',' ',&
+          'AX_DIPOLE',' ',&
+          'VALIDATION_ERR_CVRMSD'
+!
+          close(IO_HIST_SOL)
+        enddo
+      end if
 !
 ! ****** Only rank 0 writes the IO logs.
 !
       if (iamp0 .and. ( output_map_idx_cadence.gt.zero .or.     &
                        output_map_time_cadence.gt.zero)) then
 !
-        call FFOPEN (IO_MAP_OUT_LIST,io_output_map_list_filename,&
+        call ffopen (IO_MAP_OUT_LIST,io_output_map_list_filename,&
                      'rw',ierr)
 !
         write (IO_MAP_OUT_LIST,'(a10,a,a25,a,a)') &
@@ -1398,7 +1465,7 @@ subroutine create_and_open_output_log_files
 
         if (output_flows) then
 !
-          call FFOPEN (IO_MAP_OUT_LIST,io_output_flows_list_filename,&
+          call ffopen (IO_MAP_OUT_LIST,io_output_flows_list_filename,&
                        'rw',ierr)
 !
           write (IO_MAP_OUT_LIST,'(a10,a,a25,a,a)') &
@@ -1790,6 +1857,65 @@ subroutine load_initial_condition
 !
 end subroutine
 !#######################################################################
+subroutine set_realization_parameters
+!
+!-----------------------------------------------------------------------
+!
+! ****** set_realization_parameters
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use mpidefs
+      use input_parameters
+      use data_assimilation
+      use flow_from_files
+      use mesh
+      use fields
+      use globals
+      use output
+      use constants
+      use timing
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      integer :: i
+!
+!-----------------------------------------------------------------------
+!
+      if (assimilate_data) then
+!
+        allocate (assimilate_data_lat_limit_rvec(nr))
+        allocate (assimilate_data_lat_limit_tidx0_rvec(nr))
+        allocate (assimilate_data_lat_limit_tidx1_rvec(nr))
+!$acc enter data create (assimilate_data_lat_limit_rvec,       &
+!$acc                    assimilate_data_lat_limit_tidx0_rvec, &
+!$acc                    assimilate_data_lat_limit_tidx1_rvec)
+        do concurrent (i=1:nr)
+          assimilate_data_lat_limit_rvec(i) = assimilate_data_lat_limit
+          assimilate_data_lat_limit_tidx0_rvec(i) = -1
+          assimilate_data_lat_limit_tidx1_rvec(i) = -1
+        enddo
+!
+        if (assimilate_data_custom_from_mu) then
+          allocate (assimilate_data_mu_power_rvec(nr))
+          allocate (assimilate_data_mu_limit_rvec(nr))
+!$acc enter data create (assimilate_data_mu_power_rvec, &
+!$acc                    assimilate_data_mu_limit_rvec)
+          do concurrent (i=1:nr)
+            assimilate_data_mu_power_rvec(i) = assimilate_data_mu_power
+            assimilate_data_mu_limit_rvec(i) = assimilate_data_mu_limit
+          enddo
+        end if
+!
+      end if
+!
+end subroutine
+!#######################################################################
 subroutine tesseral_spherical_harmonic (m, l, pvec, tvec, np, nt, Y)
 !
 !-----------------------------------------------------------------------
@@ -1991,9 +2117,8 @@ subroutine output_step
 !-----------------------------------------------------------------------
 !
       t1 = MPI_Wtime()
-! RMC: This should eventually be for all ranks
-!      to write out all realizations.
-      if (iamp0) call output_histories
+!
+      call output_histories
 !
       call output_map
 !
@@ -2015,6 +2140,8 @@ subroutine output_histories
       use input_parameters
       use output
       use globals
+      use mpidefs
+      use mesh
       use sts
 !
 !-----------------------------------------------------------------------
@@ -2023,42 +2150,92 @@ subroutine output_histories
 !
 !-----------------------------------------------------------------------
 !
-      integer :: ierr
+      integer :: ierr, n_real, istart, iend
       integer*8 :: niters
       character(*), parameter :: FMT='(i10,a,6(1pe23.15e3,a),i15)'
       character(*), parameter :: FMT2='(i10,a,15(1pe23.15e3,a))'
+      character(23) :: io_hist_num_real_filename
+      character(23) :: io_hist_sol_real_filename
 !
 !-----------------------------------------------------------------------
 !
-      call FFOPEN (IO_HIST_NUM,io_hist_num_filename,'a',ierr)
+      if (n_realizations == 1) then
+        call ffopen (IO_HIST_NUM,io_hist_num_filename,'a',ierr)
 !
-      if (diffusion_num_method.eq.1) then
-        niters = n_stable_diffusion_cycles
+        if (diffusion_num_method.eq.1) then
+          niters = n_stable_diffusion_cycles
+        else
+          niters = sts_s
+        end if
+!
+        write(IO_HIST_NUM,FMT) ntime,' ',                               &
+                               time,' ',dtime_global,' ',               &
+                               dtmax_flow,' ',dtime_advection_used, ' ',&
+                               dtime_diffusion_euler,' ',               &
+                               dtime_diffusion_used, ' ',niters
+!
+        close(IO_HIST_NUM)
+!
+        call ffopen (IO_HIST_SOL,io_hist_sol_filename,'a',ierr)
+
+        write(IO_HIST_SOL,FMT2) ntime,' ',time,' ',                     &
+                                h_minbr,' ',h_maxbr,' ',h_minabsbr,' ', &
+                                h_fluxp,    ' ', h_fluxm,    ' ',       &
+                                h_fluxp_pn, ' ', h_fluxm_pn, ' ',       &
+                                h_fluxp_ps, ' ', h_fluxm_ps, ' ',       &
+                                h_area_pn,  ' ', h_area_ps,  ' ',       &
+                                h_eq_dipole,' ', h_ax_dipole,' ',       &
+                                h_valerr
+!
+        close(IO_HIST_SOL)
       else
-        niters = sts_s
+!
+        if (nr*nproc .lt. n_realizations) then
+          istart = 1 + n_realizations - (nproc-iprocsh)*nr
+          iend = n_realizations - (nproc-iprocsh-1)*nr
+        else
+          istart = 1 + iprocsh*nr
+          iend = istart + (nr - 1)
+        end if
+!
+        do n_real=istart,iend
+!
+          write(io_hist_num_real_filename,'(A13,I6.6,A4)') &
+              "history_num_r", n_real, ".dat"
+
+          write(io_hist_sol_real_filename,'(A13,I6.6,A4)') &
+              "history_sol_r", n_real, ".dat"
+!
+          call ffopen (IO_HIST_NUM,io_hist_num_real_filename,'a',ierr)
+!
+          if (diffusion_num_method.eq.1) then
+            niters = n_stable_diffusion_cycles
+          else
+            niters = sts_s
+          end if
+!
+          write(IO_HIST_NUM,FMT) ntime,' ',                               &
+                                 time,' ',dtime_global,' ',               &
+                                 dtmax_flow,' ',dtime_advection_used, ' ',&
+                                 dtime_diffusion_euler,' ',               &
+                                 dtime_diffusion_used, ' ',niters
+!
+          close(IO_HIST_NUM)
+!
+          call ffopen (IO_HIST_SOL,io_hist_sol_real_filename,'a',ierr)
+!
+          write(IO_HIST_SOL,FMT2) ntime,' ',time,' ',                     &
+                                  h_minbr,' ',h_maxbr,' ',h_minabsbr,' ', &
+                                  h_fluxp,    ' ', h_fluxm,    ' ',       &
+                                  h_fluxp_pn, ' ', h_fluxm_pn, ' ',       &
+                                  h_fluxp_ps, ' ', h_fluxm_ps, ' ',       &
+                                  h_area_pn,  ' ', h_area_ps,  ' ',       &
+                                  h_eq_dipole,' ', h_ax_dipole,' ',       &
+                                  h_valerr
+!
+          close(IO_HIST_SOL)
+        enddo
       end if
-!
-      write(IO_HIST_NUM,FMT) ntime,' ',                               &
-                             time,' ',dtime_global,' ',               &
-                             dtmax_flow,' ',dtime_advection_used, ' ',&
-                             dtime_diffusion_euler,' ',               &
-                             dtime_diffusion_used, ' ',niters
-!
-      close(IO_HIST_NUM)
-!
-      call FFOPEN (IO_HIST_SOL,io_hist_sol_filename,'a',ierr)
-
-      write(IO_HIST_SOL,FMT2) ntime,' ',time,' ',                     &
-                              h_minbr,' ',h_maxbr,' ',h_minabsbr,' ', &
-                              h_fluxp,    ' ', h_fluxm,    ' ',       &
-                              h_fluxp_pn, ' ', h_fluxm_pn, ' ',       &
-                              h_fluxp_ps, ' ', h_fluxm_ps, ' ',       &
-                              h_area_pn,  ' ', h_area_ps,  ' ',       &
-                              h_eq_dipole,' ', h_ax_dipole,' ',       &
-                              h_valerr
-
-!
-      close(IO_HIST_SOL)
 !
 end subroutine
 !#######################################################################
@@ -2129,7 +2306,7 @@ subroutine output_map
 !
 ! ****** Record output in output text file log.
 !
-        call FFOPEN (IO_MAP_OUT_LIST, &
+        call ffopen (IO_MAP_OUT_LIST, &
                      io_output_map_list_filename,'a',ierr)
 !
         write (IO_MAP_OUT_LIST,FMT) idx_out,'   ',time,'    ', &
@@ -2148,8 +2325,8 @@ subroutine output_map
 !
 ! ****** Record output in output text file log.
 !
-          call FFOPEN (IO_MAP_OUT_LIST, &
-                     io_output_flows_list_filename,'a',ierr)
+          call ffopen (IO_MAP_OUT_LIST, &
+                       io_output_flows_list_filename,'a',ierr)
 !
           write (IO_MAP_OUT_LIST,FMT) idx_out,'   ',time,'    ', &
                                       trim(base_filename)
@@ -3197,7 +3374,7 @@ subroutine load_data_assimilation
       use output
       use data_assimilation
       use constants
-      use mesh, ONLY : t,ntm
+      use mesh, ONLY : t,ntm,nr
 !
 !-----------------------------------------------------------------------
 !
@@ -3281,17 +3458,19 @@ subroutine load_data_assimilation
 !
 ! ****** Find indices of latitude limit in main mesh tvec.
 !
-        do j=1,ntm
-          if (t(j).ge.assimilate_data_lat_limit*d2r .and.           &
-                          assimilate_data_lat_limit_tidx0.eq.-1) then
-            assimilate_data_lat_limit_tidx0 = j
-          end if
-        enddo
-        do j=ntm,1,-1
-          if (t(j).le.(pi-assimilate_data_lat_limit*d2r) .and.      &
-                          assimilate_data_lat_limit_tidx1.eq.-1) then
-            assimilate_data_lat_limit_tidx1 = j
-          end if
+        do concurrent(i=1:nr)
+          do j=1,ntm
+            if (t(j).ge.assimilate_data_lat_limit_rvec(i)*d2r .and.           &
+                            assimilate_data_lat_limit_tidx0_rvec(i).eq.-1) then
+              assimilate_data_lat_limit_tidx0_rvec(i) = j
+            end if
+          enddo
+          do j=ntm,1,-1
+            if (t(j).le.(pi-assimilate_data_lat_limit_rvec(i)*d2r) .and.      &
+                            assimilate_data_lat_limit_tidx1_rvec(i).eq.-1) then
+              assimilate_data_lat_limit_tidx1_rvec(i) = j
+            end if
+          enddo
         enddo
 !
       end if
@@ -3420,8 +3599,8 @@ subroutine update_field
         if (assimilate_data_custom_from_mu) then
 
           do concurrent(i=1:nr,k=1:ntm_nd,l=1:npm_nd)
-            if (new_data(l,k,3,i).gt.assimilate_data_mu_limit) then
-              new_data(l,k,2,i) = new_data(l,k,3,i)**assimilate_data_mu_power
+            if (new_data(l,k,3,i).gt.assimilate_data_mu_limit_rvec(i)) then
+              new_data(l,k,2,i) = new_data(l,k,3,i)**assimilate_data_mu_power_rvec(i)
             else
               new_data(l,k,2,i) = zero
             end if
@@ -3432,11 +3611,13 @@ subroutine update_field
 ! ****** Apply a latitude limiter on data (solid cutoff for now).
 !
         if (assimilate_data_lat_limit.gt.0) then
-          do concurrent(i=1:nr,k=1:assimilate_data_lat_limit_tidx0,l=1:npm_nd)
-            new_data(l,k,2,i) = zero
-          enddo
-          do concurrent(i=1:nr,k=assimilate_data_lat_limit_tidx1:ntm_nd,l=1:npm_nd)
-            new_data(l,k,2,i) = zero
+          do concurrent(i=1:nr,l=1:npm_nd)
+            do concurrent(k=1:assimilate_data_lat_limit_tidx0_rvec(i))
+              new_data(l,k,2,i) = zero
+            enddo
+            do concurrent(k=assimilate_data_lat_limit_tidx1_rvec(i):ntm_nd)
+              new_data(l,k,2,i) = zero
+            enddo
           enddo
         end if
 !
@@ -3717,7 +3898,12 @@ subroutine diffusion_step (dtime_local)
       use mpidefs
       use input_parameters
       use timing
-      use globals, ONLY : dtime_diffusion_used,time
+      use constants
+      use globals
+      use mesh
+      use fields, ONLY : f,diffusion_coef
+      use sts, ONLY : need_to_load_sts
+      use matrix_storage
 !
 !-----------------------------------------------------------------------
 !
@@ -3726,9 +3912,14 @@ subroutine diffusion_step (dtime_local)
 !-----------------------------------------------------------------------
 !
       real(r_typ), INTENT(IN) :: dtime_local
-      real(r_typ) :: dtime_local2,t1
-      real(r_typ) :: time_stepped,timetmp
-      integer :: i
+      real(r_typ) :: dtime_local2,t1,dtflux0,dtflux
+      real(r_typ) :: time_stepped,timetmp,gersh_rad
+      real(r_typ) :: dtime_diffusion_euler_local,dtime_diffusion_cn_local
+      real(r_typ) :: dtime_diffusion_cn_min
+      integer, parameter :: diffusion_subcycles_max = 30
+      real(r_typ), dimension(:,:,:), allocatable :: Af
+      real(r_typ) :: eps = 1.0e-16
+      integer :: i,j,k,ierr,d
 !
 !-----------------------------------------------------------------------
 !
@@ -3736,8 +3927,87 @@ subroutine diffusion_step (dtime_local)
 !
       time_stepped = 0.
 !
+! ****** Set flux timestep to auto set number of subcycles.
+! ****** This is based on the current solution, so
+! ****** has to be done every step, requiring the
+! ****** STS params to be updated as well.
+!
+      if (auto_sc) then
+!
+        allocate (Af(ntm,npm,nr))
+!$acc enter data create(Af)
+        call diffusion_operator_cd (f,Af)
+!
+        dtflux = dtime_local
+        dtflux0 = dtime_local
+        print*, '--> dtime_local: ',dtime_local
+        print*, '--> dtflux initial: ',dtflux
+        print*, '--> dtime_diffusion_euler: ',dtime_diffusion_euler
+        dtime_diffusion_cn_local = dtime_local
+        dtime_diffusion_cn_min = HUGE(1._r_typ)
+!
+!$omp parallel do   collapse(3) default(shared)  reduction(min:dtflux)
+!$acc parallel loop collapse(3) default(present) reduction(min:dtflux) &
+!$acc                                            reduction(min:dtime_diffusion_cn_min)
+        do i=1,nr
+          do k=2,npm-1
+            do j=2,ntm-1
+              gersh_rad = 0.
+!$acc loop seq
+              do d=1,5
+                gersh_rad = gersh_rad + abs(coef(j,k,d,i))
+              enddo
+!
+              dtime_diffusion_euler_local = two/gersh_rad
+!
+              dtime_diffusion_cn_local = 0.9_r_typ*SQRT(dtime_diffusion_euler_local)/ &
+                                                   SQRT(MAX(diffusion_coef(j,k,i),  &
+                                                            diffusion_coef(j+1,k,i),&
+                                                            diffusion_coef(j,k+1,i),&
+                                                            diffusion_coef(j+1,k+1,i)))
+!
+              dtime_diffusion_cn_min = MIN(dtime_diffusion_cn_local,dtime_diffusion_cn_min)
+!
+              if (Af(j,k,i)*f(j,k,i) .lt. 0.) then
+                dtflux0 = -0.9_r_typ*f(j,k,i)/Af(j,k,i)
+              end if
+!
+              if (dtflux0 .gt. dtime_diffusion_cn_local) then
+                dtflux = MIN(dtflux,dtflux0)
+              end if
+!
+            enddo
+          enddo
+        enddo
+!$omp end parallel do
+!
+        print*, '--> dtflux: ',dtflux
+        print*, '--> dtime_diffusion_cn: ',dtime_diffusion_cn_min
+!
+        wtime_tmp_mpi = MPI_Wtime()
+        call MPI_Allreduce (MPI_IN_PLACE,dtflux,1,ntype_real,  &
+                            MPI_MIN,MPI_COMM_WORLD,ierr)
+        wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+!
+! ****** Compute required subcycles and set subcycle dt.
+!
+        diffusion_subcycles = CEILING(dtime_local/dtflux)
+        print*, '--> diffusion_subcycles_calc: ',diffusion_subcycles
+        if (diffusion_subcycles .gt. diffusion_subcycles_max) then
+          diffusion_subcycles = diffusion_subcycles_max
+        end if
+        print*, '--> diffusion_subcycles_used: ',diffusion_subcycles
+!
+        need_to_load_sts = .true.
+!
+      end if
+!
+! ****** Set sub-cycled time step.
+!
       dtime_local2 = dtime_local/diffusion_subcycles
       dtime_diffusion_used = dtime_local2
+!
+! ****** Start diffusion subcycles.
 !
       do i=1,diffusion_subcycles
 !
@@ -3755,18 +4025,22 @@ subroutine diffusion_step (dtime_local)
         time_stepped = time_stepped + dtime_local2
 !
         if (verbose.and.MOD(i,1).eq.0) then
-          write(*,*) '-->Diff subcycle #',i,' of ', &
+          write(*,*) '--> Diff subcycle #',i,' of ', &
                      diffusion_subcycles, 'time:',time_stepped
           flush(OUTPUT_UNIT)
           timetmp = time
           time = time + time_stepped
           call analysis_step
-! RMC: Eventaully, all ranks should write out histories for all realizations.
-          if (iamp0) call output_histories
+          call output_histories
           time = timetmp
         end if
 !
       enddo
+!
+      if (auto_sc) then
+!$acc exit data delete(Af)
+        deallocate (Af)
+      end if
 !
       wtime_flux_transport_diffusion = wtime_flux_transport_diffusion &
                                        + (MPI_Wtime() - t1)
@@ -4048,7 +4322,8 @@ subroutine load_diffusion_matrix
                             + diffusion_coef(j+1,k+1,i)) &
                        *dph_i(k+1)*dp_i(k)*st_i(j)*st_i(j)
 !
-        coef(j,k,3,i)=-(coef(j,k,1,i)+coef(j,k,2,i)+coef(j,k,4,i)+coef(j,k,5,i))
+        coef(j,k,3,i)=-(coef(j,k,1,i) + coef(j,k,2,i) &
+                       +coef(j,k,4,i) + coef(j,k,5,i))
 !
       enddo
 !
@@ -5499,7 +5774,7 @@ subroutine load_diffusion
 !
 !-----------------------------------------------------------------------
 !
-! ****** Allocate memory for the total diffusion coef on the half mesh.
+! ****** Allocate memory for the total diffusion coef on the half-half mesh.
 !
       allocate (diffusion_coef(nt,np,nr))
 !
@@ -5632,6 +5907,15 @@ subroutine load_diffusion
 ! ****** Get stable explicit Euler timestep.
 !
       call get_dtime_diffusion_euler (dtime_diffusion_euler)
+!
+! ****** Set flag to auto-compute number of subcycles
+! ****** using flux time-step.
+!
+      if (diffusion_subcycles.eq.0) then
+        auto_sc=.true.
+      else
+        auto_sc=.false.
+      end if
 !
 end subroutine
 !#######################################################################
@@ -7148,30 +7432,62 @@ subroutine read_input_file
 !
       namelist /hipft_input_parameters/                                &
                verbose,                                                &
-               initial_map_filename,output_map_root_filename,          &
+               initial_map_filename,                                   &
+               output_map_root_filename,                               &
+               time_start,                                             &
                output_map_directory,n_realizations,validation_run,     &
                output_map_idx_cadence,output_map_time_cadence,         &
                output_map_2d,restart_run,restart_file,time_end,        &
+               output_flows_directory,                                 &
                dt_max_increase_fac,dt_min,dt_max,strang_splitting,     &
-               pole_flux_lat_limit,advance_flow,flow_vp_rigid_omega,   &
-               flow_rigid_omega,flow_vt_const,flow_attenuate,          &
-               flow_dr_model,flow_mf_model,use_flow_from_files,        &
-               flow_list_filename,flow_root_dir,flow_num_method,       &
-               upwind,advance_diffusion,diffusion_coef_constant,       &
-               diffusion_coef_filename,diffusion_coef_grid,            &
-               diffusion_coef_factor,diffusion_num_method,             &
-               diffusion_subcycles,advance_source,source_filename,     &
-               assimilate_data,assimilate_data_map_list_filename,      &
-               assimilate_data_map_root_dir,time_start,output_flows,   &
-               output_flows_directory,flow_attenuate_value,            &
+               pole_flux_lat_limit,                                    &
+               advance_flow,                                           &
+               flow_vp_rigid_omega,                                    &
+               flow_rigid_omega,                                       &
+               flow_vt_const,                                          &
+               flow_attenuate,                                         &
+               flow_attenuate_value,                                   &
+               flow_dr_model,                                          &
+               flow_mf_model,                                          &
+               use_flow_from_files,                                    &
+               flow_list_filename,                                     &
+               flow_root_dir,                                          &
+               flow_num_method,                                        &
+               output_flows,                                           &
+               upwind,                                                 &
+               advance_source,                                         &
+               source_filename,                                        &
+               advance_diffusion,                                      &
+               diffusion_coef_filename,                                &
+               diffusion_coef_grid,                                    &
+               diffusion_coef_factor,                                  &
+               diffusion_num_method,                                   &
+               diffusion_subcycles,                                    &
+               diffusion_coef_constant,                                &
+               assimilate_data,                                        &
+               assimilate_data_map_list_filename,                      &
+               assimilate_data_map_root_dir,                           &
                assimilate_data_custom_from_mu,                         &
-               assimilate_data_mu_power,assimilate_data_lat_limit,     &
+               assimilate_data_mu_power,                               &
+               assimilate_data_lat_limit,                              &
                assimilate_data_mu_limit
 !
 !-----------------------------------------------------------------------
 !
       integer :: ierr
-      character(80) :: infile='hipft.dat'
+      character(len=:), allocatable :: infile
+      integer arglen
+!
+!-----------------------------------------------------------------------
+!
+      if (command_argument_count().ge.1) then
+        call GET_COMMAND_ARGUMENT(1,length=arglen)
+        allocate(character(arglen) :: infile)
+        call GET_COMMAND_ARGUMENT(1,value=infile)
+      else
+        allocate(character(9):: infile)
+        infile='hipft.dat'
+      end if
 !
 !-----------------------------------------------------------------------
 !
@@ -7217,7 +7533,7 @@ subroutine read_input_file
 ! ****** Write the NAMELIST parameter values to file.
 !
       if (iamp0) then
-        call ffopen (8,'hipft_run_parameters_used.dat','w',ierr)
+        call ffopen (8,'hipft_run_parameters_used.dat','rw',ierr)
         write (8,hipft_input_parameters)
         close (8)
       end if
@@ -7411,6 +7727,15 @@ end subroutine
 ! 03/24/2023, RC, Version 0.18.1:
 !   - Cleaned up some code.
 !   - Added writing of namelist parameters to file.
+!
+! 04/21/2023, MS+RC, Version 0.19.0:
+!   - Added ability to specify input file as command line argument.
+!     If none specified, the default "hipft.dat" is assumed.
+!   - Added functionality to output history files for each realization.
+!   - Added auto diffusion subcycle feature based on flux-time-step.
+!     To use, set diffusion_subcycles=0.
+!   - Added internals to use different data assimilation parameters
+!     over realizations.  This requires further development.
 !
 !-----------------------------------------------------------------------
 !
