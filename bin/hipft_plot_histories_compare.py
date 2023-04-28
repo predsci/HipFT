@@ -6,13 +6,27 @@ import matplotlib.pyplot as plt
 from astropy.time import Time
 import os
 
+# - Add initial UT time and options on how to format x-axis times.
+
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
   parser.add_argument('-name',help='Name of the set of plots',type=str, default='')
   parser.add_argument('-valrun', help='Plot validation run errors', dest='valrun', action='store_true', default=False, required=False)
   parser.add_argument('-samples',help='Number of points to plot, this helps with larger files (default:all)',default=-1)
-  parser.add_argument('-dirs',help='A comma separated list of paths to the directory each run is located in', type=str, required=True)
+  parser.add_argument('-histfiles',help='A comma separated list of history files', type=str, required=True)
   parser.add_argument('-labels',help='A comma separated list of labels to display in the plots for each run (default:"Run 1","Run 2",...)',type=str,default=' ')
+
+#  parser.add_argument('-utstart',
+#    help='Start Date in UT: YYYYMMDDTHH:MM:SS',
+#    dest='utstart',
+#    default='00000000T00:00:00',
+#    required=False)
+
+#  parser.add_argument('-xaxunitstr',
+#    help='Plot axis units',
+#    dest='xaxunitstr',
+#    default='days',
+#    required=False)
 
   return parser.parse_args()
 
@@ -23,8 +37,10 @@ def argParsing():
 
 def run(args):
 
+  flux_fac=1e-21
+
   arg_dict = vars(args)
-  dir_list = arg_dict['dirs'].split(',')
+  hist_list = arg_dict['histfiles'].split(',')
   label_list = arg_dict['labels'].split(',')
 
   # Build the default list of labels based on the number runs the user entered
@@ -32,12 +48,12 @@ def run(args):
   if arg_dict['labels'] == ' ':
       label_list = []
       def_label = 'Run '
-      for i,dire in enumerate(dir_list):
+      for i,dire in enumerate(hist_list):
           label_list.append(def_label+str(i+1))
 
   LABEL_LEN = len(label_list)
   # Validate the list arguments:
-  if not len(dir_list) == LABEL_LEN:
+  if not len(hist_list) == LABEL_LEN:
       print('ERROR: Number of runs, dirs, and labels must match. Use -h for more information.')
       sys.exit()
 
@@ -63,8 +79,8 @@ def run(args):
   pole_n_avg_field_list=[]
   pole_s_avg_field_list=[]
 
-  for i,dire in enumerate(dir_list):
-    h_file_name = "{}/{}".format(dire,'history_sol.dat')
+  for i,dire in enumerate(hist_list):
+    h_file_name = dire
     hist_sol_full = pd.read_table(h_file_name,header=0,sep='\s+')
 
     samples = int(args.samples)
@@ -129,7 +145,6 @@ def run(args):
       title = title + '{} ({})'.format(label_list[-1], COLOR_NAMES[LABEL_LEN - 1])
       title2 = title2 + '{} ({})'.format(label_list[-1], MARKERS_NAMES[LABEL_LEN - 1])
 
-  flux_fac=1e-21
 
   ###### PLOTTING ######
 
@@ -222,6 +237,7 @@ def run(args):
   plt.close('all')
 #
 # ****** Total signed flux.
+#
   fig = plt.figure(num=None, figsize=(14, 7), dpi=dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
   fig.suptitle(title, fontsize=20)
@@ -417,3 +433,4 @@ def main():
 
 if __name__ == '__main__':
   main()
+

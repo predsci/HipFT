@@ -6,13 +6,7 @@ import matplotlib.pyplot as plt
 from astropy.time import Time
 import os
 
-#history_sol.dat
-#history_num.dat
-
-# - Add skip option
-# - Add initial UT time and plot by year, MM/YY, etc.
-# - Add ability to compare two runs...
-
+# - Add initial UT time and options on how to format x-axis times.
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -24,17 +18,23 @@ def argParsing():
     default=False,
     required=False)
 
-  parser.add_argument('-utstart',
-    help='Start Date in UT: YYYYMMDDTHH:MM:SS',
-    dest='utstart',
-    default='00000000T00:00:00',
+  parser.add_argument('-file',
+    help='File location',
+    dest='file',
+    default='history_sol_r00001.out',
     required=False)
 
-  parser.add_argument('-xaxunitstr',
-    help='Plot axis units',
-    dest='xaxunitstr',
-    default='days',
-    required=False)
+#  parser.add_argument('-utstart',
+#    help='Start Date in UT: YYYYMMDDTHH:MM:SS',
+#    dest='utstart',
+#    default='00000000T00:00:00',
+#    required=False)
+
+#  parser.add_argument('-xaxunitstr',
+#    help='Plot axis units',
+#    dest='xaxunitstr',
+#    default='days',
+#    required=False)
 
   return parser.parse_args()
 
@@ -46,13 +46,10 @@ def argParsing():
 def run(args):
 
   flux_fac=1e-21
-  area_fac=1e-21
 
   # Read the data:
-  hist_sol = pd.read_table('history_sol.dat',header=0,sep='\s+')
-  hist_num = pd.read_table('history_num.dat',header=0,sep='\s+')
+  hist_sol = pd.read_table(args.file,header=0,sep='\s+')
 
-  step  = np.array(hist_sol['STEP'])
   time  = np.array(hist_sol['TIME'])
   fluxp = np.array(hist_sol['FLUX_POSITIVE'])
   fluxm = np.array(hist_sol['FLUX_NEGATIVE'])
@@ -73,12 +70,6 @@ def run(args):
   brabsmin = np.array(hist_sol['BR_ABS_MIN'])
   valerr = np.array(hist_sol['VALIDATION_ERR_CVRMSD'])
 
-  dtime = np.array(hist_num['DTIME'])
-  dtime_advection_stable = np.array(hist_num['DTIME_ADV_STB'])
-  dtime_advection_used = np.array(hist_num['DTIME_ADV_USED'])
-  dtime_diffusion_stable = np.array(hist_num['DTIME_DIFF_STB'])
-  dtime_diffusion_used = np.array(hist_num['DTIME_DIFF_USED'])
-  n_sts_iter_per_step = np.array(hist_num['N_DIFF_PER_STEP'])
 
   #Compute derived quantities:
   flux_tot_un = np.abs(fluxp) + np.abs(fluxm)
@@ -91,10 +82,10 @@ def run(args):
 
   ###### PLOTTING ######
 
-  width = 0.6
+  width = 0.3
   fsize = 25
-  mksz = 15
-  lsz = 3.0
+  mksz = 6
+  lsz = 1.0
   fc = 'w'
   tc = 'k'
   dpi=120

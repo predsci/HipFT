@@ -2,6 +2,8 @@
 !
   verbose = .false.
 !
+! ****** Initial map and output options ********
+!
   initial_map_filename = 'br_input.h5'
   output_map_root_filename = 'hipft_brmap'
   output_map_directory = 'output_maps'
@@ -29,7 +31,7 @@
 !
 ! ****** Time ********
 !
-  time_end = one
+  time_end = 1.0
 !
 ! ****** Timestep ********
 !
@@ -120,6 +122,7 @@
 ! ****** Set number of diffusion subcycles per flow step.
 ! ****** For diffusion-only runs with RKG2(RKL2), set to ~30(60).
 ! ****** For flow+diffusion runs, this usually can be ~1.
+! ****** Set this to 0 to "auto" set the subcycles (experimental).
 !
   diffusion_subcycles = 30
 !

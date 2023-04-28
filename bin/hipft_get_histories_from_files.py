@@ -5,10 +5,14 @@ import argparse
 import h5py
 import glob
 
+# Need to add start time and cadence options so time is real.
+# ntime is set to the file index here, but is not plotted in the history plotter.
+# A new option in the history plotter to use it instead of time should be made.
+
 
 def argParsing():
 
-    parser = argparse.ArgumentParser(description='HIPFT_analysis_step')
+    parser = argparse.ArgumentParser(description='HIPFT: Generate history files from sequence of hipft-formatted output maps.')
 
     parser.add_argument('-folder',
                         help='Name of folder.',
@@ -43,8 +47,8 @@ def argParsing():
 def run(args):
 
     #Calculation constants
-    io_hist_sol_filename = 'history_sol.dat'
-    pole_flux_lat_limit = 30.
+    io_hist_sol_filename = 'history_sol_r000001.out' # Make this an input parameter!
+    pole_flux_lat_limit = 30.  # Make this an input parameter!
     d2r = 0.017453292519943295
     pi = 3.1415926535897932
     pi_i = 0.3183098861837907
@@ -113,7 +117,8 @@ def run(args):
             
             first_file = False
         else:
-            time+=1
+            time = time + 1
+
         ntime = int(filename[-9:-3])-1
 
         #Get max and min metrics

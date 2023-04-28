@@ -4,6 +4,8 @@
 # It requires the PSI tool "plot2d", and ffmpeg with the H.264 codec.
 # It assumes a linux machine.
 
+# This needs to add an option to plot a realization, plot all realizations, or default to 2d mode?
+
 DATADIR=$1
 OUTFILE=$2
 
