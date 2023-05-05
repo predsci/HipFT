@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.19.0'
-      character(*), parameter :: cdate='04/28/2023'
+      character(*), parameter :: cvers='0.20.0'
+      character(*), parameter :: cdate='05/04/2023'
 !
 end module
 !#######################################################################
@@ -221,9 +221,9 @@ module globals
 !
       logical :: flow_needs_updating = .true.
 !
-! ****** Flow attenuation term.
+! ****** Flow attenuation.
 !
-      real(r_typ) :: flow_attenuate_value_i = 0.002_r_typ
+      real(r_typ), dimension(:), allocatable :: flow_attenuate_value_i_rvec
 !
 ! ****** Flag to indicate the time step needs updating.
 !
@@ -236,6 +236,10 @@ module globals
 ! ****** Flag to indicate the diffusion time step needs updating.
 !
       logical :: timestep_diff_needs_updating = .true.
+!
+! ****** Diffusion constant coef array.
+!
+      real(r_typ), dimension(:), allocatable :: diffusion_coef_constant_rvec
 !
 ! ****** History analysis variables.
 !
@@ -529,6 +533,8 @@ module input_parameters
 !
       logical    :: flow_attenuate = .false.
       real(r_typ) :: flow_attenuate_value = 500.0_r_typ
+      real(r_typ), dimension(MAX_REALIZATIONS) :: flow_attenuate_values
+      data (flow_attenuate_values(i),i=1,MAX_REALIZATIONS) /MAX_REALIZATIONS*-1./
 !
 ! ****** Built-in differential roation and meridianal flow models.
 ! ****** For each, setting "1" sets the model/params used in the AFT code.
@@ -562,6 +568,9 @@ module input_parameters
       logical :: advance_diffusion = .false.
 !
       real(r_typ)    :: diffusion_coef_constant = zero
+      real(r_typ), dimension(MAX_REALIZATIONS) :: diffusion_coef_constants
+      data (diffusion_coef_constants(i),i=1,MAX_REALIZATIONS) /MAX_REALIZATIONS*-1./
+!
       character(512) :: diffusion_coef_filename = ' '
       logical        :: diffusion_coef_grid = .false.
       real(r_typ)    :: diffusion_coef_factor = diff_km2_s_to_rs2_hr
@@ -599,16 +608,23 @@ module input_parameters
 !
       real(r_typ) :: assimilate_data_start_time_jd = zero
 !
-      logical :: assimilate_data_custom_from_mu = .false.
-      real(r_typ) :: assimilate_data_mu_power = 4.0_r_typ
-      real(r_typ) :: assimilate_data_mu_limit = 0.1_r_typ
+! ****** Latitute limit.
 !
-! ****** Global latitute limit array across all realizations.
-!
+      real(r_typ) :: assimilate_data_lat_limit = 0.
       real(r_typ), dimension(MAX_REALIZATIONS) :: assimilate_data_lat_limits
       data (assimilate_data_lat_limits(i),i=1,MAX_REALIZATIONS) /MAX_REALIZATIONS*-1./
 !
-      real(r_typ) :: assimilate_data_lat_limit = 0.
+      logical :: assimilate_data_custom_from_mu = .false.
+!
+! ****** Mu parameters.
+!
+      real(r_typ) :: assimilate_data_mu_power = 4.0_r_typ
+      real(r_typ), dimension(MAX_REALIZATIONS) :: assimilate_data_mu_powers
+      data (assimilate_data_mu_powers(i),i=1,MAX_REALIZATIONS) /MAX_REALIZATIONS*-1./
+!
+      real(r_typ) :: assimilate_data_mu_limit = 0.1_r_typ
+      real(r_typ), dimension(MAX_REALIZATIONS) :: assimilate_data_mu_limits
+      data (assimilate_data_mu_limits(i),i=1,MAX_REALIZATIONS) /MAX_REALIZATIONS*-1./
 !
       integer, parameter :: IO_DATA_IN = 8
 !
@@ -1762,8 +1778,14 @@ subroutine load_initial_condition
 ! ****** Caculate final analytic solution and output.
 !
         allocate (fout(n1,n2,n3))
-        fout(:,:,:) = fval_u0(:,:,:)*exp(-42.0_r_typ*diffusion_coef_constant* &
-                                     diffusion_coef_factor*time_end)
+        do k=1,n3
+          do j=1,n2
+            do i=1,n1
+              fout(i,j,k) = fval_u0(i,j,k)*exp(-42.0_r_typ*diffusion_coef_constant_rvec(k)* &
+                                           diffusion_coef_factor*time_end)
+            enddo
+          enddo
+        enddo
 !
         if (output_map_2d.and.n_realizations.eq.1) then
           call write_2d_file(                                           &
@@ -1977,7 +1999,27 @@ subroutine set_realization_parameters
       allocate (h_eq_dipole(nr))
       allocate (h_ax_dipole(nr))
 !
-! ****** St up data assimilation arrays.
+! ****** Set up diffusion arrays.
+!
+      if (advance_diffusion) then
+        allocate (diffusion_coef_constant_rvec(nr))
+        do i=1,nr
+          diffusion_coef_constant_rvec(i) =                           &
+            diffusion_coef_constants(local_realization_indices(i))
+        enddo
+      end if
+!
+! ****** Set up flow attenuation arrays.
+!
+      if (flow_attenuate) then
+        allocate (flow_attenuate_value_i_rvec(nr))
+        do i=1,nr
+          flow_attenuate_value_i_rvec(i) =                            &
+            one/flow_attenuate_values(local_realization_indices(i))
+        enddo
+      end if
+!
+! ****** Set up data assimilation arrays.
 !
       if (assimilate_data) then
 !
@@ -1985,19 +2027,14 @@ subroutine set_realization_parameters
         allocate (assimilate_data_lat_limit_tidx0_rvec(nr))
         allocate (assimilate_data_lat_limit_tidx1_rvec(nr))
 !
-!$acc enter data create (assimilate_data_lat_limit_rvec,       &
-!$acc                    assimilate_data_lat_limit_tidx0_rvec, &
+!$acc enter data create (assimilate_data_lat_limit_tidx0_rvec, &
 !$acc                    assimilate_data_lat_limit_tidx1_rvec)
 !
-! [RMC]: This is not needed!  All ranks have the full array,
-!        so this can be a simple loop using nr_disp_arr!
-!
-        call MPI_Scatterv (assimilate_data_lat_limits,                 &
-                           nr_arr, nr_disp_arr, ntype_real,            &
-                           assimilate_data_lat_limit_rvec,             &
-                           nr, ntype_real, 0, MPI_COMM_WORLD, ierr)
-!
-!$acc update device (assimilate_data_lat_limit_rvec)
+        do i=1,nr
+          assimilate_data_lat_limit_rvec(i) =                         &
+            assimilate_data_lat_limits(local_realization_indices(i))
+        enddo
+!$acc enter data copyin(assimilate_data_lat_limit_rvec)
 !
         do concurrent (i=1:nr)
           assimilate_data_lat_limit_tidx0_rvec(i) = -1
@@ -2005,20 +2042,41 @@ subroutine set_realization_parameters
         enddo
 !
         if (assimilate_data_custom_from_mu) then
+!
           allocate (assimilate_data_mu_power_rvec(nr))
           allocate (assimilate_data_mu_limit_rvec(nr))
-!$acc enter data create (assimilate_data_mu_power_rvec, &
-!$acc                    assimilate_data_mu_limit_rvec)
-          do concurrent (i=1:nr)
-            assimilate_data_mu_power_rvec(i) = assimilate_data_mu_power
-            assimilate_data_mu_limit_rvec(i) = assimilate_data_mu_limit
+!
+          do i=1,nr
+            assimilate_data_mu_power_rvec(i) =                        &
+              assimilate_data_mu_powers(local_realization_indices(i))
+            assimilate_data_mu_limit_rvec(i) =                        &
+              assimilate_data_mu_limits(local_realization_indices(i))
           enddo
+!$acc enter data copyin (assimilate_data_mu_power_rvec, &
+!$acc                    assimilate_data_mu_limit_rvec)
+!
         end if
 !
         if (iamp0) then
           call ffopen (IO_TMP,'hipft_realization_parameters.out','a',ierr)
-          write (IO_TMP,FMTR) 'assimilate_data_lat_limits ', &
-                  (assimilate_data_lat_limits(i),' ',i=1,n_realizations)
+          if (assimilate_data) then
+            write (IO_TMP,FMTR)   'assimilate_data_lat_limits     ', &
+                    (assimilate_data_lat_limits(i),' ',i=1,n_realizations)
+            if (assimilate_data_custom_from_mu) then
+              write (IO_TMP,FMTR) 'assimilate_data_mu_powers      ', &
+                      (assimilate_data_mu_powers(i),' ',i=1,n_realizations)
+              write (IO_TMP,FMTR) 'assimilate_data_mu_limits      ', &
+                      (assimilate_data_mu_limits(i),' ',i=1,n_realizations)
+            end if
+          end if
+          if (flow_attenuate) then
+            write (IO_TMP,FMTR)   'flow_attenuate_values          ', &
+                    (flow_attenuate_values(i),' ',i=1,n_realizations)
+          end if
+          if (advance_diffusion) then
+            write (IO_TMP,FMTR)   'diffusion_coef_constants       ', &
+                    (diffusion_coef_constants(i),' ',i=1,n_realizations)
+          end if
           close (IO_TMP)
         end if
 !
@@ -2196,8 +2254,6 @@ subroutine set_unchanging_quantities
       if (advance_diffusion) call load_diffusion
 !
       if (advance_flow.and.flow_num_method.eq.3) call load_weno
-!
-      if (flow_attenuate) flow_attenuate_value_i = one/flow_attenuate_value
 !
 end subroutine
 !#######################################################################
@@ -2566,7 +2622,7 @@ subroutine write_flows (idx_str)
       if (n_realizations.eq.1) then
         call write_2d_file (full_filename,npm1,nt,fout(:,:,1),pout,th,ierr)
       else
-        write(*,*) 'SORRY!  Multiple realization flow output not yet implmented!'
+        write(*,*) 'SORRY!  Multiple realization flow output not yet implemented!'
 !        wtime_tmp_mpi = MPI_Wtime()
 !        lsbuf=(npm-1)*ntm*nr
 !        allocate (tfout(lsbuf))
@@ -2735,8 +2791,9 @@ subroutine analysis_step
 !$acc enter data create (fval)
 !
         do concurrent (k=1:nr,j=1:ntm,i=1:npm-1)
-          fval(i,j,k) = fval_u0(i,j,k)*exp(-42.0_r_typ*diffusion_coef_constant* &
-                                       diffusion_coef_factor*time)
+          fval(i,j,k) = fval_u0(i,j,k)*                                  &
+                        exp(-42.0_r_typ*diffusion_coef_constant_rvec(k)* &
+                            diffusion_coef_factor*time)
         enddo
 !
       end if
@@ -2959,7 +3016,7 @@ subroutine update_flow
 !-----------------------------------------------------------------------
 !
       integer :: j,k,i
-      real(r_typ) :: br_avg
+      real(r_typ) :: br_abs_max
       real(r_typ) :: vrigid_pole
       real(r_typ), dimension(:), allocatable :: vt_npole,vt_spole
       real(r_typ), dimension(:), allocatable :: vp_npole,vp_spole
@@ -3063,17 +3120,16 @@ subroutine update_flow
 !
         if (flow_attenuate) then
 !
-! ****** Need to interpolate f at half-mesh point.
+! ****** Use MAX(|Br|) of two staggered Br cells around velocity vectors.
 !
           do concurrent (i=1:nr,k=2:npm-1,j=2:nt-1)
-! RMC: Should maybe use max(|br|) here instead of avg?
-            br_avg = half*(f(j-1,k,i) + f(j,k,i))
-            vt(j,k,i) = vt(j,k,i)*(one - tanh(abs(br_avg)*flow_attenuate_value_i))
+            br_abs_max = MAX(ABS(f(j-1,k,i)),ABS(f(j,k,i)))
+            vt(j,k,i) = vt(j,k,i)*(one - tanh(br_abs_max*flow_attenuate_value_i_rvec(i)))
           enddo
 !
           do concurrent (i=1:nr,k=2:np-1,j=2:ntm-1)
-            br_avg = half*(f(j,k-1,i) + f(j,k,i))
-            vp(j,k,i) = vp(j,k,i)*(one - tanh(abs(br_avg)*flow_attenuate_value_i))
+            br_abs_max = MAX(ABS(f(j,k-1,i)),ABS(f(j,k,i)))
+            vp(j,k,i) = vp(j,k,i)*(one - tanh(br_abs_max*flow_attenuate_value_i_rvec(i)))
           enddo
 !
 ! ****** Set poles. Maybe not needed since field is weak at pole?
@@ -3122,10 +3178,10 @@ subroutine update_flow
 ! ****** Attenuate pole value to set new v bc (f has same val for all pole pts, use 1)
 !
           do concurrent (i=1:nr)
-            vt_npole(i) = vt_npole(i)*twopi_i*(one - tanh(f(1,1,i)*flow_attenuate_value_i))
-            vt_spole(i) = vt_spole(i)*twopi_i*(one - tanh(f(ntm,1,i)*flow_attenuate_value_i))
-            vp_npole(i) = vp_npole(i)*twopi_i*(one - tanh(f(1,1,i)*flow_attenuate_value_i))
-            vp_spole(i) = vp_spole(i)*twopi_i*(one - tanh(f(ntm,1,i)*flow_attenuate_value_i))
+            vt_npole(i) = vt_npole(i)*twopi_i*(one - tanh(f(1,1,i)*flow_attenuate_value_i_rvec(i)))
+            vt_spole(i) = vt_spole(i)*twopi_i*(one - tanh(f(ntm,1,i)*flow_attenuate_value_i_rvec(i)))
+            vp_npole(i) = vp_npole(i)*twopi_i*(one - tanh(f(1,1,i)*flow_attenuate_value_i_rvec(i)))
+            vp_spole(i) = vp_spole(i)*twopi_i*(one - tanh(f(ntm,1,i)*flow_attenuate_value_i_rvec(i)))
           enddo
 !
 ! ****** Now set the pole:
@@ -5851,7 +5907,13 @@ subroutine load_diffusion
 !
 ! ****** Set the initial diffusion coef to the uniform value.
 !
-      diffusion_coef(:,:,:) = diffusion_coef_constant
+      do i=1,nr
+        do k=1,np
+          do j=1,nt
+            diffusion_coef(j,k,i) = diffusion_coef_constant_rvec(i)
+          enddo
+        enddo
+      enddo
 !
 ! ****** Read the diffusion coef file, if it was specified.
 !
@@ -7518,6 +7580,7 @@ subroutine read_input_file
                flow_vt_const,                                          &
                flow_attenuate,                                         &
                flow_attenuate_value,                                   &
+               flow_attenuate_values,                                  &
                flow_dr_model,                                          &
                flow_mf_model,                                          &
                use_flow_from_files,                                    &
@@ -7535,14 +7598,17 @@ subroutine read_input_file
                diffusion_num_method,                                   &
                diffusion_subcycles,                                    &
                diffusion_coef_constant,                                &
+               diffusion_coef_constants,                               &
                assimilate_data,                                        &
                assimilate_data_map_list_filename,                      &
                assimilate_data_map_root_dir,                           &
                assimilate_data_custom_from_mu,                         &
                assimilate_data_mu_power,                               &
+               assimilate_data_mu_powers,                              &
                assimilate_data_lat_limit,                              &
                assimilate_data_lat_limits,                             &
-               assimilate_data_mu_limit
+               assimilate_data_mu_limit,                               &
+               assimilate_data_mu_limits
 !
 !-----------------------------------------------------------------------
 !
@@ -7626,6 +7692,18 @@ subroutine read_input_file
       do i=1,MAX_REALIZATIONS
         if (assimilate_data_lat_limits(i) .lt. 0.) then
           assimilate_data_lat_limits(i) = assimilate_data_lat_limit
+        end if
+        if (assimilate_data_mu_limits(i) .lt. 0.) then
+          assimilate_data_mu_limits(i) = assimilate_data_mu_limit
+        end if
+        if (assimilate_data_mu_powers(i) .lt. 0.) then
+          assimilate_data_mu_powers(i) = assimilate_data_mu_power
+        end if
+        if (flow_attenuate_values(i) .lt. 0.) then
+          flow_attenuate_values(i) = flow_attenuate_value
+        end if
+        if (diffusion_coef_constants(i) .lt. 0.) then
+          diffusion_coef_constants(i) = diffusion_coef_constant
         end if
       enddo
 !
@@ -7836,6 +7914,18 @@ end subroutine
 !   - Added new output text file that contains realization parameters.
 !   - Added experimental auto diffusion subcycle feature based on
 !     flux-time-step.  To use, set diffusion_subcycles=0.
+!
+! 05/04/2023, RC, Version 0.20.0:
+!   - Small update to avoid an MPI call.
+!   - Added ability to set multiple values of data assimilation
+!     mu power and mu limit over realizations
+!     (assimilate_data_mu_limits, assimilate_data_mu_powers).
+!   - Added ability to set multiple values of flow attenuation
+!     over realizations (flow_attenuate_values).
+!   - Added ability to set multiple values of diffusion coef constant
+!     over realizations (diffusion_coef_constants).
+!   - Changed flow attenuation to use maximum of absolute values of Br
+!     around staggered velocity component.
 !
 !-----------------------------------------------------------------------
 !

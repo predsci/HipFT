@@ -21,7 +21,7 @@ def argParsing():
   parser.add_argument('-file',
     help='File location',
     dest='file',
-    default='history_sol_r00001.out',
+    default='hipft_history_sol_r000001.out',
     required=False)
 
 #  parser.add_argument('-utstart',
