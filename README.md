@@ -32,10 +32,10 @@ To use the python post processing scripts, add the `HIPFT` `bin` folder to your 
   
 ### Launching the Code ###  
     
-To run `HIPFT`, set the desired run parameters in a `hipft.dat` file, then copy or link the `hipft` executable into the same directory as the input file and run the command:  
+To run `HIPFT`, set the desired run parameters in a file (e.g. `hipft.in`), then copy or link the `hipft` executable into the same directory as the input file and run the command:  
   `<MPI_LAUNCHER> -np <N> ./hipft <input_file>`  
 where `<N>` is the total number of MPI ranks to use and `<MPI_LAUNCHER>` is your MPI run command (e.g. `mpiexec`,`mpirun`, `ibrun`, `srun`, etc).  
-For example:  `mpiexec -np 4 ./hipft`  
+For example:  `mpiexec -np 4 ./hipft hipft.in`  
   
 The MPI ranks split up the number of realizations to work on.  
 Therefore, if you are only running 1 realization, you should use 1 MPI rank.  
