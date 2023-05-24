@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.20.0'
-      character(*), parameter :: cdate='05/04/2023'
+      character(*), parameter :: cvers='0.21.0'
+      character(*), parameter :: cdate='05/24/2023'
 !
 end module
 !#######################################################################
@@ -949,9 +949,10 @@ subroutine set_local_number_of_realizations
       enddo
 !
       if (iamp0 .and. verbose) then
-        write(*,*) 'Realization distribution:'
-        write(*,*) 'nr_arr',nr_arr(:)
-        write(*,*) 'nr_disp_arr',nr_disp_arr(:)
+        write(*,*) ' '
+        write(*,*) 'SET_REALIZATIONS: Realization distribution:'
+        write(*,*) 'SET_REALIZATIONS: nr_arr',nr_arr(:)
+        write(*,*) 'SET_REALIZATIONS: nr_disp_arr',nr_disp_arr(:)
       end if
 !
 ! ****** Now set local number of realizations.
@@ -1073,6 +1074,10 @@ subroutine setup
 !
       call read_input_file
 !
+! ****** Initialize realization arrays.
+!
+      call set_realization_parameters
+!
 ! ****** Set up output directory.
 !
       if (output_map_idx_cadence.gt.0 .or.     &
@@ -1103,10 +1108,6 @@ subroutine setup
         call load_initial_condition
         time = time_start
       end if
-!
-! ****** Initialize realization arrays.
-!
-      call set_realization_parameters
 !
 ! ****** Allocate flow arrays.
 !
@@ -1685,7 +1686,6 @@ subroutine load_initial_condition
       call MPI_Bcast (s2,n2,ntype_real,0,MPI_COMM_WORLD,ierr)
       wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
 !
-      call set_local_number_of_realizations
       n3 = nr
       allocate (f_local(n1,n2,n3))
 
@@ -1722,11 +1722,11 @@ subroutine load_initial_condition
 !$acc update self (f_local,fval_u0)
 !$acc exit data delete (f_local,fval_u0,f_tmp2d,s1,s2)
 !
-        fval_u0(:,:,:) = 1000.0_r_typ*(f_local(:,:,:) +                  &
+        fval_u0(:,:,:) = 1000.0_r_typ*(f_local(:,:,:) +               &
                               sqrt(14.0_r_typ/11.0_r_typ)*fval_u0(:,:,:))
 !
         if (output_map_2d.and.n_realizations.eq.1) then
-          call write_2d_file(                                        &
+          call write_2d_file(                                         &
                (trim(output_map_root_filename)//'_initial_0.h5')      &
                          ,n1,n2,fval_u0(:,:,1),s1,s2,ierr)
         else
@@ -1771,7 +1771,7 @@ subroutine load_initial_condition
             deallocate (s3t)
           end if
 !
-        endif
+        end if
 !
         f_local(:,:,:) = fval_u0(:,:,:)
 !
@@ -1964,6 +1964,10 @@ subroutine set_realization_parameters
       character(*), parameter :: FMTR='(a40,2000(1pe15.8,a))'
 !
 !-----------------------------------------------------------------------
+!
+! ****** Get local number of realizations and set index arrays.
+!
+      call set_local_number_of_realizations
 !
 ! ****** Set up realization meta data file if multiple realizations being used.
 !
@@ -3324,13 +3328,19 @@ subroutine add_flow_from_files
 ! ****** Update position in map list and next map time.
 !
        current_flow_input_idx = current_flow_input_idx + 1
-       if (verbose) print*, 'FlowIdx:',current_flow_input_idx
+       if (verbose) then
+         write(*,*) ' '
+         write(*,*), 'ADD_FLOW_FROM_FILE: Current Flow Index',current_flow_input_idx
+       end if
 !
 ! ****** If there are no more flow files to load, loop back to
 !        the beginning (use index 2 to avoid dt=0 situation).
 !
        if (current_flow_input_idx .gt. num_flows_in_list) then
-         if (verbose) print*, 'Resetting FlowIdx to 2'
+         if (verbose) then
+           write(*,*) ' '
+           write(*,*), 'ADD_FLOW_FROM_FILE: Resetting Flow Index to 2'
+         end if
          current_flow_input_idx = 2
          flow_times_actual_ut_jd(:) = flow_times_actual_ut_jd0(:) &
                                       + time/twentyfour
@@ -3456,12 +3466,11 @@ subroutine load_flow_from_files
 !
       if (verbose) then
         write (*,*)
-        write (*,*) 'FLOWS FROM FILE'
-        write (*,*) 'Number of flows in flow list: ', &
+        write (*,*) 'FLOWS FROM FILE: Number of flows in flow list: ', &
                      num_flows_in_list
-        write (*,*) 'File name of first theta flow file:     ', &
+        write (*,*) 'FLOWS FROM FILE: File name of first theta flow file:     ', &
                      trim(flow_files_rel_path_t(1))
-        write (*,*) 'File name of first phi flow file:     ', &
+        write (*,*) 'FLOWS FROM FILE: File name of first phi flow file:     ', &
                      trim(flow_files_rel_path_p(1))
       end if
 !
@@ -3570,16 +3579,15 @@ subroutine load_data_assimilation
 !
       if (verbose) then
         write (*,*)
-        write (*,*) 'DATA ASSIMILATION LOADED'
-        write (*,*) 'Number of maps in map list: ', &
+        write (*,*) 'LOAD_DATA_ASSIMILATION: Number of maps in map list: ', &
                      num_maps_in_list
-        write (*,*) 'Start date:     ', &
+        write (*,*) 'LOAD_DATA_ASSIMILATION: Start date:     ', &
                      trim(map_times_actual_ut_str(1))
-        write (*,*) 'End   date:     ', &
+        write (*,*) 'LOAD_DATA_ASSIMILATION: End   date:     ', &
                      trim(map_times_actual_ut_str(num_maps_in_list))
-        write (*,*) 'File name of first map:     ', &
+        write (*,*) 'LOAD_DATA_ASSIMILATION: File name of first map:     ', &
                      trim(map_files_rel_path(1))
-        write (*,*) 'File name of first used map:     ', &
+        write (*,*) 'LOAD_DATA_ASSIMILATION: File name of first used map:     ', &
                      trim(map_files_rel_path(i))
       end if
 !
@@ -3678,8 +3686,11 @@ subroutine update_field
 ! ****** If it is time to load new data, read it from file.
 !
       if (time .ge. time_of_next_input_map) then
-        if (verbose) write(*,*) 'UPDATE_FIELD: Loading field IDX ',current_map_input_idx
-        if (verbose) write(*,*) 'UPDATE_FIELD: Time of next input0: ',time_of_next_input_map
+        if (verbose) then
+          write(*,*)
+          write(*,*) 'UPDATE_FIELD: Loading field index ',current_map_input_idx
+          write(*,*) 'UPDATE_FIELD: Time of next input map: ',time_of_next_input_map
+        end if
 !
         if (iamp0) then
           mapfile = TRIM(assimilate_data_map_root_dir)//"/"&
@@ -3770,7 +3781,10 @@ subroutine update_field
            - map_time_initial_hr
         end if
 
-        if (verbose) write(*,*) 'UPDATE_FIELD: Time of next input1: ',time_of_next_input_map
+        if (verbose) then
+          write(*,*) 'UPDATE_FIELD: Time of next input map: ', &
+                      time_of_next_input_map
+        end if
 !
       end if
 !
@@ -3810,12 +3824,15 @@ subroutine update_timestep
 ! ****** Save previous timestep.
 !
         dtime_old = dtime_global
-        if (verbose) write(*,*) 'UPDATE_TIMESTEP:  dtime_old=',dtime_old
+        if (verbose) then
+          write(*,*)
+          write(*,*) 'UPDATE_TIMESTEP: dtime_old=',dtime_old
+        end if
 !
 ! ****** Default timestep is one giant step for remaining time.
 !
         dtime_global = time_end - time
-        if (verbose) write(*,*) 'UPDATE_TIMESTEP:  dtime_endrun=',dtime_global
+        if (verbose) write(*,*) 'UPDATE_TIMESTEP: dtime_endrun=',dtime_global
         dtime_reason = 'endrun'
         time_step_changed = .true.
 !
@@ -3825,12 +3842,12 @@ subroutine update_timestep
         if (advance_flow.and.timestep_flow_needs_updating) then
           call get_flow_dtmax (dtmax_flow)
           timestep_flow_needs_updating = .false.
-          if (verbose) write(*,*) 'UPDATE_TIMESTEP:  dtime_flow=',dtmax_flow
+          if (verbose) write(*,*) 'UPDATE_TIMESTEP: dtime_flow=',dtmax_flow
         end if
         if (dtmax_flow .lt. dtime_global) then
           dtime_global = dtmax_flow
           dtime_reason = 'flowcfl'
-          if (verbose) write(*,*) 'UPDATE_TIMESTEP:  dtime_flow=',dtime_global
+          if (verbose) write(*,*) 'UPDATE_TIMESTEP: dtime_flow=',dtime_global
         end if
 !
 ! ****** Timestep increase limit.
@@ -3838,13 +3855,13 @@ subroutine update_timestep
         dt_mxup = huge(one)
         if (dt_max_increase_fac.gt.0.and.dtime_old.gt.0.) then
           dt_mxup = (one + dt_max_increase_fac)*dtime_old
-          if (verbose) write(*,*) 'UPDATE_TIMESTEP:  dtime_dtmxup=',dt_mxup
+          if (verbose) write(*,*) 'UPDATE_TIMESTEP: dtime_dtmxup=',dt_mxup
         end if
 !
         if (dt_mxup .lt. dtime_global) then
           dtime_global = dt_mxup
           dtime_reason = 'maxup'
-          if (verbose) write(*,*) 'UPDATE_TIMESTEP:  dtime_maxup=',dtime_global
+          if (verbose) write(*,*) 'UPDATE_TIMESTEP: dtime_maxup=',dtime_global
         end if
 !
 ! ****** Maximum allowed timestep.
@@ -3852,7 +3869,7 @@ subroutine update_timestep
         if (dt_max .lt. dtime_global) then
           dtime_global = dt_max
           dtime_reason = 'dtmax'
-          if (verbose) write(*,*) 'UPDATE_TIMESTEP:  dtime_dtmax=',dtime_global
+          if (verbose) write(*,*) 'UPDATE_TIMESTEP: dtime_dtmax=',dtime_global
         end if
 !
         if (dtime_global .lt. dt_min) then
@@ -4037,106 +4054,69 @@ subroutine diffusion_step (dtime_local)
 !-----------------------------------------------------------------------
 !
       real(r_typ), INTENT(IN) :: dtime_local
-      real(r_typ) :: dtime_local2,t1,dtflux0,dtflux
+      real(r_typ) :: dtime_local2,t1
       real(r_typ) :: time_stepped,timetmp,gersh_rad
-      real(r_typ) :: dtime_diffusion_euler_local,dtime_diffusion_cn_local
-      real(r_typ) :: dtime_diffusion_cn_min
-      integer, parameter :: diffusion_subcycles_max = 30
-      real(r_typ), dimension(:,:,:), allocatable :: Af
-      real(r_typ) :: eps = 1.0e-16
+      real(r_typ) :: dtime_diffusion_euler_local
+      integer, parameter :: diffusion_subcycles_max = 5000
       integer :: i,j,k,ierr,d
+      logical :: we_are_done = .false.
 !
 !-----------------------------------------------------------------------
 !
       t1 = MPI_Wtime()
 !
-      time_stepped = 0.
-!
-! ****** Set flux timestep to auto set number of subcycles.
-! ****** This is based on the current solution, so
-! ****** has to be done every step, requiring the
-! ****** STS params to be updated as well.
-!
-      if (auto_sc) then
-!
-        allocate (Af(ntm,npm,nr))
-!$acc enter data create(Af)
-        call diffusion_operator_cd (f,Af)
-!
-        dtflux = dtime_local
-        dtflux0 = dtime_local
-        print*, '--> dtime_local: ',dtime_local
-        print*, '--> dtflux initial: ',dtflux
-        print*, '--> dtime_diffusion_euler: ',dtime_diffusion_euler
-        dtime_diffusion_cn_local = dtime_local
-        dtime_diffusion_cn_min = HUGE(1._r_typ)
-!
-!$omp parallel do   collapse(3) default(shared)  reduction(min:dtflux)
-!$acc parallel loop collapse(3) default(present) reduction(min:dtflux) &
-!$acc                                            reduction(min:dtime_diffusion_cn_min)
-        do i=1,nr
-          do k=2,npm-1
-            do j=2,ntm-1
-              gersh_rad = 0.
-!$acc loop seq
-              do d=1,5
-                gersh_rad = gersh_rad + abs(coef(j,k,d,i))
-              enddo
-!
-              dtime_diffusion_euler_local = two/gersh_rad
-!
-              dtime_diffusion_cn_local = 0.9_r_typ*SQRT(dtime_diffusion_euler_local)/ &
-                                                   SQRT(MAX(diffusion_coef(j,k,i),  &
-                                                            diffusion_coef(j+1,k,i),&
-                                                            diffusion_coef(j,k+1,i),&
-                                                            diffusion_coef(j+1,k+1,i)))
-!
-!              dtime_diffusion_cn_local = SQRT(dtime_diffusion_euler_local)
-!
-              dtime_diffusion_cn_min = MIN(dtime_diffusion_cn_local,dtime_diffusion_cn_min)
-!
-              if (Af(j,k,i)*f(j,k,i) .lt. 0.) then
-                dtflux0 = -0.9_r_typ*f(j,k,i)/Af(j,k,i)
-              end if
-!
-              if (dtflux0 .gt. dtime_diffusion_cn_local) then
-                dtflux = MIN(dtflux,dtflux0)
-              end if
-!
-            enddo
-          enddo
-        enddo
-!$omp end parallel do
-!
-        print*, '--> dtflux: ',dtflux
-        print*, '--> dtime_diffusion_cn: ',dtime_diffusion_cn_min
-!
-        wtime_tmp_mpi = MPI_Wtime()
-        call MPI_Allreduce (MPI_IN_PLACE,dtflux,1,ntype_real,  &
-                            MPI_MIN,MPI_COMM_WORLD,ierr)
-        wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
-!
-! ****** Compute required subcycles and set subcycle dt.
-!
-        diffusion_subcycles = CEILING(dtime_local/dtflux)
-        print*, '--> diffusion_subcycles_calc: ',diffusion_subcycles
-        if (diffusion_subcycles .gt. diffusion_subcycles_max) then
-          diffusion_subcycles = diffusion_subcycles_max
-        end if
-        print*, '--> diffusion_subcycles_used: ',diffusion_subcycles
-!
-        need_to_load_sts = .true.
-!
-      end if
-!
-! ****** Set sub-cycled time step.
-!
-      dtime_local2 = dtime_local/diffusion_subcycles
-      dtime_diffusion_used = dtime_local2
-!
 ! ****** Start diffusion subcycles.
 !
-      do i=1,diffusion_subcycles
+      i = 1
+      time_stepped = 0.
+      we_are_done = .false.
+!
+! ****** Set the initial subcycle time step.
+!
+      if (auto_sc) then
+        dtime_local2 = dtime_local
+      else
+        dtime_local2 = dtime_local/REAL(diffusion_subcycles,r_typ)
+      end if
+!
+! ****** Start the subcycle loop.
+!
+      do
+!
+! ****** Compute and set the flux time-step if requested.
+!
+        if (auto_sc) then
+          call get_dtime_diffusion_flux (dtime_local2)
+          need_to_load_sts = .true.
+        end if
+!
+! ****** Lower time step to reach the end time exactly if
+! ****** it would otherwise go too far.
+!
+        if (auto_sc .and. time_stepped + dtime_local2 .ge. dtime_local) then
+          dtime_local2 = dtime_local - time_stepped
+          need_to_load_sts = .true.
+          we_are_done = .true.
+        end if
+!
+! ****** Take one last big step if hitting max # cycles.
+! ****** Note: this is not the same effect of having that number from the start.
+!
+        if (auto_sc .and. i .eq. diffusion_subcycles_max-1) then
+          dtime_local2 = dtime_local - time_stepped
+          need_to_load_sts = .true.
+          we_are_done = .true.
+        end if
+!
+! ****** If using the flux time-step, compute the needed subcycles
+! ****** if we were to equal-step from this point to the end.
+! ****** This is a DIAGNOSTIC only!  This is not used!
+!
+        if (auto_sc .and. verbose) then
+          diffusion_subcycles = CEILING((dtime_local - time_stepped)/dtime_local2)
+        end if
+!
+! ****** Take the diffusion step.
 !
         if (diffusion_num_method.eq.1) then
 !
@@ -4149,25 +4129,34 @@ subroutine diffusion_step (dtime_local)
 !
         end if
 !
+! ****** Update the amount of the large time step that has been stepped.
+!
         time_stepped = time_stepped + dtime_local2
 !
-        if (verbose.and.MOD(i,1).eq.0) then
-          write(*,*) '--> Diff subcycle #',i,' of ', &
-                     diffusion_subcycles, 'time:',time_stepped
-          flush(OUTPUT_UNIT)
+        if (verbose) then
           timetmp = time
           time = time + time_stepped
           call analysis_step
           call output_histories
+          write(*,*) '--> Subcycle #',i,' SC: ',diffusion_subcycles, &
+                     ' dtcycle:',dtime_local2,' time_stepped: ',time_stepped
+          flush(OUTPUT_UNIT)
           time = timetmp
         end if
 !
-      enddo
+! ****** If we are using a set number of subcycles, check if done.
 !
-      if (auto_sc) then
-!$acc exit data delete(Af)
-        deallocate (Af)
-      end if
+        if (.not. auto_sc .and. i .eq. diffusion_subcycles) then
+          we_are_done = .true.
+        end if
+!
+! ****** Exit the loop if the full time step is complete.
+!
+        if (we_are_done) exit
+!
+        i = i + 1
+!
+      enddo
 !
       wtime_flux_transport_diffusion = wtime_flux_transport_diffusion &
                                        + (MPI_Wtime() - t1)
@@ -4520,6 +4509,87 @@ subroutine get_dtime_diffusion_euler (dtime_exp)
 !
 end subroutine
 !#######################################################################
+subroutine get_dtime_diffusion_flux (dtime_flux)
+!
+!-----------------------------------------------------------------------
+!
+! ****** Get the flux time step limit for diffusion.
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use mpidefs
+      use mesh
+      use constants
+      use timing
+      use fields, ONLY : f
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      real(r_typ), INTENT(INOUT) :: dtime_flux
+!
+!-----------------------------------------------------------------------
+!
+      integer :: i,j,k,ierr
+      real(r_typ) :: axabsmax
+      real(r_typ), dimension(:,:,:), allocatable :: Af
+      real(r_typ), parameter :: safe = 0.9_r_typ
+      real(r_typ), parameter :: max_fac = 1.1_r_typ
+!
+!-----------------------------------------------------------------------
+!
+! ****** Limit how much larger the timestep can be from the current one.
+!
+      dtime_flux = max_fac*dtime_flux
+!
+      allocate (Af(ntm,npm,nr))
+!$acc enter data create(Af)
+!
+      call diffusion_operator_cd (f,Af)
+!
+      axabsmax = -1.0
+!$omp parallel do   collapse(3) default(shared)  reduction(max:axabsmax)
+!$acc parallel loop collapse(3) default(present) reduction(max:axabsmax)
+      do i=1,nr
+        do k=2,npm-1
+          do j=2,ntm-1
+            axabsmax = MAX(ABS(Af(j,k,i)),axabsmax)
+          enddo
+        enddo
+      enddo
+!$omp end parallel do
+!
+      if (axabsmax.gt.zero) then
+!
+!$omp parallel do   collapse(3) default(shared)  reduction(min:dtime_flux)
+!$acc parallel loop collapse(3) default(present) reduction(min:dtime_flux) copyin(axabsmax)
+        do i=1,nr
+          do k=2,npm-1
+            do j=2,ntm-1
+              if (axabsmax .eq. ABS(Af(j,k,i))) then
+                dtime_flux = safe*(ABS(f(j,k,i)))/(ABS(Af(j,k,i)))
+              end if
+            enddo
+          enddo
+        enddo
+!$omp end parallel do
+!
+        wtime_tmp_mpi = MPI_Wtime()
+        call MPI_Allreduce (MPI_IN_PLACE,dtime_flux,1,ntype_real,  &
+                            MPI_MIN,MPI_COMM_WORLD,ierr)
+        wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+!
+      end if
+!
+!$acc exit data delete(Af)
+      deallocate (Af)
+!
+end subroutine
+!#######################################################################
 subroutine diffusion_step_sts_cd (dtime_local)
 !
 !-----------------------------------------------------------------------
@@ -4704,12 +4774,13 @@ subroutine load_sts_rkl2 (dtime_local)
 !$acc update device(sts_uj,sts_vj,sts_ubj,sts_gj)
 !
       if (verbose) then
-        write (*,*) '*** Diffusion: 2nd-order RKL2  ***'
-        write (*,*) 'Super-time-step used              = ',dtime_local
-        write (*,*) 'Euler time-step                   = ',dtime_diffusion_euler
-        write (*,*) 'Number of STS iterations needed   = ',sts_s
-        write (*,*) 'Number of Euler iterations needed = ',dtime_local/dtime_diffusion_euler
-        write (*,*) 'Potential max speedup of STS      = ', &
+        write (*,*) ' '
+        write (*,*) 'LOAD_STS:  *** Diffusion: 2nd-order RKL2  ***'
+        write (*,*) 'LOAD_STS:  Super-time-step used              = ',dtime_local
+        write (*,*) 'LOAD_STS:  Euler time-step                   = ',dtime_diffusion_euler
+        write (*,*) 'LOAD_STS:  Number of STS iterations needed   = ',sts_s
+        write (*,*) 'LOAD_STS:  Number of Euler iterations needed = ',dtime_local/dtime_diffusion_euler
+        write (*,*) 'LOAD_STS:  Potential max speedup of STS      = ', &
                           (dtime_local/dtime_diffusion_euler)/sts_s,'X'
       end if
 !
@@ -4818,12 +4889,13 @@ subroutine load_sts_rkg2 (dtime_local)
 !$acc update device(sts_uj,sts_vj,sts_ubj,sts_gj)
 !
       if (verbose) then
-        write (*,*) '*** Diffusion: 2nd-order RKG2  ***'
-        write (*,*) 'Super-time-step used              = ',dtime_local
-        write (*,*) 'Euler time-step                   = ',dtime_diffusion_euler
-        write (*,*) 'Number of STS iterations needed   = ',sts_s
-        write (*,*) 'Number of Euler iterations needed = ',dtime_local/dtime_diffusion_euler
-        write (*,*) 'Potential max speedup of STS      = ', &
+        write (*,*) ' '
+        write (*,*) 'LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***'
+        write (*,*) 'LOAD_STS:  Super-time-step used              = ',dtime_local
+        write (*,*) 'LOAD_STS:  Euler time-step                   = ',dtime_diffusion_euler
+        write (*,*) 'LOAD_STS:  Number of STS iterations needed   = ',sts_s
+        write (*,*) 'LOAD_STS:  Number of Euler iterations needed = ',dtime_local/dtime_diffusion_euler
+        write (*,*) 'LOAD_STS:  Potential max speedup of STS      = ', &
                           (dtime_local/dtime_diffusion_euler)/sts_s,'X'
       end if
 !
@@ -5993,10 +6065,10 @@ subroutine load_diffusion
 !
         if (verbose) then
           write (*,*)
-          write (*,*) 'Diffusion coef from file: ', &
+          write (*,*) 'LOAD_DIFFUSION: Diffusion coef from file: ', &
                                            trim(diffusion_coef_filename)
-          write (*,*) 'Minimum value = ',minval(diffusion_coef_file)
-          write (*,*) 'Maximum value = ',maxval(diffusion_coef_file)
+          write (*,*) 'LOAD_DIFFUSION: Minimum value = ',minval(diffusion_coef_file)
+          write (*,*) 'LOAD_DIFFUSION: Maximum value = ',maxval(diffusion_coef_file)
         end if
 !
 ! ****** Add the file diffusion coef to the uniform value.
@@ -6027,7 +6099,7 @@ subroutine load_diffusion
 
         if (verbose) then
           write (*,*)
-          write (*,*) 'Grid-based diffusion coef is activated.'
+          write (*,*) 'LOAD_DIFFUSION: Grid-based diffusion is activated.'
         end if
 
       end if
@@ -6045,9 +6117,9 @@ subroutine load_diffusion
 ! ****** using flux time-step.
 !
       if (diffusion_subcycles.eq.0) then
-        auto_sc=.true.
+        auto_sc = .true.
       else
-        auto_sc=.false.
+        auto_sc = .false.
       end if
 !
 end subroutine
@@ -6351,10 +6423,10 @@ subroutine load_source
 !
         if (verbose) then
           write (*,*)
-          write (*,*) 'A source term was read in from file: ', &
+          write (*,*) 'LOAD_SOURCE: A source term was read in from file: ', &
                      trim(source_filename)
-          write (*,*) 'Minimum value = ',minval(source(:,:,1))
-          write (*,*) 'Maximum value = ',maxval(source(:,:,1))
+          write (*,*) 'LOAD_SOURCE: Minimum value = ',minval(source(:,:,1))
+          write (*,*) 'LOAD_SOURCE: Maximum value = ',maxval(source(:,:,1))
         end if
 !
         deallocate (f_tmp2d)
@@ -7926,6 +7998,10 @@ end subroutine
 !     over realizations (diffusion_coef_constants).
 !   - Changed flow attenuation to use maximum of absolute values of Br
 !     around staggered velocity component.
+!
+! 05/24/2023, RC, Version 0.21.0:
+!   - Updated auto diffusion subcycle feature based on
+!     flux-time-step.  It should be more robust and faster.
 !
 !-----------------------------------------------------------------------
 !
