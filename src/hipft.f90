@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.21.0'
-      character(*), parameter :: cdate='05/24/2023'
+      character(*), parameter :: cvers='0.21.1'
+      character(*), parameter :: cdate='05/31/2023'
 !
 end module
 !#######################################################################
@@ -4055,11 +4055,10 @@ subroutine diffusion_step (dtime_local)
 !
       real(r_typ), INTENT(IN) :: dtime_local
       real(r_typ) :: dtime_local2,t1
-      real(r_typ) :: time_stepped,timetmp,gersh_rad
-      real(r_typ) :: dtime_diffusion_euler_local
-      integer, parameter :: diffusion_subcycles_max = 5000
-      integer :: i,j,k,ierr,d
-      logical :: we_are_done = .false.
+      real(r_typ) :: time_stepped,timetmp
+      integer, parameter :: diffusion_subcycles_max = 60
+      integer :: i,j,k,ierr
+      logical :: we_are_done
 !
 !-----------------------------------------------------------------------
 !
@@ -4537,21 +4536,18 @@ subroutine get_dtime_diffusion_flux (dtime_flux)
       integer :: i,j,k,ierr
       real(r_typ) :: axabsmax
       real(r_typ), dimension(:,:,:), allocatable :: Af
-      real(r_typ), parameter :: safe = 0.9_r_typ
-      real(r_typ), parameter :: max_fac = 1.1_r_typ
+      real(r_typ), parameter :: safe = 0.95_r_typ
 !
 !-----------------------------------------------------------------------
 !
-! ****** Limit how much larger the timestep can be from the current one.
-!
-      dtime_flux = max_fac*dtime_flux
+      dtime_flux = HUGE(one)
 !
       allocate (Af(ntm,npm,nr))
 !$acc enter data create(Af)
 !
       call diffusion_operator_cd (f,Af)
 !
-      axabsmax = -1.0
+      axabsmax = -one
 !$omp parallel do   collapse(3) default(shared)  reduction(max:axabsmax)
 !$acc parallel loop collapse(3) default(present) reduction(max:axabsmax)
       do i=1,nr
@@ -4563,6 +4559,13 @@ subroutine get_dtime_diffusion_flux (dtime_flux)
       enddo
 !$omp end parallel do
 !
+! ****** Get maximum over all MPI ranks.
+!
+      wtime_tmp_mpi = MPI_Wtime()
+      call MPI_Allreduce (MPI_IN_PLACE,axabsmax,1,ntype_real,  &
+                          MPI_MAX,MPI_COMM_WORLD,ierr)
+      wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+!
       if (axabsmax.gt.zero) then
 !
 !$omp parallel do   collapse(3) default(shared)  reduction(min:dtime_flux)
@@ -4571,7 +4574,7 @@ subroutine get_dtime_diffusion_flux (dtime_flux)
           do k=2,npm-1
             do j=2,ntm-1
               if (axabsmax .eq. ABS(Af(j,k,i))) then
-                dtime_flux = safe*(ABS(f(j,k,i)))/(ABS(Af(j,k,i)))
+                dtime_flux = safe*ABS(f(j,k,i))/ABS(Af(j,k,i))
               end if
             enddo
           enddo
@@ -8002,6 +8005,9 @@ end subroutine
 ! 05/24/2023, RC, Version 0.21.0:
 !   - Updated auto diffusion subcycle feature based on
 !     flux-time-step.  It should be more robust and faster.
+!
+! 05/31/2023, RC, Version 0.21.1:
+!   - BUG FIX for automatic diffusion subcycle feature.
 !
 !-----------------------------------------------------------------------
 !
