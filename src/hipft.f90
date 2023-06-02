@@ -2338,6 +2338,8 @@ subroutine output_histories
         if (time .ge. time_start+idx_hist*output_history_time_cadence) then
           output_current_history = .true.
         end if
+      else
+        output_current_history = .true.
       end if
 !
       if (output_current_history) then
@@ -2823,6 +2825,8 @@ subroutine analysis_step
         if (time .ge. time_start+idx_hist*output_history_time_cadence) then
           output_current_history = .true.
         end if
+      else
+        output_current_history = .true.
       end if
 !
       if (output_current_history) then
