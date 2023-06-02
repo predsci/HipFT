@@ -207,7 +207,6 @@ module globals
 !
       real(r_typ) :: dtime_diffusion_euler = 0.
       integer*8 :: n_stable_diffusion_cycles = 1
-      real(r_typ) :: dtime_diffusion_used = 0.
       logical :: auto_sc=.false.
 !
 ! ****** Explicit Euler advection stable time-step.
@@ -1489,14 +1488,13 @@ subroutine create_and_open_output_log_files
 !
         call ffopen (IO_HIST_NUM,io_hist_num_filename,'rw',ierr)
 !
-        write (IO_HIST_NUM,'(a10,a,8(a22,a))') &
+        write (IO_HIST_NUM,'(a10,a,7(a22,a))') &
         'STEP',' ',&
         'TIME',' ',&
         'DTIME',' ',&
         'DTIME_ADV_STB',' ',&
         'DTIME_ADV_USED',' ',&
         'DTIME_DIFF_STB',' ',&
-        'DTIME_DIFF_USED',' ',&
         'N_DIFF_PER_STEP',' ',&
         'N_DIFF_CYCLES',' '
 !
@@ -2329,7 +2327,7 @@ subroutine output_histories
 !
       integer :: ierr, i
       integer*8 :: niters
-      character(*), parameter :: FMT='(i10,a,6(1pe23.15e3,a),i15,a,i15)'
+      character(*), parameter :: FMT='(i10,a,5(1pe23.15e3,a),i15,a,i15)'
       character(*), parameter :: FMT2='(i10,a,15(1pe23.15e3,a))'
 !
 !-----------------------------------------------------------------------
@@ -2365,8 +2363,7 @@ subroutine output_histories
           write(IO_HIST_NUM,FMT) ntime,' ',                               &
                                  time,' ',dtime_global,' ',               &
                                  dtmax_flow,' ',dtime_advection_used, ' ',&
-                                 dtime_diffusion_euler,' ',               &
-                                 dtime_diffusion_used, ' ',niters, ' ',   &
+                                 dtime_diffusion_euler, ' ',niters, ' ',  &
                                  diffusion_subcycles
 !
           close(IO_HIST_NUM)
@@ -3888,16 +3885,18 @@ subroutine update_timestep
 !
 ! ****** Flow CFL time step limit.
 !
-        dtmax_flow = huge(one)
-        if (advance_flow.and.timestep_flow_needs_updating) then
-          call get_flow_dtmax (dtmax_flow)
-          timestep_flow_needs_updating = .false.
-          if (verbose) write(*,*) 'UPDATE_TIMESTEP: dtime_flow=',dtmax_flow
-        end if
-        if (dtmax_flow .lt. dtime_global) then
-          dtime_global = dtmax_flow
-          dtime_reason = 'flowcfl'
-          if (verbose) write(*,*) 'UPDATE_TIMESTEP: dtime_flow=',dtime_global
+        if (advance_flow) then
+          dtmax_flow = huge(one)
+          if (timestep_flow_needs_updating) then
+            call get_flow_dtmax (dtmax_flow)
+            timestep_flow_needs_updating = .false.
+            if (verbose) write(*,*) 'UPDATE_TIMESTEP: dtime_flow=',dtmax_flow
+          end if
+          if (dtmax_flow .lt. dtime_global) then
+            dtime_global = dtmax_flow
+            dtime_reason = 'flowcfl'
+            if (verbose) write(*,*) 'UPDATE_TIMESTEP: dtime_flow=',dtime_global
+          end if
         end if
 !
 ! ****** Timestep increase limit.
