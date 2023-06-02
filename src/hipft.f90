@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.21.1'
-      character(*), parameter :: cdate='05/31/2023'
+      character(*), parameter :: cvers='0.22.0'
+      character(*), parameter :: cdate='06/02/2023'
 !
 end module
 !#######################################################################
@@ -149,10 +149,12 @@ module output
 !-----------------------------------------------------------------------
 !
       logical :: output_current_map = .false.
+      logical :: output_current_history = .false.
 !
 ! ****** File sequence number.
 !
       integer*8 :: idx_out = 0
+      integer*8 :: idx_hist = 0
 !
       integer, parameter :: IO_HIST_NUM = 20
       integer, parameter :: IO_HIST_SOL = 21
@@ -480,6 +482,10 @@ module input_parameters
       real(r_typ)    :: output_map_time_cadence = zero
       logical        :: output_map_2d = .true.
       logical        :: output_flows = .false.
+!
+! ****** Output history cadence ********
+!
+      real(r_typ)    :: output_history_time_cadence = zero
 !
 ! ****** Restarts ********
 !
@@ -1483,7 +1489,7 @@ subroutine create_and_open_output_log_files
 !
         call ffopen (IO_HIST_NUM,io_hist_num_filename,'rw',ierr)
 !
-        write (IO_HIST_NUM,'(a10,a,6(a22,a),a15)') &
+        write (IO_HIST_NUM,'(a10,a,8(a22,a))') &
         'STEP',' ',&
         'TIME',' ',&
         'DTIME',' ',&
@@ -1491,7 +1497,8 @@ subroutine create_and_open_output_log_files
         'DTIME_ADV_USED',' ',&
         'DTIME_DIFF_STB',' ',&
         'DTIME_DIFF_USED',' ',&
-        'N_DIFF_PER_STEP'
+        'N_DIFF_PER_STEP',' ',&
+        'N_DIFF_CYCLES',' '
 !
         close(IO_HIST_NUM)
 !
@@ -1513,7 +1520,7 @@ subroutine create_and_open_output_log_files
         'SPOLE_AREA',' ',&
         'EQ_DIPOLE',' ',&
         'AX_DIPOLE',' ',&
-        'VALIDATION_ERR_CVRMSD'
+        'VALIDATION_ERR_CVRMSD',' '
 !
         close(IO_HIST_SOL)
 !
@@ -1672,8 +1679,8 @@ subroutine load_initial_condition
       endif
 !
       wtime_tmp_mpi = MPI_Wtime()
-      call MPI_Bcast (n1,1,ntype_real,0,MPI_COMM_WORLD,ierr)
-      call MPI_Bcast (n2,1,ntype_real,0,MPI_COMM_WORLD,ierr)
+      call MPI_Bcast (n1,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+      call MPI_Bcast (n2,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
       wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
       if (.not.iamp0) then
         allocate (s1(n1))
@@ -2322,49 +2329,64 @@ subroutine output_histories
 !
       integer :: ierr, i
       integer*8 :: niters
-      character(*), parameter :: FMT='(i10,a,6(1pe23.15e3,a),i15)'
+      character(*), parameter :: FMT='(i10,a,6(1pe23.15e3,a),i15,a,i15)'
       character(*), parameter :: FMT2='(i10,a,15(1pe23.15e3,a))'
 !
 !-----------------------------------------------------------------------
 !
-      do i=1,nr
-!
-        write(io_hist_num_filename,'(A19,I6.6,A4)') &
-              "hipft_history_num_r", local_realization_indices(i), ".out"
-!
-        write(io_hist_sol_filename,'(A19,I6.6,A4)') &
-              "hipft_history_sol_r", local_realization_indices(i), ".out"
-!
-        call ffopen (IO_HIST_NUM,io_hist_num_filename,'a',ierr)
-!
-        if (diffusion_num_method.eq.1) then
-          niters = n_stable_diffusion_cycles
-        else
-          niters = sts_s
+      if (output_history_time_cadence .gt. 0.0) then
+        if (time .ge. time_start+idx_out*output_history_time_cadence) then
+          output_current_history = .true.
         end if
+      end if
 !
-        write(IO_HIST_NUM,FMT) ntime,' ',                               &
-                               time,' ',dtime_global,' ',               &
-                               dtmax_flow,' ',dtime_advection_used, ' ',&
-                               dtime_diffusion_euler,' ',               &
-                               dtime_diffusion_used, ' ',niters
+      if (output_current_history) then
 !
-        close(IO_HIST_NUM)
+        idx_hist = idx_hist + 1
+
+        do i=1,nr
 !
-        call ffopen (IO_HIST_SOL,io_hist_sol_filename,'a',ierr)
+          write(io_hist_num_filename,'(A19,I6.6,A4)') &
+                "hipft_history_num_r", local_realization_indices(i), ".out"
 !
-        write(IO_HIST_SOL,FMT2) ntime,' ',time,' ',                     &
-                                h_minbr(i),' ',h_maxbr(i),' ',h_minabsbr(i),' ', &
-                                h_fluxp(i),    ' ', h_fluxm(i),    ' ',       &
-                                h_fluxp_pn(i), ' ', h_fluxm_pn(i), ' ',       &
-                                h_fluxp_ps(i), ' ', h_fluxm_ps(i), ' ',       &
-                                h_area_pn(i),  ' ', h_area_ps(i),  ' ',       &
-                                h_eq_dipole(i),' ', h_ax_dipole(i),' ',       &
-                                h_valerr(i)
+          write(io_hist_sol_filename,'(A19,I6.6,A4)') &
+                "hipft_history_sol_r", local_realization_indices(i), ".out"
 !
-        close(IO_HIST_SOL)
+          call ffopen (IO_HIST_NUM,io_hist_num_filename,'a',ierr)
 !
-      enddo
+          if (diffusion_num_method.eq.1) then
+            niters = n_stable_diffusion_cycles
+          else
+            niters = sts_s
+          end if
+!
+          write(IO_HIST_NUM,FMT) ntime,' ',                               &
+                                 time,' ',dtime_global,' ',               &
+                                 dtmax_flow,' ',dtime_advection_used, ' ',&
+                                 dtime_diffusion_euler,' ',               &
+                                 dtime_diffusion_used, ' ',niters, ' ',   &
+                                 diffusion_subcycles
+!
+          close(IO_HIST_NUM)
+!
+          call ffopen (IO_HIST_SOL,io_hist_sol_filename,'a',ierr)
+!
+          write(IO_HIST_SOL,FMT2) ntime,' ',time,' ',                     &
+                                  h_minbr(i),' ',h_maxbr(i),' ',h_minabsbr(i),' ', &
+                                  h_fluxp(i),    ' ', h_fluxm(i),    ' ',       &
+                                  h_fluxp_pn(i), ' ', h_fluxm_pn(i), ' ',       &
+                                  h_fluxp_ps(i), ' ', h_fluxm_ps(i), ' ',       &
+                                  h_area_pn(i),  ' ', h_area_ps(i),  ' ',       &
+                                  h_eq_dipole(i),' ', h_ax_dipole(i),' ',       &
+                                  h_valerr(i)
+!
+          close(IO_HIST_SOL)
+!
+        enddo
+!
+        output_current_history = .false.
+!
+      end if
 !
 end subroutine
 !#######################################################################
@@ -2380,6 +2402,7 @@ subroutine output_map
       use input_parameters
       use output
       use globals
+      use mpidefs
 !
 !-----------------------------------------------------------------------
 !
@@ -2435,13 +2458,15 @@ subroutine output_map
 !
 ! ****** Record output in output text file log.
 !
-        call ffopen (IO_MAP_OUT_LIST, &
-                     io_output_map_list_filename,'a',ierr)
+        if (iamp0) then
+          call ffopen (IO_MAP_OUT_LIST, &
+                       io_output_map_list_filename,'a',ierr)
 !
-        write (IO_MAP_OUT_LIST,FMT) idx_out,'   ',time,'    ', &
-                                    trim(base_filename)
+          write (IO_MAP_OUT_LIST,FMT) idx_out,'   ',time,'    ', &
+                                      trim(base_filename)
 !
-        close(IO_MAP_OUT_LIST)
+          close(IO_MAP_OUT_LIST)
+        end if
 !
         if (output_flows) then
 !
@@ -2454,13 +2479,15 @@ subroutine output_map
 !
 ! ****** Record output in output text file log.
 !
-          call ffopen (IO_MAP_OUT_LIST, &
-                       io_output_flows_list_filename,'a',ierr)
+          if (iamp0) then
+            call ffopen (IO_MAP_OUT_LIST, &
+                         io_output_flows_list_filename,'a',ierr)
 !
-          write (IO_MAP_OUT_LIST,FMT) idx_out,'   ',time,'    ', &
-                                      trim(base_filename)
+            write (IO_MAP_OUT_LIST,FMT) idx_out,'   ',time,'    ', &
+                                        trim(base_filename)
 !
-          close(IO_MAP_OUT_LIST)
+            close(IO_MAP_OUT_LIST)
+          end if
 !
         end if
 !
@@ -3700,12 +3727,12 @@ subroutine update_field
           deallocate(s1)
           deallocate(s2)
           deallocate(s3)
-        endif
+        end if
 !
         wtime_tmp_mpi = MPI_Wtime()
-        call MPI_Bcast (npm_nd,1,ntype_real,0,MPI_COMM_WORLD,ierr)
-        call MPI_Bcast (ntm_nd,1,ntype_real,0,MPI_COMM_WORLD,ierr)
-        call MPI_Bcast (nslices,1,ntype_real,0,MPI_COMM_WORLD,ierr)
+        call MPI_Bcast (npm_nd,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+        call MPI_Bcast (ntm_nd,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+        call MPI_Bcast (nslices,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 !
         if (.not.iamp0) allocate (new_data2d(npm_nd,ntm_nd,nslices))
 !
@@ -4156,6 +4183,10 @@ subroutine diffusion_step (dtime_local)
         i = i + 1
 !
       enddo
+!
+! ****** If using auto-cycle, set this for history output.
+!
+      if (auto_sc) diffusion_subcycles = i
 !
       wtime_flux_transport_diffusion = wtime_flux_transport_diffusion &
                                        + (MPI_Wtime() - t1)
@@ -6000,9 +6031,9 @@ subroutine load_diffusion
           call read_2d_file (diffusion_coef_filename,nfp,nft,f_tmp2d,pf,tf,ierr)
         endif
         wtime_tmp_mpi = MPI_Wtime()
-        call MPI_Bcast (nfp,1,ntype_real,0,MPI_COMM_WORLD,ierr)
-        call MPI_Bcast (nft,1,ntype_real,0,MPI_COMM_WORLD,ierr)
-        if (.NOT. iamp0) then
+        call MPI_Bcast (nfp,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+        call MPI_Bcast (nft,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+        if (.not. iamp0) then
           allocate (pf(nfp))
           allocate (tf(nft))
           allocate (f_tmp2d(nfp,nft))
@@ -6370,8 +6401,8 @@ subroutine load_source
           call read_2d_file (source_filename,nfp,nft,sf,pf,tf,ierr)
         endif
         wtime_tmp_mpi = MPI_Wtime()
-        call MPI_Bcast (nfp,1,ntype_real,0,MPI_COMM_WORLD,ierr)
-        call MPI_Bcast (nft,1,ntype_real,0,MPI_COMM_WORLD,ierr)
+        call MPI_Bcast (nfp,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+        call MPI_Bcast (nft,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
         if (.NOT. iamp0) then
           allocate (pf(nfp))
           allocate (tf(nft))
@@ -7647,6 +7678,7 @@ subroutine read_input_file
                output_map_idx_cadence,output_map_time_cadence,         &
                output_map_2d,restart_run,restart_file,time_end,        &
                output_flows_directory,                                 &
+               output_history_time_cadence,                            &
                dt_max_increase_fac,dt_min,dt_max,strang_splitting,     &
                pole_flux_lat_limit,                                    &
                advance_flow,                                           &
@@ -8007,7 +8039,12 @@ end subroutine
 !     flux-time-step.  It should be more robust and faster.
 !
 ! 05/31/2023, RC, Version 0.21.1:
-!   - BUG FIX for automatic diffusion subcycle feature.
+!   - BUG FIX: Automatic diffusion subcycle feature fixed.
+!
+! 06/02/2023, RC, Version 0.22.0:
+!   - BUG FIX:  Fixed incorrect MPI type and duplicate output.
+!   - Added output_history_time_cadence parameter to allow user to
+!     set a cadence for the history output.
 !
 !-----------------------------------------------------------------------
 !
