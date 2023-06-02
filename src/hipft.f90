@@ -2335,7 +2335,7 @@ subroutine output_histories
 !-----------------------------------------------------------------------
 !
       if (output_history_time_cadence .gt. 0.0) then
-        if (time .ge. time_start+idx_out*output_history_time_cadence) then
+        if (time .ge. time_start+idx_hist*output_history_time_cadence) then
           output_current_history = .true.
         end if
       end if
@@ -2794,6 +2794,7 @@ subroutine analysis_step
       use globals
       use mesh
       use fields
+      use output
 !
 !-----------------------------------------------------------------------
 !
@@ -2814,6 +2815,17 @@ subroutine analysis_step
 !-----------------------------------------------------------------------
 !
       t1 = MPI_Wtime()
+!
+! ****** Only need to perform this analysis if we are writing out
+! ****** the history on this step.
+!
+      if (output_history_time_cadence .gt. 0.0) then
+        if (time .ge. time_start+idx_hist*output_history_time_cadence) then
+          output_current_history = .true.
+        end if
+      end if
+!
+      if (output_current_history) then
 !
 ! ****** If running validation, compute current exact solution.
 !
@@ -2987,6 +2999,13 @@ subroutine analysis_step
         h_eq_dipole(k) = SQRT(eqd1**2 + eqd2**2)
 !
       enddo
+!
+! ****** Reset this even though the same logic will set it in
+! ****** the output_histories( )subroutine.
+!
+      output_current_history = .false.
+!
+      end if
 !
       wtime_analysis = wtime_analysis + (MPI_Wtime() - t1)
 !
