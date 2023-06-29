@@ -11,17 +11,34 @@ import os
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
 
-  parser.add_argument('-valrun',
-    help='Plot validation run errors',
-    dest='valrun',
+  parser.add_argument('file',
+    help='HipFT solution history file name.')
+
+  parser.add_argument('-runtag',
+    help='Add a run tag to the output plot file names.',
+    dest='runtag',
+    default='',
+    required=False)
+
+  parser.add_argument('-info',
+    help='Write out some diagnostics of the history quantites.',
+    dest='info',
     action='store_true',
     default=False,
     required=False)
 
-  parser.add_argument('-file',
-    help='File location',
-    dest='file',
-    default='hipft_history_sol_r000001.out',
+  parser.add_argument('-noplot',
+    help='Do not plot the history data (useful if only need the info).',
+    dest='noplot',
+    action='store_true',
+    default=False,
+    required=False)
+
+  parser.add_argument('-val',
+    help='Plot validation run errors.',
+    dest='valrun',
+    action='store_true',
+    default=False,
     required=False)
 
 #  parser.add_argument('-utstart',
@@ -38,6 +55,17 @@ def argParsing():
 
   return parser.parse_args()
 
+
+def stats(data):
+
+  data_stats = np.zeros(4)
+
+  data_stats[0] = np.min(data)
+  data_stats[1] = np.max(data)
+  data_stats[2] = np.mean(data)
+  data_stats[3] = np.std(data)
+  
+  return data_stats
 
 ###  Need to make Time object, convert to datetime, use %s in order ot get "unix time"
 ###
@@ -80,6 +108,24 @@ def run(args):
   pole_n_avg_field = (fluxp_pn+fluxm_pn)/area_pn
   pole_s_avg_field = (fluxp_ps+fluxm_ps)/area_ps
 
+  ###### INFO ##########
+
+  if (args.info):
+
+    brmax_stats = stats(brmax)
+    brminabs_stats = stats(np.abs(brmin))
+    brabsmin_stats = stats(brabsmin)
+  
+    print('Quantity  Max  Min  Mean  STD')
+    print('max(Br)    ',brmax_stats)
+    print('|min(Br)|  ',brminabs_stats)
+    print('min(|Br|)  ',brabsmin_stats)
+
+  
+  if (args.noplot):
+    return
+
+
   ###### PLOTTING ######
 
   width = 0.3
@@ -101,14 +147,14 @@ def run(args):
   xmn = np.min(time*tfac)
   xmx = np.max(time*tfac)
   plt.xlim(xmin=xmn,xmax=xmx)
-  plt.title('Relative Flux Imbalance', {'fontsize': fsize, 'color': tc})
+  plt.title('Relative Flux Imbalance '+args.runtag, {'fontsize': fsize, 'color': tc})
   plt.xlabel('Time (Days)', {'fontsize': fsize, 'color': tc})
   plt.ylabel('%', {'fontsize': fsize, 'color': tc})
   ax.tick_params(axis='y',labelsize=fsize)
   ax.tick_params(axis='x',labelsize=fsize)
   ax.grid(zorder=0)
   fig.tight_layout()
-  fig.savefig('history_flux_imb_pm.png', bbox_inches="tight", pad_inches=0, dpi=dpi, facecolor=fig.get_facecolor(), edgecolor=None)
+  fig.savefig('hipft_'+args.runtag+'_history_flux_imb_pm.png', bbox_inches="tight", pad_inches=0, dpi=dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
 #
 # ****** Total (+) and (-) flux.
@@ -120,7 +166,7 @@ def run(args):
   xmn = np.min(time*tfac)
   xmx = np.max(time*tfac)
   plt.xlim(xmin=xmn,xmax=xmx)
-  plt.title('Total Positive and Negative Flux', {'fontsize': fsize, 'color': tc})
+  plt.title('Total Positive and Negative Flux '+args.runtag, {'fontsize': fsize, 'color': tc})
   plt.xlabel('Time (Days)', {'fontsize': fsize, 'color': tc})
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})
   ax.tick_params(axis='y',labelsize=fsize)
@@ -128,7 +174,7 @@ def run(args):
   ax.grid(zorder=0)
   plt.legend([h[0],h2[0]],["|Flux (-)|","Flux (+)"],loc='upper right',fontsize=fsize)
   fig.tight_layout()
-  fig.savefig('history_flux_pm.png', bbox_inches="tight", pad_inches=0, dpi=dpi, \
+  fig.savefig('hipft_'+args.runtag+'_history_flux_pm.png', bbox_inches="tight", pad_inches=0, dpi=dpi, \
               facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
 #
@@ -140,14 +186,14 @@ def run(args):
   xmn = np.min(time*tfac)
   xmx = np.max(time*tfac)
   plt.xlim(xmin=xmn,xmax=xmx)
-  plt.title('Total Unsigned Flux', {'fontsize': fsize, 'color': tc})
+  plt.title('Total Unsigned Flux '+args.runtag, {'fontsize': fsize, 'color': tc})
   plt.xlabel('Time (Days)', {'fontsize': fsize, 'color': tc})
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})
   ax.tick_params(axis='y',labelsize=fsize)
   ax.tick_params(axis='x',labelsize=fsize)
   ax.grid(zorder=0)
   fig.tight_layout()
-  fig.savefig('history_flux_total_unsigned.png', bbox_inches="tight", pad_inches=0, dpi=dpi, facecolor=fig.get_facecolor(), edgecolor=None)
+  fig.savefig('hipft_'+args.runtag+'_history_flux_total_unsigned.png', bbox_inches="tight", pad_inches=0, dpi=dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
 #
 # ****** Total signed flux.
@@ -158,14 +204,14 @@ def run(args):
   xmn = np.min(time*tfac)
   xmx = np.max(time*tfac)
   plt.xlim(xmin=xmn,xmax=xmx)
-  plt.title('Total Signed Flux', {'fontsize': fsize, 'color': tc})
+  plt.title('Total Signed Flux '+args.runtag, {'fontsize': fsize, 'color': tc})
   plt.xlabel('Time (Days)', {'fontsize': fsize, 'color': tc})
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})
   ax.tick_params(axis='y',labelsize=fsize)
   ax.tick_params(axis='x',labelsize=fsize)
   ax.grid(zorder=0)
   fig.tight_layout()
-  fig.savefig('history_flux_total_signed.png', bbox_inches="tight", pad_inches=0, dpi=dpi, facecolor=fig.get_facecolor(), edgecolor=None)
+  fig.savefig('hipft_'+args.runtag+'_history_flux_total_signed.png', bbox_inches="tight", pad_inches=0, dpi=dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')  
 #
 # ****** Polar +/- fluxes.
@@ -185,13 +231,13 @@ def run(args):
   plt.ylim(ymin=ymin,ymax=ymax)
   plt.xlabel('Time (Days)', {'fontsize': fsize, 'color': tc})
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})
-  plt.title('Polar Flux (within 30 degrees of poles)', {'fontsize': fsize, 'color': tc})
+  plt.title('Polar Flux (within 30 deg of poles) '+args.runtag, {'fontsize': fsize, 'color': tc})
   ax.tick_params(axis='y',labelsize=fsize)
   ax.tick_params(axis='x',labelsize=fsize)
   ax.grid(zorder=0)
   plt.legend([h[0],h2[0],h3[0],h4[0]],["N (+)","N (-)","S (+)","S (-)"],loc='upper right',fontsize=fsize)
   fig.tight_layout()
-  fig.savefig('history_flux_poles_30.png', bbox_inches="tight", pad_inches=0, dpi=dpi, facecolor=fig.get_facecolor(), edgecolor=None)
+  fig.savefig('hipft_'+args.runtag+'_history_flux_poles_30.png', bbox_inches="tight", pad_inches=0, dpi=dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
 #
 # ****** Polar average field strengths.
@@ -208,13 +254,13 @@ def run(args):
   plt.ylim(ymin=ymin,ymax=ymax)
   plt.xlabel('Time (Days)', {'fontsize': fsize, 'color': tc})
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
-  plt.title('Polar Average Field (within 30 degrees of poles)', {'fontsize': fsize, 'color': tc})
+  plt.title('Polar Average Field (within 30 deg of poles) '+args.runtag, {'fontsize': fsize, 'color': tc})
   ax.tick_params(axis='y',labelsize=fsize)
   ax.tick_params(axis='x',labelsize=fsize)
   ax.grid(zorder=0)
   plt.legend([h[0],h2[0]],["North","South"],loc='upper right',fontsize=fsize)
   fig.tight_layout()
-  fig.savefig('history_field_poles_30.png', bbox_inches="tight", pad_inches=0, dpi=dpi, facecolor=fig.get_facecolor(), edgecolor=None)
+  fig.savefig('hipft_'+args.runtag+'_history_field_poles_30.png', bbox_inches="tight", pad_inches=0, dpi=dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
 #
 # ****** Min and max field.
@@ -227,14 +273,14 @@ def run(args):
   plt.xlim(xmin=xmn,xmax=xmx)
   plt.xlabel('Time (Days)', {'fontsize': fsize, 'color': tc})
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
-  plt.title('Min and Max Br', {'fontsize': fsize, 'color': tc})
+  plt.title('Min and Max Br '+args.runtag, {'fontsize': fsize, 'color': tc})
   ax.tick_params(axis='y',labelsize=fsize)
   ax.tick_params(axis='x',labelsize=fsize)
   h1 = plt.plot(time*tfac,np.abs(brmin),'r-',linewidth=lsz,markersize=mksz)
   ax.grid(zorder=0)
   plt.legend([h[0],h1[0]],["max(Br)","|min(Br)|"],loc='upper right',fontsize=fsize)
   fig.tight_layout()
-  fig.savefig('history_br.png', bbox_inches="tight", dpi=dpi, facecolor=fig.get_facecolor(), edgecolor=None)
+  fig.savefig('hipft_'+args.runtag+'_history_br.png', bbox_inches="tight", dpi=dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
 #
 # ****** Axial Dipole strength
@@ -246,13 +292,13 @@ def run(args):
   h = plt.plot(time*tfac,ax_dipole,'k-',linewidth=lsz,markersize=mksz)
   plt.xlim(xmin=xmn,xmax=xmx)
   plt.xlabel('Time (Days)', {'fontsize': fsize, 'color': tc})
-  plt.title('Axial Dipole Strength', {'fontsize': fsize, 'color': tc})
+  plt.title('Axial Dipole Strength '+args.runtag, {'fontsize': fsize, 'color': tc})
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
   ax.tick_params(axis='y',labelsize=fsize)
   ax.tick_params(axis='x',labelsize=fsize)
   ax.grid(zorder=0)
   fig.tight_layout()
-  fig.savefig('history_dipole_axial.png', bbox_inches="tight", pad_inches=0, dpi=dpi, facecolor=fig.get_facecolor(), edgecolor=None)
+  fig.savefig('hipft_'+args.runtag+'_history_dipole_axial.png', bbox_inches="tight", pad_inches=0, dpi=dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
 #
 # ****** Equatorial Dipole strength
@@ -264,13 +310,13 @@ def run(args):
   h = plt.plot(time*tfac,eq_dipole,'k-',linewidth=lsz,markersize=mksz)
   plt.xlim(xmin=xmn,xmax=xmx)
   plt.xlabel('Time (Days)', {'fontsize': fsize, 'color': tc})
-  plt.title('Equatorial Dipole Strength', {'fontsize': fsize, 'color': tc})
+  plt.title('Equatorial Dipole Strength '+args.runtag, {'fontsize': fsize, 'color': tc})
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
   ax.tick_params(axis='y',labelsize=fsize)
   ax.tick_params(axis='x',labelsize=fsize)
   ax.grid(zorder=0)
   fig.tight_layout()
-  fig.savefig('history_dipole_eq.png', bbox_inches="tight", pad_inches=0, dpi=dpi, facecolor=fig.get_facecolor(), edgecolor=None)
+  fig.savefig('hipft_'+args.runtag+'_history_dipole_eq.png', bbox_inches="tight", pad_inches=0, dpi=dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
   
 #
@@ -280,14 +326,14 @@ def run(args):
     fig = plt.figure(num=None, figsize=(14, 7), dpi=120, facecolor=fc,frameon=True)
     ax = plt.gca()
     h = plt.plot(time*tfac,(1e5)*valerr,'k-',linewidth=lsz,markersize=mksz)
-    plt.title('Validation Error', {'fontsize': fsize, 'color': tc})
+    plt.title('Validation Error '+args.runtag, {'fontsize': fsize, 'color': tc})
     plt.xlabel('Time (Days)', {'fontsize': fsize, 'color': tc})
     plt.ylabel('(CV)RMSD ($10^{-5}$)', {'fontsize': fsize, 'color': tc})
     ax.tick_params(axis='y',labelsize=fsize)
     ax.tick_params(axis='x',labelsize=fsize)
     ax.grid(zorder=0)
     fig.tight_layout()  
-    fig.savefig('history_val.png', bbox_inches="tight", pad_inches=0, dpi=120, facecolor=fig.get_facecolor(), edgecolor=None)
+    fig.savefig('hipft_'+args.runtag+'_history_val.png', bbox_inches="tight", pad_inches=0, dpi=120, facecolor=fig.get_facecolor(), edgecolor=None)
   
 def main():
   ## Get input agruments:
