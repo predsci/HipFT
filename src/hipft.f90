@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.22.0'
-      character(*), parameter :: cdate='06/02/2023'
+      character(*), parameter :: cvers='0.23.0'
+      character(*), parameter :: cdate='06/30/2023'
 !
 end module
 !#######################################################################
@@ -258,6 +258,9 @@ module globals
 !
       integer, dimension(:), allocatable :: local_realization_indices
 !
+      integer :: advection_num_method_space
+      integer :: advection_num_method_time
+!
 end module
 !#######################################################################
 module mesh
@@ -396,13 +399,6 @@ module weno
       real(r_typ), dimension(:,:,:), allocatable :: alpha_p
 !
       real(r_typ), parameter :: weno_eps = ten*SQRT(TINY(one))
-!
-      real(r_typ) :: p0p,p1p,p0m,p1m
-      real(r_typ) :: B0p,B1p,B0m,B1m
-      real(r_typ) :: w0p,w1p,w0m,w1m
-      real(r_typ) :: wp_sum,wm_sum
-      real(r_typ) :: OM0p,OM1p,OM0m,OM1m
-      real(r_typ) :: up,um
 !
 end module
 !#######################################################################
@@ -555,10 +551,11 @@ module input_parameters
       real(r_typ) :: flow_from_file_start_time_jd = zero
 !
 ! ****** Algorithm options.
-!        Can set upwind to central differencing by also setting UPWIND=0.
-! ****** 1: FE+Upwind.
-! ****** 2: RK3TVD+Upwind.
-! ****** 3: RK3TVD+WENO3.
+!        Can set upwind to central differencing by setting UPWIND=0.
+! ****** 1: Forward Euler + Upwind.
+! ****** 2: RK3TVD/SSPRK(3,3) + Upwind.
+! ****** 3: RK3TVD/SSPRK(3,3) + WENO3.
+! ****** 4: SSPRK(4,3) + WENO3 [NOT FINISHED IMPLEMENTING YET]
 !
       integer :: flow_num_method = 3
 !
@@ -925,7 +922,7 @@ subroutine set_local_number_of_realizations
 !
 !-----------------------------------------------------------------------
 !
-      integer :: ierr, i, idisp, nravg, nrem
+      integer :: i, idisp, nravg, nrem
 !
 !-----------------------------------------------------------------------
 !
@@ -1208,7 +1205,6 @@ function check_if_stoprun ()
 !-----------------------------------------------------------------------
 !
       use mpidefs
-      use globals, ONLY : time,ntime
 !
 !-----------------------------------------------------------------------
 !
@@ -2622,10 +2618,7 @@ subroutine write_flows (idx_str)
       character(*) :: idx_str
       character(512) :: full_filename
       integer :: ierr = 0
-      integer :: i, lsbuf, irank
-      integer, dimension(:), allocatable :: displ,lbuf
-      real(r_typ), dimension(:), allocatable :: gfout,tfout,rscale
-      real(r_typ), dimension(:,:,:), allocatable :: gout
+      integer :: i
 !
 !-----------------------------------------------------------------------
 !
@@ -3377,7 +3370,7 @@ subroutine add_flow_from_files
        current_flow_input_idx = current_flow_input_idx + 1
        if (verbose) then
          write(*,*) ' '
-         write(*,*), 'ADD_FLOW_FROM_FILE: Current Flow Index',current_flow_input_idx
+         write(*,*) 'ADD_FLOW_FROM_FILE: Current Flow Index',current_flow_input_idx
        end if
 !
 ! ****** If there are no more flow files to load, loop back to
@@ -3386,7 +3379,7 @@ subroutine add_flow_from_files
        if (current_flow_input_idx .gt. num_flows_in_list) then
          if (verbose) then
            write(*,*) ' '
-           write(*,*), 'ADD_FLOW_FROM_FILE: Resetting Flow Index to 2'
+           write(*,*) 'ADD_FLOW_FROM_FILE: Resetting Flow Index to 2'
          end if
          current_flow_input_idx = 2
          flow_times_actual_ut_jd(:) = flow_times_actual_ut_jd0(:) &
@@ -4016,15 +4009,13 @@ subroutine flux_transport_step
 !
       dtime_local = dtime_global
 !
-! ****** If only advancing flow or diffusion, no need to split.
-!
-      if (strang_splitting.and.advance_flow.and.advance_diffusion) then
+      if (strang_splitting) then
         dtime_local_half = dtime_local*half
-        call advection_step (dtime_local_half)
+        if (advance_flow)      call advection_step (dtime_local_half)
 !        if (advance_source)    call source_step    (dtime_local_half)
-        call diffusion_step (dtime_local)
+        if (advance_diffusion) call diffusion_step (dtime_local)
 !        if (advance_source)    call source_step    (dtime_local_half)
-        call advection_step (dtime_local_half)
+        if (advance_flow)      call advection_step (dtime_local_half)
       else
         if (advance_flow)      call advection_step (dtime_local)
 !        if (advance_source)    call source_step    (dtime_local)
@@ -4047,7 +4038,7 @@ subroutine advection_step (dtime_local)
       use mpidefs
       use input_parameters
       use timing
-      use globals
+      use globals, ONLY : advection_num_method_time,dtime_advection_used
 !
 !-----------------------------------------------------------------------
 !
@@ -4064,12 +4055,12 @@ subroutine advection_step (dtime_local)
 !
       dtime_advection_used = dtime_local
 !
-      if (flow_num_method.eq.1) then
-        call advection_step_fe_upwind (dtime_local)
-      elseif (flow_num_method.eq.2) then
-        call advection_step_rk3tvd_upwind (dtime_local)
-      elseif (flow_num_method.eq.3) then
-        call advection_step_rk3tvd_weno3 (dtime_local)
+      if (advection_num_method_time .eq. 1) then
+        call advection_step_fe (dtime_local)
+      elseif (advection_num_method_time .eq. 2) then
+        call advection_step_rk3tvd (dtime_local)
+      elseif (advection_num_method_time .eq. 3) then
+        call advection_step_ssprk43 (dtime_local)
       end if
 !
       wtime_flux_transport_advection = wtime_flux_transport_advection &
@@ -4092,7 +4083,6 @@ subroutine diffusion_step (dtime_local)
       use constants
       use globals
       use mesh
-      use fields, ONLY : f,diffusion_coef
       use sts, ONLY : need_to_load_sts
       use matrix_storage
 !
@@ -4106,7 +4096,7 @@ subroutine diffusion_step (dtime_local)
       real(r_typ) :: dtime_local2,t1
       real(r_typ) :: time_stepped,timetmp
       integer, parameter :: diffusion_subcycles_max = 60
-      integer :: i,j,k,ierr
+      integer :: i
       logical :: we_are_done
 !
 !-----------------------------------------------------------------------
@@ -4168,7 +4158,7 @@ subroutine diffusion_step (dtime_local)
 !
         if (diffusion_num_method.eq.1) then
 !
-          call diffusion_step_euler_cd (dtime_local2)
+          call diffusion_step_fe_cd (dtime_local2)
 !
         else if (diffusion_num_method.eq.2.or.   &
                  diffusion_num_method.eq.3) then
@@ -4427,8 +4417,9 @@ subroutine set_periodic_bc_3d (a,n1,n2,n3)
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ), dimension(n1,n2,n3) :: a
-      integer :: n1,n2,n3,j,i
+      real(r_typ), INTENT(INOUT), dimension(n1,n2,n3) :: a
+      integer, INTENT(IN) :: n1,n2,n3
+      integer :: i,j
 !
 !-----------------------------------------------------------------------
 !
@@ -6613,6 +6604,7 @@ subroutine get_flow_dtmax (dtmaxflow)
       use mesh
       use fields, ONLY : vt,vp
       use constants
+      use input_parameters, ONLY : strang_splitting
       use timing
 !
 !-----------------------------------------------------------------------
@@ -6646,7 +6638,17 @@ subroutine get_flow_dtmax (dtmaxflow)
       enddo
 !$omp end parallel do
 !
-      dtmaxflow = half*safety*dtmax
+      dtmaxflow = safety*dtmax
+!
+! ****** Since the flow time step will be cut in half when using
+! ****** Strang splitting, we can double the time-step limit here.
+!
+      if (strang_splitting) then
+        dtmaxflow = two*dtmaxflow
+      end if
+!
+! [RMC]  If we add SSPRK(4,3), we can boost another 2x!
+!
       wtime_tmp_mpi = MPI_Wtime()
       call MPI_Allreduce (MPI_IN_PLACE,dtmaxflow,1,ntype_real, &
                           MPI_MIN,MPI_COMM_WORLD,ierr)
@@ -6654,7 +6656,7 @@ subroutine get_flow_dtmax (dtmaxflow)
 !
 end subroutine
 !#######################################################################
-subroutine diffusion_step_euler_cd (dtime_local)
+subroutine diffusion_step_fe_cd (dtime_local)
 !
 !-----------------------------------------------------------------------
 !
@@ -6711,20 +6713,18 @@ subroutine diffusion_step_euler_cd (dtime_local)
 !
 end subroutine
 !#######################################################################
-subroutine advection_step_fe_upwind (dtime_local)
+subroutine advection_step_fe (dtime_local)
 !
 !-----------------------------------------------------------------------
 !
 ! ****** Advance the field with advection by the time-step dtime_local
-! ****** using the Foward-Euler+Upwind method.
+! ****** using the Foward-Euler method.
 !
 !-----------------------------------------------------------------------
 !
       use number_types
-      use input_parameters
-      use constants
+      use fields, ONLY : f
       use mesh
-      use fields
 !
 !-----------------------------------------------------------------------
 !
@@ -6744,7 +6744,7 @@ subroutine advection_step_fe_upwind (dtime_local)
       allocate (aop(ntm,npm,nr))
 !$acc enter data create(aop)
 !
-      call advection_operator_upwind (f,aop)
+      call advection_operator (f,aop)
 !
       do concurrent (i=1:nr,k=1:npm,j=1:ntm)
         f(j,k,i) = f(j,k,i) - dtime_local*aop(j,k,i)
@@ -6755,12 +6755,12 @@ subroutine advection_step_fe_upwind (dtime_local)
 !
 end subroutine
 !#######################################################################
-subroutine advection_step_rk3tvd_upwind (dtime_local)
+subroutine advection_step_rk3tvd (dtime_local)
 !
 !-----------------------------------------------------------------------
 !
 ! ****** Advance the field with advection by the time-step dtime_local
-! ****** using the RK3TVD+Upwind method.
+! ****** using the RK3TVD method.
 !
 !-----------------------------------------------------------------------
 !
@@ -6792,21 +6792,24 @@ subroutine advection_step_rk3tvd_upwind (dtime_local)
       allocate (aop(ntm,npm,nr))
 !$acc enter data create(f1,f2,aop)
 !
-      call advection_operator_upwind (f,aop)
+      call advection_operator (f,aop)
       do concurrent (i=1:nr,k=1:npm,j=1:ntm)
-        f1(j,k,i) = f(j,k,i) - dtime_local*aop(j,k,i)
+        f1(j,k,i) =               f(j,k,i)     &
+                  - dtime_local*aop(j,k,i)
       enddo
 !
-      call advection_operator_upwind (f1,aop)
+      call advection_operator (f1,aop)
       do concurrent (i=1:nr,k=1:npm,j=1:ntm)
-        f2(j,k,i) = three_quarter*f(j,k,i) + quarter*f1(j,k,i)        &
-                                       - quarter*dtime_local*aop(j,k,i)
+        f2(j,k,i) = three_quarter*f(j,k,i)     &
+                       + quarter*f1(j,k,i)     &
+          - quarter*dtime_local*aop(j,k,i)
       enddo
 !
-      call advection_operator_upwind (f2,aop)
+      call advection_operator (f2,aop)
       do concurrent (i=1:nr,k=1:npm,j=1:ntm)
-        f(j,k,i) = third*f(j,k,i) + two_third*f2(j,k,i)               &
-                                  - two_third*dtime_local*aop(j,k,i)
+        f(j,k,i) =          third*f(j,k,i)     &
+                     + two_third*f2(j,k,i)     &  
+        - two_third*dtime_local*aop(j,k,i)
       enddo
 !
 ! ****** Deallocate temporary arrays.
@@ -6815,6 +6818,103 @@ subroutine advection_step_rk3tvd_upwind (dtime_local)
       deallocate (f1)
       deallocate (f2)
       deallocate (aop)
+!
+end subroutine
+!#######################################################################
+subroutine advection_step_ssprk43 (dtime_local)
+!
+!-----------------------------------------------------------------------
+!
+! ****** Advance the field with advection by the time-step dtime_local
+! ****** using the SSPRK(4,3) method.
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use input_parameters
+      use constants
+      use mesh
+      use fields
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      real(r_typ), INTENT(IN) :: dtime_local
+!
+!-----------------------------------------------------------------------
+!
+      integer :: i,j,k
+      real(r_typ), dimension(:,:,:), allocatable :: f1,aop
+!
+!-----------------------------------------------------------------------
+!
+! ****** Allocate temporary arrays for RK.
+!
+      allocate (f1(ntm,npm,nr))
+      allocate (aop(ntm,npm,nr))
+!$acc enter data create(f1,aop)
+!
+      call advection_operator (f,aop)
+      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
+        f1(j,k,i) = f(j,k,i) - half*dtime_local*aop(j,k,i)
+      enddo
+!
+      call advection_operator (f1,aop)
+      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
+        f1(j,k,i) =  f1(j,k,i) - half*dtime_local*aop(j,k,i)
+      enddo
+!  UP TO HERE
+!      call advection_operator (f1,aop)
+!      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
+!        f(j,k,i) = third*f(j,k,i) + two_third*f1(j,k,i) &
+!                                  - two_third*dtime_local*aop(j,k,i)
+!      enddo
+!
+!      call advection_operator (f1,aop)
+!      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
+!        f(j,k,i) = third*f(j,k,i) + two_third*f1(j,k,i) &
+!                                  - two_third*dtime_local*aop(j,k,i)
+!      enddo
+!
+! ****** Deallocate temporary arrays.
+!
+!$acc exit data delete(f1,aop)
+      deallocate (f1)
+      deallocate (aop)
+!
+end subroutine
+!#######################################################################
+subroutine advection_operator (ftemp,aop)
+!
+!-----------------------------------------------------------------------
+!
+! ****** Compute DIV(v*f)
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use mesh
+      use globals, ONLY : advection_num_method_space
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      real(r_typ), dimension(ntm,npm,nr), INTENT(IN) :: ftemp
+      real(r_typ), dimension(ntm,npm,nr), INTENT(OUT) :: aop
+!
+!-----------------------------------------------------------------------
+!
+      if (advection_num_method_space .eq. 1) then
+        call advection_operator_upwind (ftemp,aop)
+      elseif (advection_num_method_space .eq. 2) then
+        call advection_operator_weno3 (ftemp,aop)
+      end if
 !
 end subroutine
 !#######################################################################
@@ -6962,6 +7062,12 @@ subroutine advection_operator_weno3 (ftemp,aop)
 !-----------------------------------------------------------------------
 !
       integer :: i,j,k
+      real(r_typ) :: p0p,p1p,p0m,p1m
+      real(r_typ) :: B0p,B1p,B0m,B1m
+      real(r_typ) :: w0p,w1p,w0m,w1m
+      real(r_typ) :: wp_sum,wm_sum
+      real(r_typ) :: OM0p,OM1p,OM0m,OM1m
+      real(r_typ) :: up,um
       real(r_typ) :: cct
       real(r_typ), dimension(:), allocatable :: fn,fs
       real(r_typ), dimension(:,:,:), allocatable :: flux_t,flux_p
@@ -7156,67 +7262,6 @@ subroutine advection_operator_weno3 (ftemp,aop)
       deallocate (flux_p)
       deallocate (fn)
       deallocate (fs)
-!
-end subroutine
-!#######################################################################
-subroutine advection_step_rk3tvd_weno3 (dtime_local)
-!
-!-----------------------------------------------------------------------
-!
-! ****** Advance the field with advection by the time-step dtime_local
-! ****** using the RK3TVD+WENO3 method.
-!
-!-----------------------------------------------------------------------
-!
-      use number_types
-      use input_parameters
-      use constants
-      use mesh
-      use fields
-!
-!-----------------------------------------------------------------------
-!
-      implicit none
-!
-!-----------------------------------------------------------------------
-!
-      real(r_typ), INTENT(IN) :: dtime_local
-!
-!-----------------------------------------------------------------------
-!
-      integer :: i,j,k
-      real(r_typ), dimension(:,:,:), allocatable :: f1,aop
-!
-!-----------------------------------------------------------------------
-!
-! ****** Allocate temporary arrays for RK.
-!
-      allocate (f1(ntm,npm,nr))
-      allocate (aop(ntm,npm,nr))
-!$acc enter data create(f1,aop)
-!
-      call advection_operator_weno3 (f,aop)
-      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
-        f1(j,k,i) = f(j,k,i) - dtime_local*aop(j,k,i)
-      enddo
-!
-      call advection_operator_weno3 (f1,aop)
-      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
-        f1(j,k,i) = three_quarter*f(j,k,i) + quarter*f1(j,k,i) &
-                                           - quarter*dtime_local*aop(j,k,i)
-      enddo
-!
-      call advection_operator_weno3 (f1,aop)
-      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
-        f(j,k,i) = third*f(j,k,i) + two_third*f1(j,k,i) &
-                                  - two_third*dtime_local*aop(j,k,i)
-      enddo
-!
-! ****** Deallocate temporary arrays.
-!
-!$acc exit data delete(f1,aop)
-      deallocate (f1)
-      deallocate (aop)
 !
 end subroutine
 !#######################################################################
@@ -7741,7 +7786,7 @@ subroutine read_input_file
 !
 !-----------------------------------------------------------------------
 !
-      integer :: ierr, i
+      integer :: ierr
       character(len=:), allocatable :: infile
       integer arglen
 !
@@ -7775,7 +7820,41 @@ subroutine read_input_file
       read (8,hipft_input_parameters)
       close (8)
 !
-! ****** Check inputs for issues.
+! ****** Write the NAMELIST parameter values to file.
+!
+      if (iamp0) then
+        call ffopen (8,'hipft_run_parameters_used.out','rw',ierr)
+        write (8,hipft_input_parameters)
+        close (8)
+      end if
+!
+! ****** Check & process input parameters.
+!
+      call process_input_parameters
+!
+end subroutine
+!#######################################################################
+subroutine process_input_parameters
+!
+!-----------------------------------------------------------------------
+!
+! ****** Process the input parameters.
+!
+!-----------------------------------------------------------------------
+!
+      use input_parameters
+      use globals
+      use mpidefs
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      integer :: i
+!
+!-----------------------------------------------------------------------
 !
       if (output_map_time_cadence.gt.0            &
           .and. output_map_idx_cadence.gt.0) then
@@ -7803,17 +7882,9 @@ subroutine read_input_file
           write (*,*) '### ERROR in SETUP:'
           write (*,*) '### Requested realizations greater than maximum allowed.'
           write (*,*) 'Number of requested realizations = ',n_realizations
-          write (*,*) 'Maximum number of realizations allowed = ',MAX_REALIZATIONS
+          write (*,*) 'Maximum number of realizations allowed:  ',MAX_REALIZATIONS
         end if
         call endrun (.true.)
-      end if
-!
-! ****** Write the NAMELIST parameter values to file.
-!
-      if (iamp0) then
-        call ffopen (8,'hipft_run_parameters_used.out','rw',ierr)
-        write (8,hipft_input_parameters)
-        close (8)
       end if
 !
 ! ****** Set realizations to defaults if they have not been set.
@@ -7835,6 +7906,31 @@ subroutine read_input_file
           diffusion_coef_constants(i) = diffusion_coef_constant
         end if
       enddo
+!
+! ****** Set numerical method presets.
+!
+      if (flow_num_method .eq. 1) then
+        advection_num_method_time = 1
+        advection_num_method_space = 1
+      elseif (flow_num_method .eq. 2) then
+        advection_num_method_time = 2
+        advection_num_method_space = 1
+      elseif (flow_num_method .eq. 3) then
+        advection_num_method_time = 2
+        advection_num_method_space = 2
+      elseif (flow_num_method .eq. 4) then
+        advection_num_method_time = 3
+        advection_num_method_space = 2
+      else
+        if (iamp0) then
+          write (*,*)
+          write (*,*) '### ERROR in PROCESS_INPUT_PARAMETERS:'
+          write (*,*) '### Invalid flow_num_method specified.'
+          write (*,*) 'flow_num_method  = ',flow_num_method
+          write (*,*) 'Valid values: {1,2,3,4}'
+        end if
+        call endrun (.true.)
+      end if
 !
 end subroutine
 !#######################################################################
@@ -8067,6 +8163,12 @@ end subroutine
 !   - BUG FIX:  Fixed incorrect MPI type and duplicate output.
 !   - Added output_history_time_cadence parameter to allow user to
 !     set a cadence for the history output.
+!
+! 06/30/2023, RC, Version 0.23.0:
+!   - Modified CFL condition in update_timestep to reflect
+!     which method one is using to get maximum possible.
+!   - Refactored advection routines to have less 
+!     repeated code.
 !
 !-----------------------------------------------------------------------
 !
