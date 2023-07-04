@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.23.0'
-      character(*), parameter :: cdate='06/30/2023'
+      character(*), parameter :: cvers='0.24.0'
+      character(*), parameter :: cdate='07/04/2023'
 !
 end module
 !#######################################################################
@@ -90,6 +90,7 @@ module constants
       real(r_typ), parameter :: four = 4._r_typ
       integer*8,   parameter :: four_int = 4
       real(r_typ), parameter :: six = 6._r_typ
+      real(r_typ), parameter :: sixth = 0.16666666666666666_r_typ
       real(r_typ), parameter :: nine = 9._r_typ
       real(r_typ), parameter :: ten = 10._r_typ
       real(r_typ), parameter :: fifteen = 15._r_typ
@@ -244,12 +245,12 @@ module globals
 !
 ! ****** History analysis variables.
 !
-      real(r_typ), dimension(:), allocatable :: h_minbr, h_maxbr,       &
-                                                h_minabsbr, h_fluxp,    &
-                                                h_fluxm, h_valerr,      &
-                                                h_fluxp_pn, h_fluxm_pn, &
-                                                h_fluxp_ps, h_fluxm_ps, &
-                                                h_area_pn, h_area_ps,   &
+      real(r_typ), dimension(:), allocatable :: h_minbr,     h_maxbr,    &
+                                                h_minabsbr,  h_fluxp,    &
+                                                h_fluxm,     h_valerr,   &
+                                                h_fluxp_pn,  h_fluxm_pn, &
+                                                h_fluxp_ps,  h_fluxm_ps, &
+                                                h_area_pn,   h_area_ps,  &
                                                 h_eq_dipole, h_ax_dipole
 !
       real(r_typ) :: u0max,u0min
@@ -260,6 +261,13 @@ module globals
 !
       integer :: advection_num_method_space
       integer :: advection_num_method_time
+!
+      integer, parameter :: FE      = 1
+      integer, parameter :: RK3TVD  = 2
+      integer, parameter :: SSPRK43 = 3
+!
+      integer, parameter :: UW      = 1
+      integer, parameter :: WENO3   = 2
 !
 end module
 !#######################################################################
@@ -2258,7 +2266,9 @@ subroutine set_unchanging_quantities
 !
       if (advance_diffusion) call load_diffusion
 !
-      if (advance_flow.and.flow_num_method.eq.3) call load_weno
+      if (advance_flow.and.advection_num_method_space.eq.WENO3) then
+        call load_weno
+      end if
 !
 end subroutine
 !#######################################################################
@@ -3261,7 +3271,7 @@ subroutine update_flow
 !
 ! ****** If using WENO3 for flow, set new alpha values for LF.
 !
-        if (flow_num_method.eq.3) call set_lf_alpha
+        if (advection_num_method_space .eq. WENO3) call set_lf_alpha
 !
       end if
 !
@@ -6605,6 +6615,7 @@ subroutine get_flow_dtmax (dtmaxflow)
       use fields, ONLY : vt,vp
       use constants
       use input_parameters, ONLY : strang_splitting
+      use globals
       use timing
 !
 !-----------------------------------------------------------------------
@@ -6647,12 +6658,17 @@ subroutine get_flow_dtmax (dtmaxflow)
         dtmaxflow = two*dtmaxflow
       end if
 !
-! [RMC]  If we add SSPRK(4,3), we can boost another 2x!
+! ****** The CFL for the SSPRK(4,3) method is 2, so we can double dt!
+!
+      if (advection_num_method_time .eq. SSPRK43) then
+        dtmaxflow = two*dtmaxflow
+      end if
 !
       wtime_tmp_mpi = MPI_Wtime()
       call MPI_Allreduce (MPI_IN_PLACE,dtmaxflow,1,ntype_real, &
                           MPI_MIN,MPI_COMM_WORLD,ierr)
-      wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+      wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() &
+                           - wtime_tmp_mpi
 !
 end subroutine
 !#######################################################################
@@ -6760,73 +6776,7 @@ subroutine advection_step_rk3tvd (dtime_local)
 !-----------------------------------------------------------------------
 !
 ! ****** Advance the field with advection by the time-step dtime_local
-! ****** using the RK3TVD method.
-!
-!-----------------------------------------------------------------------
-!
-      use number_types
-      use input_parameters
-      use constants
-      use mesh
-      use fields
-!
-!-----------------------------------------------------------------------
-!
-      implicit none
-!
-!-----------------------------------------------------------------------
-!
-      real(r_typ), INTENT(IN) :: dtime_local
-!
-!-----------------------------------------------------------------------
-!
-      integer :: i,j,k
-      real(r_typ), dimension(:,:,:), allocatable :: f1,f2,aop
-!
-!-----------------------------------------------------------------------
-!
-! ****** Allocate temporary arrays for RK.
-!
-      allocate (f1(ntm,npm,nr))
-      allocate (f2(ntm,npm,nr))
-      allocate (aop(ntm,npm,nr))
-!$acc enter data create(f1,f2,aop)
-!
-      call advection_operator (f,aop)
-      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
-        f1(j,k,i) =               f(j,k,i)     &
-                  - dtime_local*aop(j,k,i)
-      enddo
-!
-      call advection_operator (f1,aop)
-      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
-        f2(j,k,i) = three_quarter*f(j,k,i)     &
-                       + quarter*f1(j,k,i)     &
-          - quarter*dtime_local*aop(j,k,i)
-      enddo
-!
-      call advection_operator (f2,aop)
-      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
-        f(j,k,i) =          third*f(j,k,i)     &
-                     + two_third*f2(j,k,i)     &  
-        - two_third*dtime_local*aop(j,k,i)
-      enddo
-!
-! ****** Deallocate temporary arrays.
-!
-!$acc exit data delete(f1,f2,aop)
-      deallocate (f1)
-      deallocate (f2)
-      deallocate (aop)
-!
-end subroutine
-!#######################################################################
-subroutine advection_step_ssprk43 (dtime_local)
-!
-!-----------------------------------------------------------------------
-!
-! ****** Advance the field with advection by the time-step dtime_local
-! ****** using the SSPRK(4,3) method.
+! ****** using the low storage RK3TVD/SSPRK(3,3) method.
 !
 !-----------------------------------------------------------------------
 !
@@ -6859,25 +6809,92 @@ subroutine advection_step_ssprk43 (dtime_local)
 !
       call advection_operator (f,aop)
       do concurrent (i=1:nr,k=1:npm,j=1:ntm)
-        f1(j,k,i) = f(j,k,i) - half*dtime_local*aop(j,k,i)
+        f1(j,k,i) =               f(j,k,i)     &
+                  - dtime_local*aop(j,k,i)
       enddo
 !
       call advection_operator (f1,aop)
       do concurrent (i=1:nr,k=1:npm,j=1:ntm)
-        f1(j,k,i) =  f1(j,k,i) - half*dtime_local*aop(j,k,i)
+        f1(j,k,i) = three_quarter*f(j,k,i)     &
+                       + quarter*f1(j,k,i)     &
+          - quarter*dtime_local*aop(j,k,i)
       enddo
-!  UP TO HERE
-!      call advection_operator (f1,aop)
-!      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
-!        f(j,k,i) = third*f(j,k,i) + two_third*f1(j,k,i) &
-!                                  - two_third*dtime_local*aop(j,k,i)
-!      enddo
 !
-!      call advection_operator (f1,aop)
-!      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
-!        f(j,k,i) = third*f(j,k,i) + two_third*f1(j,k,i) &
-!                                  - two_third*dtime_local*aop(j,k,i)
-!      enddo
+      call advection_operator (f1,aop)
+      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
+        f(j,k,i) =          third*f(j,k,i)     &
+                     + two_third*f1(j,k,i)     &
+        - two_third*dtime_local*aop(j,k,i)
+      enddo
+!
+! ****** Deallocate temporary arrays.
+!
+!$acc exit data delete(f1,aop)
+      deallocate (f1)
+      deallocate (aop)
+!
+end subroutine
+!#######################################################################
+subroutine advection_step_ssprk43 (dtime_local)
+!
+!-----------------------------------------------------------------------
+!
+! ****** Advance the field with advection by the time-step dtime_local
+! ****** using the low-storage SSPRK(4,3) method.
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use input_parameters
+      use constants
+      use mesh
+      use fields
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      real(r_typ), INTENT(IN) :: dtime_local
+!
+!-----------------------------------------------------------------------
+!
+      integer :: i,j,k
+      real(r_typ), dimension(:,:,:), allocatable :: f1,aop
+!
+!-----------------------------------------------------------------------
+!
+! ****** Allocate temporary arrays for RK.
+!
+      allocate (f1(ntm,npm,nr))
+      allocate (aop(ntm,npm,nr))
+!$acc enter data create(f1,aop)
+!
+      call advection_operator (f,aop)
+      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
+        f1(j,k,i) =                    f(j,k,i)         &
+                  - half*dtime_local*aop(j,k,i)
+      enddo
+!
+      call advection_operator (f1,aop)
+      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
+        f1(j,k,i) =                   f1(j,k,i)         &
+                  - half*dtime_local*aop(j,k,i)
+      enddo
+!
+      call advection_operator (f1,aop)
+      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
+        f1(j,k,i) =          two_third*f(j,k,i)         &
+                              + third*f1(j,k,i)         &
+                 - sixth*dtime_local*aop(j,k,i)
+      enddo
+!
+      call advection_operator (f1,aop)
+      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
+        f(j,k,i) =                    f1(j,k,i)         &
+                  - half*dtime_local*aop(j,k,i)
+      enddo
 !
 ! ****** Deallocate temporary arrays.
 !
@@ -6897,7 +6914,7 @@ subroutine advection_operator (ftemp,aop)
 !
       use number_types
       use mesh
-      use globals, ONLY : advection_num_method_space
+      use globals, ONLY : advection_num_method_space,UW,WENO3
 !
 !-----------------------------------------------------------------------
 !
@@ -6910,9 +6927,9 @@ subroutine advection_operator (ftemp,aop)
 !
 !-----------------------------------------------------------------------
 !
-      if (advection_num_method_space .eq. 1) then
+      if (advection_num_method_space .eq. UW) then
         call advection_operator_upwind (ftemp,aop)
-      elseif (advection_num_method_space .eq. 2) then
+      elseif (advection_num_method_space .eq. WENO3) then
         call advection_operator_weno3 (ftemp,aop)
       end if
 !
@@ -7910,17 +7927,17 @@ subroutine process_input_parameters
 ! ****** Set numerical method presets.
 !
       if (flow_num_method .eq. 1) then
-        advection_num_method_time = 1
-        advection_num_method_space = 1
+        advection_num_method_time  = FE
+        advection_num_method_space = UW
       elseif (flow_num_method .eq. 2) then
-        advection_num_method_time = 2
-        advection_num_method_space = 1
+        advection_num_method_time  = RK3TVD
+        advection_num_method_space = UW
       elseif (flow_num_method .eq. 3) then
-        advection_num_method_time = 2
-        advection_num_method_space = 2
+        advection_num_method_time  = RK3TVD
+        advection_num_method_space = WENO3
       elseif (flow_num_method .eq. 4) then
-        advection_num_method_time = 3
-        advection_num_method_space = 2
+        advection_num_method_time  = SSPRK43
+        advection_num_method_space = WENO3
       else
         if (iamp0) then
           write (*,*)
@@ -7928,6 +7945,10 @@ subroutine process_input_parameters
           write (*,*) '### Invalid flow_num_method specified.'
           write (*,*) 'flow_num_method  = ',flow_num_method
           write (*,*) 'Valid values: {1,2,3,4}'
+          write (*,*) '  1: FE+Upwind'
+          write (*,*) '  2: RK3TVD+Upwind'
+          write (*,*) '  3: RK3TVD+WENO3'
+          write (*,*) '  4: SSPRK(4,3)+WENO3'
         end if
         call endrun (.true.)
       end if
@@ -8167,8 +8188,11 @@ end subroutine
 ! 06/30/2023, RC, Version 0.23.0:
 !   - Modified CFL condition in update_timestep to reflect
 !     which method one is using to get maximum possible.
-!   - Refactored advection routines to have less 
-!     repeated code.
+!   - Refactored advection routines to have less repeated code.
+!
+! 07/04/2023, RC, Version 0.24.0:
+!   - Added SSPRK(4,3) tiem stepping scheme for advection.
+!     To use, set flow_num_method to "4" (will use WENO3 as well).
 !
 !-----------------------------------------------------------------------
 !
