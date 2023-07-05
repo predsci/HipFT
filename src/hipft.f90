@@ -269,6 +269,8 @@ module globals
       integer, parameter :: UW      = 1
       integer, parameter :: WENO3   = 2
 !
+      integer, parameter :: IO_DATA_IN = 8
+!
 end module
 !#######################################################################
 module mesh
@@ -461,15 +463,21 @@ module input_parameters
 !
       integer, private :: i
 !
-      logical        :: verbose = .false.
+! ****** Initial map ********
 !
       character(512) :: initial_map_filename = 'br_input.h5'
 !
+! ****** Output options ********
+!
       character(512) :: output_map_root_filename = 'hipft_brmap'
       character(512) :: output_map_directory     = 'output_maps'
-!
       character(512) :: output_flows_root_filename = 'hipft_flow'
       character(512) :: output_flows_directory     = 'output_flows'
+      integer        :: output_map_idx_cadence = 0
+      real(r_typ)    :: output_map_time_cadence = zero
+      logical        :: output_map_2d = .true.
+      logical        :: output_flows = .false.
+      real(r_typ)    :: output_history_time_cadence = zero
 !
 ! ****** Number of realizations ********
 !
@@ -478,17 +486,6 @@ module input_parameters
 ! ****** Validation Mode ********
 !
       integer        :: validation_run = 0
-!
-! ****** Output map cadence and type ********
-!
-      integer        :: output_map_idx_cadence = 0
-      real(r_typ)    :: output_map_time_cadence = zero
-      logical        :: output_map_2d = .true.
-      logical        :: output_flows = .false.
-!
-! ****** Output history cadence ********
-!
-      real(r_typ)    :: output_history_time_cadence = zero
 !
 ! ****** Restarts ********
 !
@@ -499,8 +496,6 @@ module input_parameters
 !
       real(r_typ)    :: time_start = zero
       real(r_typ)    :: time_end = one
-      real(r_typ)    :: time_output_cadence = zero
-      real(r_typ)    :: time_restart_cadence = zero
 !
 ! ****** Timestep ********
 !
@@ -508,7 +503,7 @@ module input_parameters
       real(r_typ)    :: dt_min = 1.0e-15_r_typ
       real(r_typ)    :: dt_max = huge(one)
 !
-! ****** Algorithm options.
+! ****** General algorithm options.
 !
       logical :: strang_splitting = .true.
 !
@@ -545,7 +540,7 @@ module input_parameters
       real(r_typ), dimension(MAX_REALIZATIONS) :: flow_attenuate_values
       data (flow_attenuate_values(i),i=1,MAX_REALIZATIONS) /MAX_REALIZATIONS*-1./
 !
-! ****** Built-in differential roation and meridianal flow models.
+! ****** Add in analytic differential roation and meridianal flow models.
 ! ****** For each, setting "1" sets the model/params used in the AFT code.
 !
       integer :: flow_dr_model = 0
@@ -556,16 +551,15 @@ module input_parameters
       logical :: use_flow_from_files = .false.
       character(512) :: flow_list_filename = ' '
       character(512) :: flow_root_dir = '.'
-      real(r_typ) :: flow_from_file_start_time_jd = zero
 !
 ! ****** Algorithm options.
 !        Can set upwind to central differencing by setting UPWIND=0.
 ! ****** 1: Forward Euler + Upwind.
 ! ****** 2: RK3TVD/SSPRK(3,3) + Upwind.
 ! ****** 3: RK3TVD/SSPRK(3,3) + WENO3.
-! ****** 4: SSPRK(4,3) + WENO3 [NOT FINISHED IMPLEMENTING YET]
+! ****** 4: SSPRK(4,3) + WENO3
 !
-      integer :: flow_num_method = 3
+      integer :: flow_num_method = 4
 !
 ! ****** Upwind coefficient.
 !
@@ -580,7 +574,6 @@ module input_parameters
       real(r_typ)    :: diffusion_coef_constant = zero
       real(r_typ), dimension(MAX_REALIZATIONS) :: diffusion_coef_constants
       data (diffusion_coef_constants(i),i=1,MAX_REALIZATIONS) /MAX_REALIZATIONS*-1./
-!
       character(512) :: diffusion_coef_filename = ' '
       logical        :: diffusion_coef_grid = .false.
       real(r_typ)    :: diffusion_coef_factor = diff_km2_s_to_rs2_hr
@@ -595,10 +588,11 @@ module input_parameters
       integer :: diffusion_num_method = 3
 !
 ! ****** Set number of diffusion subcycles per flow step.
-! ****** For diffusion-only runs with RKG2(RKL2), set to ~30(60).
+! ****** For diffusion-only runs with RK[G|L]2, robust to set to ~30(60).
 ! ****** For flow+diffusion runs, this usually can be ~1.
+! ****** Set this to 0 to "auto" set the subcycles (experimental).
 !
-      integer :: diffusion_subcycles = 30
+      integer :: diffusion_subcycles = 0
 !
 !-----------------------------------------------------------------------
 !
@@ -616,15 +610,13 @@ module input_parameters
       character(512) :: assimilate_data_map_list_filename = ' '
       character(512) :: assimilate_data_map_root_dir = '.'
 !
-      real(r_typ) :: assimilate_data_start_time_jd = zero
+! ****** Custom assimilation options.
 !
-! ****** Latitute limit.
+      logical :: assimilate_data_custom_from_mu = .false.
 !
       real(r_typ) :: assimilate_data_lat_limit = 0.
       real(r_typ), dimension(MAX_REALIZATIONS) :: assimilate_data_lat_limits
       data (assimilate_data_lat_limits(i),i=1,MAX_REALIZATIONS) /MAX_REALIZATIONS*-1./
-!
-      logical :: assimilate_data_custom_from_mu = .false.
 !
 ! ****** Mu parameters.
 !
@@ -636,7 +628,7 @@ module input_parameters
       real(r_typ), dimension(MAX_REALIZATIONS) :: assimilate_data_mu_limits
       data (assimilate_data_mu_limits(i),i=1,MAX_REALIZATIONS) /MAX_REALIZATIONS*-1./
 !
-      integer, parameter :: IO_DATA_IN = 8
+      logical        :: verbose = .false.
 !
 end module
 !#######################################################################
@@ -8191,7 +8183,7 @@ end subroutine
 !   - Refactored advection routines to have less repeated code.
 !
 ! 07/04/2023, RC, Version 0.24.0:
-!   - Added SSPRK(4,3) tiem stepping scheme for advection.
+!   - Added SSPRK(4,3) time stepping scheme for advection.
 !     To use, set flow_num_method to "4" (will use WENO3 as well).
 !
 !-----------------------------------------------------------------------
