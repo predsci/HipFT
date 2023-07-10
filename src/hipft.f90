@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.24.0'
-      character(*), parameter :: cdate='07/04/2023'
+      character(*), parameter :: cvers='0.24.1'
+      character(*), parameter :: cdate='07/10/2023'
 !
 end module
 !#######################################################################
@@ -1961,23 +1961,14 @@ subroutine set_realization_parameters
 !-----------------------------------------------------------------------
 !
       integer :: i, ierr
-      character(*), parameter :: FMTI='(a40,2000(I15.6,a))'
-      character(*), parameter :: FMTR='(a40,2000(1pe15.8,a))'
+      character(*), parameter :: FMTI='(100(A28))'
+      character(*), parameter :: FMTR='(I28,a,100(1pe15.8e3,a))'
 !
 !-----------------------------------------------------------------------
 !
 ! ****** Get local number of realizations and set index arrays.
 !
       call set_local_number_of_realizations
-!
-! ****** Set up realization meta data file if multiple realizations being used.
-!
-      if (n_realizations .gt. 1 .and. iamp0) then
-        call ffopen (IO_TMP,'hipft_realization_parameters.out','rw',ierr)
-        ! Write Realization number
-        write (IO_TMP,FMTI) 'Realization Number ',(i,' ',i=1,n_realizations)
-        close (IO_TMP)
-      end if
 !
 ! ****** Set realization index arrays.
 !
@@ -2012,6 +2003,7 @@ subroutine set_realization_parameters
           diffusion_coef_constant_rvec(i) =                           &
             diffusion_coef_constants(local_realization_indices(i))
         enddo
+!$acc enter data copyin(diffusion_coef_constant_rvec)
       end if
 !
 ! ****** Set up flow attenuation arrays.
@@ -2019,9 +2011,14 @@ subroutine set_realization_parameters
       if (flow_attenuate) then
         allocate (flow_attenuate_value_i_rvec(nr))
         do i=1,nr
-          flow_attenuate_value_i_rvec(i) =                            &
-            one/flow_attenuate_values(local_realization_indices(i))
+          if (flow_attenuate_values(local_realization_indices(i)).gt.zero) then
+            flow_attenuate_value_i_rvec(i) =                            &
+              one/flow_attenuate_values(local_realization_indices(i))
+          else
+            flow_attenuate_value_i_rvec(i) = HUGE(one)
+          end if
         enddo
+!$acc enter data copyin(flow_attenuate_value_i_rvec)
       end if
 !
 ! ****** Set up data assimilation arrays.
@@ -2062,28 +2059,33 @@ subroutine set_realization_parameters
 !
         end if
 !
-        if (iamp0) then
-          call ffopen (IO_TMP,'hipft_realization_parameters.out','a',ierr)
-          if (assimilate_data) then
-            write (IO_TMP,FMTR)   'assimilate_data_lat_limits     ', &
-                    (assimilate_data_lat_limits(i),' ',i=1,n_realizations)
-            if (assimilate_data_custom_from_mu) then
-              write (IO_TMP,FMTR) 'assimilate_data_mu_powers      ', &
-                      (assimilate_data_mu_powers(i),' ',i=1,n_realizations)
-              write (IO_TMP,FMTR) 'assimilate_data_mu_limits      ', &
-                      (assimilate_data_mu_limits(i),' ',i=1,n_realizations)
-            end if
-          end if
-          if (flow_attenuate) then
-            write (IO_TMP,FMTR)   'flow_attenuate_values          ', &
-                    (flow_attenuate_values(i),' ',i=1,n_realizations)
-          end if
-          if (advance_diffusion) then
-            write (IO_TMP,FMTR)   'diffusion_coef_constants       ', &
-                    (diffusion_coef_constants(i),' ',i=1,n_realizations)
-          end if
-          close (IO_TMP)
-        end if
+      end if
+!
+      if (iamp0 .and. n_realizations .gt. 1) then
+!
+! ****** Write realization meta data file.
+!
+        call ffopen (IO_TMP,'hipft_realization_parameters.out','rw',ierr)
+
+        write (IO_TMP,FMTI) 'Realization Number          ', &
+                            'assimilate_data_lat_limits  ', &
+                            'assimilate_data_mu_powers   ', &
+                            'assimilate_data_mu_limits   ', &
+                            'flow_attenuate_values       ', &
+                            'diffusion_coef_constants    '
+!
+        do i=1,n_realizations
+!
+          write (IO_TMP,FMTR) i,' ',                                &
+                                assimilate_data_lat_limits(i),' ',  &
+                                assimilate_data_mu_powers(i),' ',   &
+                                assimilate_data_mu_limits(i),' ',   &
+                                flow_attenuate_values(i),' ',       &
+                                diffusion_coef_constants(i),' '
+!
+        end do
+!
+        close (IO_TMP)
 !
       end if
 !
@@ -2641,7 +2643,7 @@ subroutine write_flows (idx_str)
 !   For now, this should be computed on the CPU no matter what...
 !
       do i=1,nr
-        fout(:,:,i) = TRANSPOSE(vt(:,1:npm1,i))
+        fout(:,:,i) = TRANSPOSE(vt(:,1:npm1,i))/m_s_to_rs_hr
       enddo
 !
       if (n_realizations.eq.1) then
@@ -2714,7 +2716,7 @@ subroutine write_flows (idx_str)
 !   For now, this should be computed on the CPU no matter what...
 !
       do i=1,nr
-        fout(:,:,i) = TRANSPOSE(vp(:,:,i))
+        fout(:,:,i) = TRANSPOSE(vp(:,:,i))/m_s_to_rs_hr
       enddo
 !
       if (n_realizations.eq.1) then
@@ -8185,6 +8187,12 @@ end subroutine
 ! 07/04/2023, RC, Version 0.24.0:
 !   - Added SSPRK(4,3) time stepping scheme for advection.
 !     To use, set flow_num_method to "4" (will use WENO3 as well).
+!
+! 07/10/2023, RC, Version 0.24.1:
+!   - Changed the way realization parameters are written out.
+!   - BUG FIX:  Flow attenuation values were not being put on GPU,
+!               unclear how things were working...
+!   - Modified flow output to be in units of m/s.
 !
 !-----------------------------------------------------------------------
 !
