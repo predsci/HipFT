@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.24.1'
-      character(*), parameter :: cdate='07/10/2023'
+      character(*), parameter :: cvers='0.25.0'
+      character(*), parameter :: cdate='07/11/2023'
 !
 end module
 !#######################################################################
@@ -590,7 +590,7 @@ module input_parameters
 ! ****** Set number of diffusion subcycles per flow step.
 ! ****** For diffusion-only runs with RK[G|L]2, robust to set to ~30(60).
 ! ****** For flow+diffusion runs, this usually can be ~1.
-! ****** Set this to 0 to "auto" set the subcycles (experimental).
+! ****** Set this to 0 to "auto" set the subcycles.
 !
       integer :: diffusion_subcycles = 0
 !
@@ -4116,7 +4116,11 @@ subroutine diffusion_step (dtime_local)
 ! ****** Set the initial subcycle time step.
 !
       if (auto_sc) then
-        dtime_local2 = dtime_local
+!
+! This will allow the first dtflux calculation to be unbound.
+! After it is set, it is used as a lower bound.
+!
+        dtime_local2 = zero
       else
         dtime_local2 = dtime_local/REAL(diffusion_subcycles,r_typ)
       end if
@@ -4582,12 +4586,13 @@ subroutine get_dtime_diffusion_flux (dtime_flux)
 !-----------------------------------------------------------------------
 !
       integer :: i,j,k,ierr
-      real(r_typ) :: axabsmax
+      real(r_typ) :: axabsmax, dtime_in
       real(r_typ), dimension(:,:,:), allocatable :: Af
       real(r_typ), parameter :: safe = 0.95_r_typ
 !
 !-----------------------------------------------------------------------
 !
+      dtime_in = dtime_flux
       dtime_flux = HUGE(one)
 !
       allocate (Af(ntm,npm,nr))
@@ -4628,6 +4633,10 @@ subroutine get_dtime_diffusion_flux (dtime_flux)
           enddo
         enddo
 !$omp end parallel do
+!
+! ****** Don't let the new dt be smaller than the previous one.
+!
+        if (dtime_flux .lt. dtime_in) dtime_flux = dtime_in
 !
         wtime_tmp_mpi = MPI_Wtime()
         call MPI_Allreduce (MPI_IN_PLACE,dtime_flux,1,ntype_real,  &
@@ -8193,6 +8202,10 @@ end subroutine
 !   - BUG FIX:  Flow attenuation values were not being put on GPU,
 !               unclear how things were working...
 !   - Modified flow output to be in units of m/s.
+!
+! 07/11/2023, RC, Version 0.25.0:
+!   - Updated dtflux caluclation to not allow the time step
+!     within the cycles to decrease.
 !
 !-----------------------------------------------------------------------
 !
