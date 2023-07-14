@@ -2067,7 +2067,7 @@ subroutine set_realization_parameters
 !
         call ffopen (IO_TMP,'hipft_realization_parameters.out','rw',ierr)
 
-        write (IO_TMP,FMTI) 'Realization Number          ', &
+        write (IO_TMP,FMTI) 'realization_number          ', &
                             'assimilate_data_lat_limits  ', &
                             'assimilate_data_mu_powers   ', &
                             'assimilate_data_mu_limits   ', &
