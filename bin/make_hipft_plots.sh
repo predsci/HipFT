@@ -19,7 +19,8 @@ mkdir $DATADIR/plots
 cd $DATADIR/plots
 
 
-for file in $(ls ../*.h5)
+for file in ../*.h5 
+#for file in $(ls ../*.h5)
 do
   TWOD=$(h5dump -d dim3 -H $file 2>/dev/null |tr '"' '\n' | grep DATASPACE\ \ SIMPLE | head -1 | tr -dc '^[0-9]/' | tr '/' '\n'| head -1)
 
