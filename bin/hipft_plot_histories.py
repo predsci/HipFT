@@ -116,7 +116,7 @@ def run(args):
     brminabs_stats = stats(np.abs(brmin))
     brabsmin_stats = stats(brabsmin)
   
-    print('Quantity  Max  Min  Mean  STD')
+    print('Quantity  Min  Max  Mean  StdDev')
     print('max(Br)    ',brmax_stats)
     print('|min(Br)|  ',brminabs_stats)
     print('min(|Br|)  ',brabsmin_stats)

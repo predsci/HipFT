@@ -18,9 +18,7 @@ CURRDIR=$PWD
 mkdir $DATADIR/plots
 cd $DATADIR/plots
 
-
 for file in ../*.h5 
-#for file in $(ls ../*.h5)
 do
   TWOD=$(h5dump -d dim3 -H $file 2>/dev/null |tr '"' '\n' | grep DATASPACE\ \ SIMPLE | head -1 | tr -dc '^[0-9]/' | tr '/' '\n'| head -1)
 
@@ -58,7 +56,7 @@ cd tmp
 i=1
 
 if [[ $TWOD -eq "" ]]; then
-  for file in $(ls ../*.png)
+  for file in ../*.png
   do
     ln -s $file  movie$i.png
     i=$((i+1))
@@ -70,7 +68,7 @@ elif [[ "$Slice" = "all" ]]; then
   do
     i=1
     fslice=$(printf %06d\\n ${j})
-    for file in $(ls ../*_r$fslice.png)
+    for file in ../*_r$fslice.png
     do
       ln -s $file  movie$i.png
       i=$((i+1))
@@ -82,7 +80,7 @@ elif [[ "$Slice" = "all" ]]; then
 elif [[ $Slice -ne "" ]]; then
   if [[ $Slice -gt $TWOD  ]]; then
     fslice=$(printf %06d\\n $TWOD)
-    for file in $(ls ../*_r$fslice.png)
+    for file in ../*_r$fslice.png
     do
       ln -s $file  movie$i.png
       i=$((i+1))
@@ -91,7 +89,7 @@ elif [[ $Slice -ne "" ]]; then
     cp movie.mov ${CURRDIR}/${OUTFILE}_r$fslice.mov
   else
     fslice=$(printf %06d\\n $Slice)
-    for file in $(ls ../*_r$fslice.png)
+    for file in ../*_r$fslice.png
     do
       ln -s $file  movie$i.png
       i=$((i+1))
@@ -101,7 +99,7 @@ elif [[ $Slice -ne "" ]]; then
     cp movie.mov ${CURRDIR}/${OUTFILE}_r$fslice.mov
   fi
 else
-  for file in $(ls ../*_r000001.png)
+  for file in ../*idx*.png
   do
     ln -s $file  movie$i.png
     i=$((i+1))
