@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.25.0'
-      character(*), parameter :: cdate='07/11/2023'
+      character(*), parameter :: cvers='0.25.1'
+      character(*), parameter :: cdate='08/16/2023'
 !
 end module
 !#######################################################################
@@ -3100,7 +3100,7 @@ subroutine update_flow
           flow_needs_updating = .true.
         end if
 !
-! ***** Add in flows from ConFlow algorithm.
+! ***** Add in flows from linked ConFlow algorithm.
 !       TO BE DEV: if (flow_from_conflow) call add_flow_from_conflow (metadata_structure,flow_array)
 !
 ! ***** Add in analytic meridianal flow model.
@@ -4606,7 +4606,9 @@ subroutine get_dtime_diffusion_flux (dtime_flux)
       do i=1,nr
         do k=2,npm-1
           do j=2,ntm-1
-            axabsmax = MAX(ABS(Af(j,k,i)),axabsmax)
+            if (Af(j,k,i)*f(j,k,i) < 0) then
+              axabsmax = MAX(ABS(Af(j,k,i)),axabsmax)
+            end if
           enddo
         enddo
       enddo
@@ -4626,8 +4628,10 @@ subroutine get_dtime_diffusion_flux (dtime_flux)
         do i=1,nr
           do k=2,npm-1
             do j=2,ntm-1
-              if (axabsmax .eq. ABS(Af(j,k,i))) then
-                dtime_flux = safe*ABS(f(j,k,i))/ABS(Af(j,k,i))
+              if (Af(j,k,i)*f(j,k,i) < 0 .and.   &
+                  axabsmax .eq. ABS(Af(j,k,i))) then
+!$acc atomic write
+                dtime_flux = safe*ABS(f(j,k,i))/axabsmax
               end if
             enddo
           enddo
@@ -8206,6 +8210,9 @@ end subroutine
 ! 07/11/2023, RC, Version 0.25.0:
 !   - Updated dtflux caluclation to not allow the time step
 !     within the cycles to decrease.
+!
+! 08/16/2023, RC, Version 0.25.1:
+!   - Updated calculation of diffusion auto time step.
 !
 !-----------------------------------------------------------------------
 !
