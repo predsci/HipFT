@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.25.2'
-      character(*), parameter :: cdate='08/18/2023'
+      character(*), parameter :: cvers='0.26.0'
+      character(*), parameter :: cdate='08/29/2023'
 !
 end module
 !#######################################################################
@@ -463,9 +463,14 @@ module input_parameters
 !
       integer, private :: i
 !
+! ****** Resolution ********
+!
+      integer :: res_nt = 0
+      integer :: res_np = 0
+!
 ! ****** Initial map ********
 !
-      character(512) :: initial_map_filename = 'br_input.h5'
+      character(512) :: initial_map_filename = ''
 !
 ! ****** Output options ********
 !
@@ -1654,6 +1659,7 @@ subroutine load_initial_condition
 !
       integer :: n1,n2,n3,ierr,i,j,k,lsbuf, irank
       integer, dimension(:), allocatable :: displ,lbuf
+      real(r_typ) :: d1,d2
       real(r_typ), dimension(:), allocatable :: fn1,fs1,fn2,fs2
       real(r_typ), dimension(:,:,:), allocatable :: f_local,gout
       real(r_typ), dimension(:,:), allocatable :: f_tmp2d
@@ -1661,43 +1667,85 @@ subroutine load_initial_condition
 !
 !-----------------------------------------------------------------------
 !
-! ****** NOTE: At this time the user cannot specify NT,NP.
-! ****** Instead, the resolution of the input map is used.
+! ****** NOTE: If the user does not specify NT,NP,
+! ****** the resolution of the input map is used.
 ! ****** The input map is assumed to be in PT and with a
 ! ****** one-point overlap in phi.
+! ******
+!
+! ****** If we are starting with an empty uniform grid map, allocate
+! ****** and set the scales.
+!
+! [RMC] Eventaully, we will allow interpolation, so can set res and
+!       have a filename.
+!
+      if (initial_map_filename .eq. '' .and. res_np*res_nt .ge. 9) then
+
+        n1 = res_np
+        d1 = twopi/(n1-1)
+        n2 = res_nt
+        d2 = pi/(n2-1)
+        n3 = nr
+
+        allocate (f_local(n1,n2,n3))
+        allocate (f_tmp2d(n1,n2))
+!
+! ****** Can add other inital conditon options here.
+!
+        f_local(:,:,:) = 0.
+        f_tmp2d(:,:) = 0.
+
+        allocate (s1(n1))
+        do i=1,n1
+          s1(i) = (i-1)*d1
+        enddo
+
+        allocate (s2(n2))
+        do i=1,n2
+          s2(i) = (i-1)*d2
+        enddo
+
+        allocate (s3(n3))
+        do i=1,n3
+          s3(i) = real(i,r_typ)
+        enddo
+
+      elseif (initial_map_filename .ne. '') then
 !
 ! ****** Read the initial magnetic map.
 !
-      if (iamp0) then
-        call read_2d_file (initial_map_filename,n1,n2,f_tmp2d,s1,s2,ierr)
-      endif
+        if (iamp0) then
+          call read_2d_file (initial_map_filename,n1,n2,f_tmp2d,s1,s2,ierr)
+        endif
 !
-      wtime_tmp_mpi = MPI_Wtime()
-      call MPI_Bcast (n1,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-      call MPI_Bcast (n2,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-      wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
-      if (.not.iamp0) then
-        allocate (s1(n1))
-        allocate (s2(n2))
-        allocate (f_tmp2d(n1,n2))
-      endif
-      wtime_tmp_mpi = MPI_Wtime()
-      call MPI_Bcast (f_tmp2d,n1*n2,ntype_real,0,MPI_COMM_WORLD,ierr)
-      call MPI_Bcast (s1,n1,ntype_real,0,MPI_COMM_WORLD,ierr)
-      call MPI_Bcast (s2,n2,ntype_real,0,MPI_COMM_WORLD,ierr)
-      wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+        wtime_tmp_mpi = MPI_Wtime()
+        call MPI_Bcast (n1,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+        call MPI_Bcast (n2,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+        wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+        if (.not.iamp0) then
+          allocate (s1(n1))
+          allocate (s2(n2))
+          allocate (f_tmp2d(n1,n2))
+        endif
+        wtime_tmp_mpi = MPI_Wtime()
+        call MPI_Bcast (f_tmp2d,n1*n2,ntype_real,0,MPI_COMM_WORLD,ierr)
+        call MPI_Bcast (s1,n1,ntype_real,0,MPI_COMM_WORLD,ierr)
+        call MPI_Bcast (s2,n2,ntype_real,0,MPI_COMM_WORLD,ierr)
+        wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
 !
-      n3 = nr
-      allocate (f_local(n1,n2,n3))
+        n3 = nr
+        allocate (f_local(n1,n2,n3))
 
-      do i=1,n3
-        f_local(:,:,i) = f_tmp2d(:,:)
-      enddo
+        do i=1,n3
+          f_local(:,:,i) = f_tmp2d(:,:)
+        enddo
 !
-      allocate (s3(n3))
-      do i=1,n3
-        s3(i)=real(i,r_typ)
-      enddo
+        allocate (s3(n3))
+        do i=1,n3
+          s3(i) = real(i,r_typ)
+        enddo
+!
+      end if
 !
       if (validation_run .eq. 1) then
 !
@@ -7767,6 +7815,7 @@ subroutine read_input_file
 !
       namelist /hipft_input_parameters/                                &
                verbose,                                                &
+               res_nt,res_np,                                          &
                initial_map_filename,                                   &
                output_map_root_filename,                               &
                time_start,                                             &
@@ -7914,6 +7963,31 @@ subroutine process_input_parameters
           write (*,*) 'Maximum number of realizations allowed:  ',MAX_REALIZATIONS
         end if
         call endrun (.true.)
+      end if
+!
+      if (initial_map_filename .eq. '' .and. res_np*res_nt .lt. 9) then
+        if (iamp0) then
+          write (*,*)
+          write (*,*) '### ERROR in SETUP:'
+          write (*,*) '### Must specify input map or proper res for initial map.'
+          write (*,*) 'Input map name = ',initial_map_filename
+          write (*,*) 'res_nt,res_np:  ',res_nt,res_np
+        end if
+        call endrun (.true.)
+      end if
+!
+      if (initial_map_filename .ne. '' .and. res_np*res_nt .ge. 9) then
+        if (iamp0) then
+          write (*,*)
+          write (*,*) '### WARNING in SETUP:'
+          write (*,*) '### You have specified a resolution and provided an '
+          write (*,*) '### input map file.  Interpolation is not yet'
+          write (*,*) '### supported.  Using the native resolution of the map.'
+          write (*,*) 'Input map name = ',initial_map_filename
+          write (*,*) 'res_nt,res_np:  ',res_nt,res_np
+        end if
+        res_np = 0
+        res_np = 0
       end if
 !
 ! ****** Set realizations to defaults if they have not been set.
@@ -8224,6 +8298,15 @@ end subroutine
 !   - BUGFIX: Seems the flow CFL was being set too high.
 !             It needed a 1/2 factor.
 !   - Yet another small update to the auto diffusion time step.
+!
+! 08/29/2023, RC, Version 0.26.0:
+!   - Added ability to specify the resolution of the run if one is not
+!     using an input map.  This will set the initial map to a uniform
+!     grid with zero value.  This is useful for validation tests,
+!     and building up a data assimilated map from scratch.
+!     To use, set res_nt and res_np to desired resolution.
+!     NOTE!  There is currently NO interpolation so you cannot specify
+!     a resolution and an input map together.
 !
 !-----------------------------------------------------------------------
 !
