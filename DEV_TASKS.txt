@@ -3,17 +3,16 @@ DEV TASKS FOR HIPFT:
  - Continue parameter 1D arrays to allow instance variations
    To do:
    - Conflow: may be multiple flow map file sets, or with later auto-gen, seed or other conflow parameters
-   - Analytic flow profile params (3 for meridianal, 3 for differential rotation)
+   - Analytic flow profile params (3 for meridianal, 3 for differential rotation - maybe 5 for each...)
 
  - Cleanup the python script that generates hipft history diagnostics from a series of hipft output maps
 
  - Update history plot script to allow UT time input for HipFT time "0"
-   for use with plot axis (and add plot axis format options)
+   for use with plot axis (and add plot axis format options) [Miko]
 
  - Update history compare script to allow N history files with a more automatic way to specify them (realizations).
 
  - Make testsuite:  Small map versions of standard runs
-   - Add 64-bit output option for detaield comparisons?
 
  - Write documentation (mkdocs? git io?)
 
@@ -21,13 +20,6 @@ DEV TASKS FOR HIPFT:
    Can use initial UT time and map output text file to get times.
    Need to do average of CR (or any time) (so find idx range for each one) and add to diagram map.
    IN PROGRESS!
-
- - Refactor time and space advection combos to be more streamlined with less repeated code (make routines pure as well)
-
- - Add SSPRK(4,3) and modify time step CFL to "safety*2" for that scheme
-
- - Test RK3TVD (SSPRK(3,3)) with a "one" instead of "half" in CFL (upwind too) 
-   Code has already been updated - needs testing!
 
 LATER
 
