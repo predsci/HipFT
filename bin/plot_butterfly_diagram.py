@@ -2,14 +2,11 @@
 import argparse
 import signal
 import sys
-
 from datetime import datetime
-
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
-
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 import psihdf as ps
 import psipals
@@ -23,7 +20,7 @@ signal.signal(signal.SIGINT, signal_handler)
 
 
 def argParsing():
-  parser = argparse.ArgumentParser(description='plot_2d:  This tool saves a png plot of a 2D hdf/h5 file.')
+  parser = argparse.ArgumentParser(description='plot_butterfly_diagram: This tool saves a plot of a 2D h5 butterfly diagram.')
 
   parser.add_argument(
             'iFile',

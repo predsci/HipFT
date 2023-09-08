@@ -5,7 +5,6 @@ import sys
 from datetime import datetime
 import numpy as np
 
-
 def signal_handler(signal, frame):
   print('You pressed Ctrl+C! Stopping!')
   sys.exit(0)
@@ -14,19 +13,20 @@ signal.signal(signal.SIGINT, signal_handler)
 
 
 def argParsing():
-  parser = argparse.ArgumentParser(description='plot_2d:  This tool saves a png plot of a 2D hdf/h5 file.')
+  parser = argparse.ArgumentParser(description='map_output_list_ut:  This tool converts a hipft map output text file to one with UT dates based on a chosen start UT time.')
 
-  parser.add_argument('-maplist',
-                      dest='maplist',
-                      help='Name of map text file',
-                      required=True)
+  parser.add_argument('maplist',
+                      help='Name of the HipFT output map list text file')
 
-  parser.add_argument('-utstart',
+  parser.add_argument('utstart',
                       help='Start Date in UT: YYYYMMDDTHH:MM:SS',
-                      dest='utstart',
-                      default='00000000T00:00:00',
-                      required=True)
+                      default='00000000T00:00:00')
 
+  parser.add_argument('-o',
+                      dest='outfile',
+                      default='map_list_with_ut.out',
+                      help='Name of output map text file',
+                      required=False)
 
   return parser.parse_args()
 
@@ -55,8 +55,8 @@ def run(args):
 
   # Create map file with ut time column appended to end:
 
-  outfile = open('map_list_with_ut.txt','w')
-  outfile = open('map_list_with_ut.txt','a')
+  outfile = open(args.outfile,'w')
+  outfile = open(args.outfile,'a')
   i = 0
 
   with open(mapfile, 'r') as infile:
