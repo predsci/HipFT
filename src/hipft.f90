@@ -4649,7 +4649,8 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
 !
 !-----------------------------------------------------------------------
 !
-! ****** Get the practical time step limit for diffusion. V3
+! ****** Get the practical time step limit for diffusion.
+! ****** Version 2.
 !
 !-----------------------------------------------------------------------
 !
@@ -4720,7 +4721,7 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
 !
       if (verbose) write (*,*) '   GET_DTIME_DIFFUSION_PTL: MAX(|F|)          = ',axabsmax
 !
-      if (axabsmax.gt.zero) then
+      if (axabsmax .gt. zero) then
 !
 !$omp parallel do   collapse(3) default(shared) reduction(min:dtime_ptl)
 !$acc parallel loop collapse(3) default(present) reduction(min:dtime_ptl) copyin(axabsmax)
@@ -4830,6 +4831,7 @@ subroutine get_dtime_diffusion_ptl_v1 (dtime_ptl)
 !-----------------------------------------------------------------------
 !
 ! ****** Get the practical time step limit for diffusion.
+! ****** Version 1.
 !
 !-----------------------------------------------------------------------
 !
@@ -4862,6 +4864,11 @@ subroutine get_dtime_diffusion_ptl_v1 (dtime_ptl)
       dtime_in = dtime_ptl
       dtime_ptl = HUGE(one)
 !
+      if (verbose) then
+        write (*,*) ' '
+        write (*,*) '   GET_DTIME_DIFFUSION_PTL: dtime_in          = ',dtime_in
+      end if
+!
       allocate (Af(ntm,npm,nr))
 !$acc enter data create(Af)
 !
@@ -4889,7 +4896,9 @@ subroutine get_dtime_diffusion_ptl_v1 (dtime_ptl)
                           MPI_MAX,MPI_COMM_WORLD,ierr)
       wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
 !
-      if (axabsmax.gt.zero) then
+      if (verbose) write (*,*) '   GET_DTIME_DIFFUSION_PTL: MAX(|F|)          = ',axabsmax
+!
+      if (axabsmax .gt. zero) then
         dtime_ptl = 0.0
 !
 !$omp parallel do   collapse(3) default(shared) reduction(max:dtime_ptl)
@@ -4899,7 +4908,7 @@ subroutine get_dtime_diffusion_ptl_v1 (dtime_ptl)
             do j=2,ntm-1
               if (axabsmax .eq. ABS(Af(j,k,i))                    &
                   .and. ABS(f(j,k,i)) .gt. fmin) then
-                tmp = safe*ABS(f(j,k,i))/ABS(Af(j,k,i))
+                tmp = safe*half*ABS(f(j,k,i))/ABS(Af(j,k,i))
               else
                 tmp = 0.0
               end if
@@ -4916,16 +4925,11 @@ subroutine get_dtime_diffusion_ptl_v1 (dtime_ptl)
 !
 ! ****** Don't let the new dt be smaller than the previous one.
 !
-        if (verbose) then
-          write (*,*) ' '
-          write (*,*) '   GET_DTIME_DIFFUSION_PTL: PTL timestep      = ',dtime_ptl
-        end if
+        if (verbose) write (*,*) '   GET_DTIME_DIFFUSION_PTL: PTL timestep      = ',dtime_ptl
 !
         if (dtime_ptl .lt. dtime_in) dtime_ptl = dtime_in
 !
-        if (verbose) then
-          write (*,*) '   GET_DTIME_DIFFUSION_PTL: PTL timestep used = ',dtime_ptl
-        end if
+        if (verbose) write (*,*) '   GET_DTIME_DIFFUSION_PTL: PTL timestep used = ',dtime_ptl
       end if
 !
 !$acc exit data delete(Af)
