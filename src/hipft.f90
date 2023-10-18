@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.27.0'
-      character(*), parameter :: cdate='09/08/2023'
+      character(*), parameter :: cvers='0.28.0'
+      character(*), parameter :: cdate='12/18/2023'
 !
 end module
 !#######################################################################
@@ -227,6 +227,18 @@ module globals
 ! ****** Flow attenuation.
 !
       real(r_typ), dimension(:), allocatable :: flow_attenuate_value_i_rvec
+!
+! ****** Flow differential rotational.
+!
+      real(r_typ), dimension(:), allocatable :: flow_dr_coef_p0_rvec
+      real(r_typ), dimension(:), allocatable :: flow_dr_coef_p2_rvec
+      real(r_typ), dimension(:), allocatable :: flow_dr_coef_p4_rvec
+!
+! ****** Flow meridianal.
+!
+      real(r_typ), dimension(:), allocatable :: flow_mf_coef_p1_rvec
+      real(r_typ), dimension(:), allocatable :: flow_mf_coef_p3_rvec
+      real(r_typ), dimension(:), allocatable :: flow_mf_coef_p5_rvec
 !
 ! ****** Flow polar boundary condition factors.
 !
@@ -551,11 +563,30 @@ module input_parameters
       real(r_typ), dimension(MAX_REALIZATIONS) :: flow_attenuate_values
       data (flow_attenuate_values(i),i=1,MAX_REALIZATIONS) /MAX_REALIZATIONS*-1./
 !
-! ****** Add in analytic differential roation and meridianal flow models.
-! ****** For each, setting "1" sets the model/params used in the AFT code.
+! ****** Analytic differential roation and meridianal flow models.
 !
       integer :: flow_dr_model = 0
       integer :: flow_mf_model = 0
+!
+      real(r_typ) :: flow_dr_coef_p0_value = 46.0_r_typ
+      real(r_typ) :: flow_dr_coef_p2_value = -262.0_r_typ
+      real(r_typ) :: flow_dr_coef_p4_value = -379.0_r_typ
+      real(r_typ), dimension(MAX_REALIZATIONS) :: flow_dr_coef_p0_values
+      real(r_typ), dimension(MAX_REALIZATIONS) :: flow_dr_coef_p2_values
+      real(r_typ), dimension(MAX_REALIZATIONS) :: flow_dr_coef_p4_values
+      data (flow_dr_coef_p0_values(i),i=1,MAX_REALIZATIONS) /MAX_REALIZATIONS*-1000000./
+      data (flow_dr_coef_p2_values(i),i=1,MAX_REALIZATIONS) /MAX_REALIZATIONS*-1000000./
+      data (flow_dr_coef_p4_values(i),i=1,MAX_REALIZATIONS) /MAX_REALIZATIONS*-1000000./
+!
+      real(r_typ) :: flow_mf_coef_p1_value = 22.0_r_typ
+      real(r_typ) :: flow_mf_coef_p3_value = 11.0_r_typ
+      real(r_typ) :: flow_mf_coef_p5_value = -28.0_r_typ
+      real(r_typ), dimension(MAX_REALIZATIONS) :: flow_mf_coef_p1_values
+      real(r_typ), dimension(MAX_REALIZATIONS) :: flow_mf_coef_p3_values
+      real(r_typ), dimension(MAX_REALIZATIONS) :: flow_mf_coef_p5_values
+      data (flow_mf_coef_p1_values(i),i=1,MAX_REALIZATIONS) /MAX_REALIZATIONS*-1000000./
+      data (flow_mf_coef_p3_values(i),i=1,MAX_REALIZATIONS) /MAX_REALIZATIONS*-1000000./
+      data (flow_mf_coef_p5_values(i),i=1,MAX_REALIZATIONS) /MAX_REALIZATIONS*-1000000./
 !
 ! ****** Time dependent flows from file (used for conflow).
 !
@@ -2097,6 +2128,36 @@ subroutine set_realization_parameters
 !$acc enter data copyin(flow_attenuate_value_i_rvec)
       end if
 !
+! ****** Set up AFT differential rotation flow arrays.
+!
+      if (flow_dr_model.eq.1) then
+        allocate (flow_dr_coef_p0_rvec(nr))
+        allocate (flow_dr_coef_p2_rvec(nr))
+        allocate (flow_dr_coef_p4_rvec(nr))
+        do i=1,nr
+          flow_dr_coef_p0_rvec(i) = flow_dr_coef_p0_values(local_realization_indices(i))   
+          flow_dr_coef_p2_rvec(i) = flow_dr_coef_p2_values(local_realization_indices(i))  
+          flow_dr_coef_p4_rvec(i) = flow_dr_coef_p4_values(local_realization_indices(i))  
+        enddo
+!$acc enter data copyin(flow_dr_coef_p0_rvec,flow_dr_coef_p2_rvec, &
+!$acc                   flow_dr_coef_p4_rvec)
+      end if
+!
+! ****** Set up AFT meridianal flow arrays.
+!
+      if (flow_dr_model.eq.1) then
+        allocate (flow_mf_coef_p1_rvec(nr))
+        allocate (flow_mf_coef_p3_rvec(nr))
+        allocate (flow_mf_coef_p5_rvec(nr))
+        do i=1,nr
+          flow_mf_coef_p1_rvec(i) = flow_mf_coef_p1_values(local_realization_indices(i))   
+          flow_mf_coef_p3_rvec(i) = flow_mf_coef_p3_values(local_realization_indices(i))  
+          flow_mf_coef_p5_rvec(i) = flow_mf_coef_p5_values(local_realization_indices(i))  
+        enddo
+!$acc enter data copyin(flow_mf_coef_p1_rvec,flow_mf_coef_p3_rvec, &
+!$acc                   flow_mf_coef_p5_rvec)
+      end if
+!
 ! ****** Set up data assimilation arrays.
 !
       if (assimilate_data) then
@@ -2147,6 +2208,12 @@ subroutine set_realization_parameters
                             'assimilate_data_lat_limits  ', &
                             'assimilate_data_mu_powers   ', &
                             'assimilate_data_mu_limits   ', &
+                            'flow_dr_coef_p0_values      ', &
+                            'flow_dr_coef_p2_values      ', &
+                            'flow_dr_coef_p4_values      ', &
+                            'flow_mf_coef_p1_values      ', &
+                            'flow_mf_coef_p3_values      ', &
+                            'flow_mf_coef_p5_values      ', &
                             'flow_attenuate_values       ', &
                             'diffusion_coef_constants    '
 !
@@ -2156,6 +2223,12 @@ subroutine set_realization_parameters
                                 assimilate_data_lat_limits(i),' ',  &
                                 assimilate_data_mu_powers(i),' ',   &
                                 assimilate_data_mu_limits(i),' ',   &
+                                flow_dr_coef_p0_values(i),' ',      &
+                                flow_dr_coef_p2_values(i),' ',      &
+                                flow_dr_coef_p4_values(i),' ',      &
+                                flow_mf_coef_p1_values(i),' ',      &
+                                flow_mf_coef_p3_values(i),' ',      &
+                                flow_mf_coef_p5_values(i),' ',      &
                                 flow_attenuate_values(i),' ',       &
                                 diffusion_coef_constants(i),' '
 !
@@ -6804,6 +6877,7 @@ subroutine add_flow_differential_rotation_aft
       use mesh
       use fields
       use constants
+      use globals
 !
 !-----------------------------------------------------------------------
 !
@@ -6811,35 +6885,17 @@ subroutine add_flow_differential_rotation_aft
 !
 !-----------------------------------------------------------------------
 !
-! ****** Parameters in m/s
-!
-      real(r_typ), dimension(:), allocatable :: t0,t2,t4
-!
-!-----------------------------------------------------------------------
-!
       integer :: i,j,k
 !
 !-----------------------------------------------------------------------
 !
-      allocate (t0(nr))
-      allocate (t2(nr))
-      allocate (t4(nr))
-!$acc enter data create(t0,t2,t4)
-      do concurrent (i=1:nr)
-        t0(i) = 46.0_r_typ
-        t2(i) = -262.0_r_typ
-        t4(i) = -379.0_r_typ
-      enddo
-!
       do concurrent (i=1:nr,k=1:np,j=1:ntm)
-        vp(j,k,i) = vp(j,k,i) + &
-                  m_s_to_rs_hr*st(j)*(t0(i) + t2(i)*ct(j)**2 + t4(i)*ct(j)**4)
+        vp(j,k,i) = vp(j,k,i) +                            &
+                  m_s_to_rs_hr*st(j)*(                     &
+                        flow_dr_coef_p0_rvec(i) +          &
+                        flow_dr_coef_p2_rvec(i)*ct(j)**2 + &
+                        flow_dr_coef_p4_rvec(i)*ct(j)**4)
       enddo
-!
-!$acc exit data delete(t0,t2,t4)
-      deallocate (t0)
-      deallocate (t2)
-      deallocate (t4)
 !
 end subroutine
 !#######################################################################
@@ -6855,6 +6911,7 @@ subroutine add_flow_meridianal_aft
       use mesh
       use fields
       use constants
+      use globals
 !
 !-----------------------------------------------------------------------
 !
@@ -6862,36 +6919,17 @@ subroutine add_flow_meridianal_aft
 !
 !-----------------------------------------------------------------------
 !
-! ****** Paramters in m/s
-!
-      real(r_typ), dimension(:), allocatable :: s1,s3,s5
-!
-!-----------------------------------------------------------------------
-!
       integer :: i,j,k
 !
 !-----------------------------------------------------------------------
 !
-      allocate (s1(nr))
-      allocate (s3(nr))
-      allocate (s5(nr))
-!$acc enter data create(s1,s3,s5)
-      do concurrent (i=1:nr)
-        s1(i) = 22.0_r_typ
-        s3(i) = 11.0_r_typ
-        s5(i) = -28.0_r_typ
-      enddo
-!
       do concurrent (i=1:nr,k=1:npm,j=1:nt)
-        vt(j,k,i) = vt(j,k,i) -            &
-                  m_s_to_rs_hr*sth(j)* &
-                  (s1(i)*cth(j) + s3(i)*cth(j)**3 + s5(i)*cth(j)**5)
+        vt(j,k,i) = vt(j,k,i) -                          &
+                  m_s_to_rs_hr*sth(j)*                   &
+                  (flow_mf_coef_p1_rvec(i)*cth(j) +      &
+                   flow_mf_coef_p3_rvec(i)*cth(j)**3 +   &
+                   flow_mf_coef_p5_rvec(i)*cth(j)**5)
       enddo
-!
-!$acc exit data delete(s1,s3,s5)
-      deallocate (s1)
-      deallocate (s3)
-      deallocate (s5)
 !
 end subroutine
 !#######################################################################
@@ -8018,7 +8056,19 @@ subroutine read_input_file
                flow_attenuate_value,                                   &
                flow_attenuate_values,                                  &
                flow_dr_model,                                          &
+               flow_dr_coef_p0_value,                                  &
+               flow_dr_coef_p2_value,                                  &
+               flow_dr_coef_p4_value,                                  &
+               flow_dr_coef_p0_values,                                 &
+               flow_dr_coef_p2_values,                                 &
+               flow_dr_coef_p4_values,                                 &
                flow_mf_model,                                          &
+               flow_mf_coef_p1_value,                                  &
+               flow_mf_coef_p3_value,                                  &
+               flow_mf_coef_p5_value,                                  &
+               flow_mf_coef_p1_values,                                 &
+               flow_mf_coef_p3_values,                                 &
+               flow_mf_coef_p5_values,                                 &
                use_flow_from_files,                                    &
                flow_list_filename,                                     &
                flow_root_dir,                                          &
@@ -8185,6 +8235,24 @@ subroutine process_input_parameters
         end if
         if (assimilate_data_mu_powers(i) .lt. 0.) then
           assimilate_data_mu_powers(i) = assimilate_data_mu_power
+        end if
+        if (flow_dr_coef_p0_values(i) .lt. -100000.) then
+          flow_dr_coef_p0_values(i) = flow_dr_coef_p0_value
+        end if
+        if (flow_dr_coef_p2_values(i) .lt. -100000.) then
+          flow_dr_coef_p2_values(i) = flow_dr_coef_p2_value
+        end if
+        if (flow_dr_coef_p4_values(i) .lt. -100000.) then
+          flow_dr_coef_p4_values(i) = flow_dr_coef_p4_value
+        end if
+        if (flow_mf_coef_p1_values(i) .lt. -100000.) then
+          flow_mf_coef_p1_values(i) = flow_mf_coef_p1_value
+        end if
+        if (flow_mf_coef_p3_values(i) .lt. -100000.) then
+          flow_mf_coef_p3_values(i) = flow_mf_coef_p3_value
+        end if
+        if (flow_mf_coef_p5_values(i) .lt. -100000.) then
+          flow_mf_coef_p5_values(i) = flow_mf_coef_p5_value
         end if
         if (flow_attenuate_values(i) .lt. 0.) then
           flow_attenuate_values(i) = flow_attenuate_value
@@ -8499,6 +8567,10 @@ end subroutine
 !     Set to .FALSE. to output maps in double precision
 !     (good for validation tests).  The default is .TRUE..
 !   - Updated automatic diffusion time step (PTL) to newer algorithm.
+!
+! 10/18/2023, MS+RC, Version 0.28.0:
+!   - Added realizations for analytic flow profile parameters for
+!     differential rotation and meridianal flows.
 !
 !-----------------------------------------------------------------------
 !
