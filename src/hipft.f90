@@ -2068,8 +2068,8 @@ subroutine set_realization_parameters
 !-----------------------------------------------------------------------
 !
       integer :: i, ierr
-      character(*), parameter :: FMTI='(100(A28))'
-      character(*), parameter :: FMTR='(I28,a,100(1pe15.8e3,a))'
+      character(*), parameter :: FMTI='(100(A29))'
+      character(*), parameter :: FMTR='(I29,a,100(1pe16.8e3,a))'
 !
 !-----------------------------------------------------------------------
 !
@@ -2204,18 +2204,18 @@ subroutine set_realization_parameters
 !
         call ffopen (IO_TMP,'hipft_realization_parameters.out','rw',ierr)
 
-        write (IO_TMP,FMTI) 'realization_number          ', &
-                            'assimilate_data_lat_limits  ', &
-                            'assimilate_data_mu_powers   ', &
-                            'assimilate_data_mu_limits   ', &
-                            'flow_dr_coef_p0_values      ', &
-                            'flow_dr_coef_p2_values      ', &
-                            'flow_dr_coef_p4_values      ', &
-                            'flow_mf_coef_p1_values      ', &
-                            'flow_mf_coef_p3_values      ', &
-                            'flow_mf_coef_p5_values      ', &
-                            'flow_attenuate_values       ', &
-                            'diffusion_coef_constants    '
+        write (IO_TMP,FMTI) 'realization_number           ', &
+                            'assimilate_data_lat_limits   ', &
+                            'assimilate_data_mu_powers    ', &
+                            'assimilate_data_mu_limits    ', &
+                            'flow_dr_coef_p0_values       ', &
+                            'flow_dr_coef_p2_values       ', &
+                            'flow_dr_coef_p4_values       ', &
+                            'flow_mf_coef_p1_values       ', &
+                            'flow_mf_coef_p3_values       ', &
+                            'flow_mf_coef_p5_values       ', &
+                            'flow_attenuate_values        ', &
+                            'diffusion_coef_constants     '
 !
         do i=1,n_realizations
 !
