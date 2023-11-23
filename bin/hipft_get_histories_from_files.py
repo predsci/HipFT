@@ -4,6 +4,7 @@ import pandas as pd
 import argparse
 import h5py
 import glob
+from datetime import datetime, timezone
 
 # Need to add start time and cadence options so time is real.
 # ntime is set to the file index here, but is not plotted in the history plotter.
@@ -15,24 +16,35 @@ def argParsing():
     parser = argparse.ArgumentParser(description='HIPFT: Generate history files from sequence of hipft-formatted output maps.')
 
     parser.add_argument('-folder',
-                        help='Name of folder.',
-                        dest='folder',
-                        required=True)
+        help='Name of folder.',
+        dest='folder',
+        required=True)
 
     parser.add_argument('-bfile',
-                        help='Base file name.',
-                        dest='bfile',
-                        required=True)
+        help='Base file name.',
+        dest='bfile',
+        required=True)
 
     parser.add_argument('-t0',
-                        help='Sequence start index.',
-                        dest='t0',
-                        required=True)
+        help='Sequence start index.',
+        dest='t0',
+        required=True)
 
     parser.add_argument('-tf',
-                        help='Sequence stop index.',
-                        dest='tf',
-                        required=True)
+        help='Sequence stop index.',
+        dest='tf',
+        required=True)
+
+    parser.add_argument('-utstart',
+        help='Start Date in UT: YYYYMMDDTHH:MM:SS (default time in seconds: 0)',
+        dest='utstart',
+        required=False)
+
+    parser.add_argument('-cadence',
+        help='Cadence for time in hours (default: 1).',
+        dest='cadence',
+        default=1,
+        required=False)    
 
     return parser.parse_args()
     
@@ -45,6 +57,15 @@ def argParsing():
 
 
 def run(args):
+
+    if (args.utstart):
+        hours = 3600
+        sDate = datetime.strptime(args.utstart, '%Y%m%dT%H:%M:%S')
+        time = int(sDate.replace(tzinfo=timezone.utc).timestamp())    
+    else:
+        time = 0
+    cadence = float(args.cadence)*3600
+
 
     #Calculation constants
     io_hist_sol_filename = 'history_sol_r000001.out' # Make this an input parameter!
@@ -63,7 +84,6 @@ def run(args):
     f_out.write(header_txt)
 
     #Count for writing to history file
-    time = 0
     first_file = True
 
     #Loop through files in folder from start to stop time.
@@ -117,7 +137,7 @@ def run(args):
             
             first_file = False
         else:
-            time = time + 1
+            time = time + cadence
 
         ntime = int(filename[-9:-3])-1
 

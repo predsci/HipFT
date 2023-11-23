@@ -196,10 +196,10 @@ def argParsing():
     default=0,
     required=False)
 
-  parser.add_argument('-utstart',
+  parser.add_argument('-ignore_data_uttime',
     action='store_true',
-    help='Use UT start date',
-    dest='utstart',
+    help='Ignore the UT time data',
+    dest='ignore_data_uttime',
     required=False)
     
   parser.add_argument('-utstartxtick',
@@ -296,6 +296,11 @@ def argParsing():
     dest='sall', 
     required=False)
 
+  parser.add_argument('-xlabel',
+    help='Label for x axis',
+    dest='xlabel',
+    required=False)
+  
   return parser.parse_args()
 
 
@@ -320,13 +325,13 @@ def run(args):
     if (args.sall):
       xvec, yvec, zvec, data_in = ps.rdhdf_3d(args.iFile)
       for islice in range(len(zvec)):
-        oFileNew = oFile.replace('.png','_sl'+str(int(zvec[islice]))+'.png')
+        oFileNew = oFile.replace('.png','_r'+str(int(zvec[islice])).zfill(6)+'.png')
         data = np.squeeze(data_in[islice,:,:])
         plot(args, xvec, yvec, data, oFileNew)
     elif (args.slices):
       xvec, yvec, zvec, data_in = ps.rdhdf_3d(args.iFile)
       for islice in args.slices:
-        oFileNew = oFile.replace('.png','_sl'+str(islice)+'.png')
+        oFileNew = oFile.replace('.png','_r'+str(islice).zfill(6)+'.png')
         data = np.squeeze(data_in[islice-1,:,:])
         plot(args, xvec, yvec, data, oFileNew)
     else:
@@ -593,18 +598,18 @@ def get_xticks(args,xmn,xmx,init_locs):
     elif args.xunits == 'seconds':
       xcUnitsSec = seconds
       
-  if (args.utstart):
-    utstartSecs = xmn
-  else:
+  if (args.ignore_data_uttime):
     utstartSecs = 0
+  else:
+    utstartSecs = xmn
   initLocs_uttime = init_locs*hours
   xmn_uttime = xmn*hours
   xmx_uttime = xmx*hours
   if args.xunits == "date":
-    if (args.utstart):
-      locs, labels = date_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime)
-    else:
+    if (args.ignore_data_uttime):
       raise Exception("Did not specify a utstart")
+    else:
+      locs, labels = date_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime)
   elif args.xunits == "seconds":
     locs, labels = since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,seconds)
   elif args.xunits == "minutes":
@@ -616,10 +621,10 @@ def get_xticks(args,xmn,xmx,init_locs):
   elif args.xunits == "weeks":
     locs, labels = since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,weeks)
   elif args.xunits == "cr":
-    if (args.utstart): 
-      locs, labels = cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime)
-    else:
+    if (args.ignore_data_uttime): 
       locs, labels = since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,cr)
+    else:
+      locs, labels = cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime)
   elif args.xunits == "years":
     locs, labels = since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,years)
   locs = (np.array(locs)-utstartSecs)/3600
@@ -633,7 +638,7 @@ def date_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime):
   if (args.xc_units == 'months'):
     xformat = '%m/%Y/%d/%H/%M/%S'
     if (args.xcadence):
-      cadence = args.xcadence
+      cadence = int(args.xcadence)
     else:
       tempArray = np.array(initLocs_uttime)
       cadence = int(np.average(np.diff(tempArray))/2678400)
@@ -662,7 +667,7 @@ def date_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime):
   elif (args.xunits == 'years' or args.xc_units == 'years'):
     xformat = '%Y/%m/%d/%H/%M/%S'
     if (args.xcadence):
-      cadence = args.xcadence
+      cadence = int(args.xcadence)
     else:
       tempArray = np.array(initLocs_uttime)
       cadence = int(np.average(np.diff(tempArray))/31556952)
@@ -687,8 +692,7 @@ def date_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime):
       tempArray = np.array(initLocs_uttime)
       cadence = np.average(np.diff(tempArray)) 
     if (args.utstartxtick):
-      extraSeconds = datetime.strptime(args.utstartxtick,'%Y%m%dT%H:%M:%S').replace(tzinfo=timezone.utc).timestamp()
-      currDate = xmn_uttime+extraSeconds
+      currDate = datetime.strptime(args.utstartxtick,'%Y%m%dT%H:%M:%S').replace(tzinfo=timezone.utc).timestamp()
     else:
       currDate = xmn_uttime
     locs.append(currDate)
@@ -727,13 +731,19 @@ def cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime):
   locs = []
   labels = []
   xformat = '%Y%m%dT%H:%M:%S'
+
+  if (args.utstartxtick):
+    currDateSec = datetime.strptime(args.utstartxtick,'%Y%m%dT%H:%M:%S').replace(tzinfo=timezone.utc).timestamp()
+  else:
+    currDateSec = xmn_uttime
+
   if (args.xcadence):
     if (args.xc_units):
       if (args.xc_units == 'cr'):
         endOffset = 0 
         if (args.xcrpos == 'end'):
           endOffset = 1
-        cr_num = int(carrington_rotation_number(np.datetime64(int(xmn_uttime),'s')))
+        cr_num = int(carrington_rotation_number(np.datetime64(int(currDateSec),'s')))
         if (args.xcrpos == 'center'):
           cr_num = cr_num-0.5
           currDate = int(carrington_rotation_time(cr_num).unix)
@@ -742,6 +752,9 @@ def cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime):
             currDate = int(carrington_rotation_time(cr_num).unix)
         else:
           currDate = int(carrington_rotation_time(cr_num).unix)
+        if currDate<xmn_uttime:
+          cr_num = cr_num+1
+          currDate =  int(carrington_rotation_time(cr_num).unix)
         locs.append(currDate)
         labels.append(str(int(cr_num)-endOffset))
         cr_num = cr_num+int(args.xcadence)
@@ -755,7 +768,7 @@ def cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime):
         endOffset = 0 
         if (args.xcrpos == 'end'):
           endOffset = 1
-        cr_num = int(carrington_rotation_number(np.datetime64(int(xmn_uttime),'s')))
+        cr_num = int(carrington_rotation_number(np.datetime64(int(currDateSec),'s')))
         if (args.xcrpos == 'center'):
           cr_num = cr_num-0.5
           currDate = int(carrington_rotation_time(cr_num).unix)
@@ -764,6 +777,9 @@ def cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime):
             currDate = int(carrington_rotation_time(cr_num).unix)
         else:
           currDate = int(carrington_rotation_time(cr_num).unix)
+        if currDate<xmn_uttime:
+          cr_num = cr_num+1
+          currDate =  int(carrington_rotation_time(cr_num).unix)
         locs.append(currDate)
         labels.append(str(int(cr_num)-endOffset))
         cr_num = float(carrington_rotation_number(np.datetime64(int(currDate+xcUnitsSec*int(args.xcadence)),'s')))
@@ -777,7 +793,7 @@ def cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime):
       endOffset = 0 
       if (args.xcrpos == 'end'):
         endOffset = 1
-      cr_num = int(carrington_rotation_number(np.datetime64(int(xmn_uttime),'s')))
+      cr_num = int(carrington_rotation_number(np.datetime64(int(currDateSec),'s')))
       if (args.xcrpos == 'center'):
         cr_num = cr_num-0.5
         currDate = int(carrington_rotation_time(cr_num).unix)
@@ -786,6 +802,9 @@ def cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime):
           currDate = int(carrington_rotation_time(cr_num).unix)
       else:
         currDate = int(carrington_rotation_time(cr_num).unix)
+      if currDate<xmn_uttime:
+        cr_num = cr_num+1
+        currDate =  int(carrington_rotation_time(cr_num).unix)
       locs.append(currDate)
       labels.append(str(int(cr_num)-endOffset))
       cr_num = cr_num+int(args.xcadence)
@@ -799,7 +818,7 @@ def cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime):
     endOffset = 0 
     if (args.xcrpos == 'end'):
       endOffset = 1
-    cr_num = int(carrington_rotation_number(np.datetime64(int(xmn_uttime),'s')))
+    cr_num = int(carrington_rotation_number(np.datetime64(int(currDateSec),'s')))
     if (args.xcrpos == 'center'):
       cr_num = cr_num-0.5
       currDate = int(carrington_rotation_time(cr_num).unix)
@@ -808,6 +827,9 @@ def cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime):
         currDate =  int(carrington_rotation_time(cr_num).unix)
     else:
       currDate = int(carrington_rotation_time(cr_num).unix)
+    if currDate<xmn_uttime:
+      cr_num = cr_num+1
+      currDate =  int(carrington_rotation_time(cr_num).unix)
     locs.append(currDate)
     labels.append(str(int(cr_num)-endOffset))
     cr_num = cr_num+1
@@ -826,7 +848,8 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
   else:
     rmode = 'default'
   if args.xunits == "date":
-    plt.xlabel('UT Date', {'fontsize': args.fsize, 'color': tc})
+    if (args.xlabel):
+      plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
     ax.tick_params(axis='x',labelsize=args.xlabelfsize)
     if (args.slant):
       plt.xticks(locs,labels,rotation=int(args.slant), ha=args.ha, rotation_mode=rmode, ma=args.ma)
@@ -837,7 +860,9 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
       plt.xticks(locs,labels,rotation=int(args.slant), ha=args.ha, rotation_mode=rmode, ma=args.ma)
     else:
       plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
-    if (args.utstart): 
+    if (args.xlabel):
+      plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
+    elif (args.utstart): 
       plt.xlabel('Seconds since '+ datetime.utcfromtimestamp(utstartSecs).strftime('UT-%Y-%m-%dT%H:%M:%S'), {'fontsize': args.fsize, 'color': tc})
     else:
       plt.xlabel('Seconds', {'fontsize': args.fsize, 'color': tc})
@@ -847,7 +872,9 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
       plt.xticks(locs,labels,rotation=int(args.slant), ha=args.ha, rotation_mode=rmode, ma=args.ma)
     else:
       plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
-    if (args.utstart): 
+    if (args.xlabel):
+      plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
+    elif (args.utstart): 
       plt.xlabel('Minutes since '+ datetime.utcfromtimestamp(utstartSecs).strftime('UT-%Y-%m-%dT%H:%M:%S'), {'fontsize': args.fsize, 'color': tc})
     else:
       plt.xlabel('Minutes', {'fontsize': args.fsize, 'color': tc})
@@ -857,7 +884,9 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
       plt.xticks(locs,labels,rotation=int(args.slant), ha=args.ha, rotation_mode=rmode, ma=args.ma)
     else:
       plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
-    if (args.utstart): 
+    if (args.xlabel):
+      plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
+    elif (args.utstart): 
       plt.xlabel('Hours since '+ datetime.utcfromtimestamp(utstartSecs).strftime('UT-%Y-%m-%dT%H:%M:%S'), {'fontsize': args.fsize, 'color': tc})
     else:
       plt.xlabel('Hours', {'fontsize': args.fsize, 'color': tc})
@@ -867,7 +896,9 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
       plt.xticks(locs,labels,rotation=int(args.slant), ha=args.ha, rotation_mode=rmode, ma=args.ma)
     else:
       plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
-    if (args.utstart): 
+    if (args.xlabel):
+      plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
+    elif (args.utstart): 
       plt.xlabel('Days since '+ datetime.utcfromtimestamp(utstartSecs).strftime('UT-%Y-%m-%dT%H:%M:%S'), {'fontsize': args.fsize, 'color': tc})
     else:
       plt.xlabel('Days', {'fontsize': args.fsize, 'color': tc})
@@ -877,7 +908,9 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
       plt.xticks(locs,labels,rotation=int(args.slant), ha=args.ha, rotation_mode=rmode, ma=args.ma)
     else:
       plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
-    if (args.utstart): 
+    if (args.xlabel):
+      plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
+    elif (args.utstart): 
       plt.xlabel('Weeks since '+ datetime.utcfromtimestamp(utstartSecs).strftime('UT-%Y-%m-%dT%H:%M:%S'), {'fontsize': args.fsize, 'color': tc})
     else:
       plt.xlabel('Weeks', {'fontsize': args.fsize, 'color': tc})
@@ -887,7 +920,9 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
       plt.xticks(locs,labels,rotation=int(args.slant), ha=args.ha, rotation_mode=rmode, ma=args.ma)
     else:
       plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
-    if (args.utstart): 
+    if (args.xlabel):
+      plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
+    elif (args.utstart): 
       if (args.xcrpos == 'start'):
         plt.xlabel('Carrington Rotation', {'fontsize': args.fsize, 'color': tc})
       else: 
@@ -903,13 +938,18 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
       plt.xticks(locs,labels,rotation=int(args.slant), ha=args.ha, rotation_mode=rmode, ma=args.ma)
     else:
       plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
-    if (args.utstart): 
+    if (args.xlabel):
+      plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
+    elif (args.utstart): 
       plt.xlabel('Years since '+ datetime.utcfromtimestamp(utstartSecs).strftime('UT-%Y-%m-%dT%H:%M:%S'), {'fontsize': args.fsize, 'color': tc})
     else:
       plt.xlabel('Years', {'fontsize': args.fsize, 'color': tc})
     ax.tick_params(axis='x',labelsize=args.xlabelfsize)  
   else:
-    plt.xlabel('Hours', {'fontsize': args.fsize, 'color': tc})
+    if (args.xlabel):
+      plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
+    else:
+      plt.xlabel('Hours', {'fontsize': args.fsize, 'color': tc})
     ax.tick_params(axis='x',labelsize=args.xlabelfsize)
 
 
