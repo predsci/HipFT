@@ -8,7 +8,7 @@ www.predsci.com
   
 HipFT is the computational core of the Open-source Flux Transport (OFT) software suite, which is a data-assimilation flux transport model used to generate an ensemble of synchronic radial magnetic field maps for use as boundary conditions for the coronal field models.   
   
-HipFT implements advection, diffusion, and data assimilation for the solar surface on a logically rectangular non-uniform spherical grid.  It is written in Fortran and parallelized for use with multi-core CPUs and GPUs using a combination of Fortran's standard parallel `do concurrent` and OpenMP Target directives.  To alleviate the strict time-step stability criteria for the diffusion equation, we use an extended stability Runge-Kutta super time-stepping algorithm.  The code is designed to be modular, incorporating various differential rotation, meridianal flow, super granular convective flow, and data assimilation models.
+HipFT implements advection, diffusion, and data assimilation for the solar surface on a logically rectangular non-uniform spherical grid.  It is written in Fortran and parallelized for use with multi-core CPUs and GPUs using a combination of Fortran's standard parallel `do concurrent` (DC) and OpenMP Target data directives.  To alleviate the strict time-step stability criteria for the diffusion equation, we use an extended stability Runge-Kutta super time-stepping algorithm.  The code is designed to be modular, incorporating various differential rotation, meridianal flow, super granular convective flow, and data assimilation models.
   
 --------------------------------  
    
@@ -41,7 +41,7 @@ The MPI ranks split up the number of realizations to work on.
 Therefore, if you are only running 1 realization, you should use 1 MPI rank.  
 The number of ranks cannot be larger than the number of realizations.  
   
-The code is parallelized with OpenACC/OpenMP/StdPar across each MPI rank.  
+The code is parallelized with DC and OpenMP Target data directives across each MPI rank.  
   
 ### Running HIPFT on GPUs ###
   
