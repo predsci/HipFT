@@ -2135,9 +2135,9 @@ subroutine set_realization_parameters
         allocate (flow_dr_coef_p2_rvec(nr))
         allocate (flow_dr_coef_p4_rvec(nr))
         do i=1,nr
-          flow_dr_coef_p0_rvec(i) = flow_dr_coef_p0_values(local_realization_indices(i))   
-          flow_dr_coef_p2_rvec(i) = flow_dr_coef_p2_values(local_realization_indices(i))  
-          flow_dr_coef_p4_rvec(i) = flow_dr_coef_p4_values(local_realization_indices(i))  
+          flow_dr_coef_p0_rvec(i) = flow_dr_coef_p0_values(local_realization_indices(i))
+          flow_dr_coef_p2_rvec(i) = flow_dr_coef_p2_values(local_realization_indices(i))
+          flow_dr_coef_p4_rvec(i) = flow_dr_coef_p4_values(local_realization_indices(i))
         enddo
 !$acc enter data copyin(flow_dr_coef_p0_rvec,flow_dr_coef_p2_rvec, &
 !$acc                   flow_dr_coef_p4_rvec)
@@ -2150,9 +2150,9 @@ subroutine set_realization_parameters
         allocate (flow_mf_coef_p3_rvec(nr))
         allocate (flow_mf_coef_p5_rvec(nr))
         do i=1,nr
-          flow_mf_coef_p1_rvec(i) = flow_mf_coef_p1_values(local_realization_indices(i))   
-          flow_mf_coef_p3_rvec(i) = flow_mf_coef_p3_values(local_realization_indices(i))  
-          flow_mf_coef_p5_rvec(i) = flow_mf_coef_p5_values(local_realization_indices(i))  
+          flow_mf_coef_p1_rvec(i) = flow_mf_coef_p1_values(local_realization_indices(i))
+          flow_mf_coef_p3_rvec(i) = flow_mf_coef_p3_values(local_realization_indices(i))
+          flow_mf_coef_p5_rvec(i) = flow_mf_coef_p5_values(local_realization_indices(i))
         enddo
 !$acc enter data copyin(flow_mf_coef_p1_rvec,flow_mf_coef_p3_rvec, &
 !$acc                   flow_mf_coef_p5_rvec)
@@ -3001,29 +3001,24 @@ subroutine analysis_step
         h_minabsbr_tmp = large_value
         h_valerr_tmp   = 0.
         sumfval2       = 0.
-!$omp parallel do collapse(2) default(shared)    &
-!$omp         reduction(+:sumfval2,h_valerr_tmp) &
-!$omp         reduction(max:h_maxbr_tmp) reduction(min:h_minbr_tmp,h_minabsbr_tmp)
-!$acc parallel loop collapse(2) default(present) &
-!$acc         reduction(+:sumfval2,h_valerr_tmp) &
-!$acc         reduction(max:h_maxbr_tmp) reduction(min:h_minbr_tmp,h_minabsbr_tmp)
-        do j=1,npm-2
-          do i=1,ntm
-            h_minbr_tmp = min(f(i,j,k),h_minbr_tmp)
-            h_maxbr_tmp = max(f(i,j,k),h_maxbr_tmp)
-            h_minabsbr_tmp = min(abs(f(i,j,k)),h_minabsbr_tmp)
-            if (validation_run .eq. 1) then
-              fv = (f(i,j,k) - fval(j,i,k))**2
-              fv2 = fval(j,i,k)**2
-            else
-              fv = 0.
-              fv2 = 0.
-            end if
-            h_valerr_tmp = h_valerr_tmp + fv
-            sumfval2 = sumfval2 + fv2
-          enddo
+!
+        do concurrent (j=1:npm-2,i=1:ntm) reduce(+:sumfval2,h_valerr_tmp) &
+                                          reduce(max:h_maxbr_tmp)         &
+                                          reduce(min:h_minbr_tmp,h_minabsbr_tmp)
+          h_minbr_tmp = min(f(i,j,k),h_minbr_tmp)
+          h_maxbr_tmp = max(f(i,j,k),h_maxbr_tmp)
+          h_minabsbr_tmp = min(abs(f(i,j,k)),h_minabsbr_tmp)
+          if (validation_run .eq. 1) then
+            fv = (f(i,j,k) - fval(j,i,k))**2
+            fv2 = fval(j,i,k)**2
+          else
+            fv = 0.
+            fv2 = 0.
+          end if
+          h_valerr_tmp = h_valerr_tmp + fv
+          sumfval2 = sumfval2 + fv2
         enddo
-!$omp end parallel do
+!
         h_minbr(k)    = h_minbr_tmp
         h_maxbr(k)    = h_maxbr_tmp
         h_minabsbr(k) = h_minabsbr_tmp
@@ -3049,84 +3044,79 @@ subroutine analysis_step
         eqd1 = 0.
         eqd2 = 0.
         h_ax_dipole_tmp = 0.
-!$omp parallel do   collapse(2) default(shared)                                         &
-!$omp reduction(+:h_fluxp_tmp,h_fluxm_tmp,h_fluxp_pn_tmp,h_fluxm_pn_tmp,h_area_pn_tmp,  &
-!$omp             h_fluxp_ps_tmp,h_fluxm_ps_tmp,h_area_ps_tmp,eqd1,eqd2,h_ax_dipole_tmp)
-!$acc parallel loop collapse(2) default(present)                                        &
-!$acc reduction(+:h_fluxp_tmp,h_fluxm_tmp,h_fluxp_pn_tmp,h_fluxm_pn_tmp,h_area_pn_tmp, &
-!$acc             h_fluxp_ps_tmp,h_fluxm_ps_tmp,h_area_ps_tmp,eqd1,eqd2,h_ax_dipole_tmp)
-        do i=1,npm-1
-          do j=1,ntm
 !
-            if (j.eq.1) then
-              tav=half*(t(1)+t(2))
-              sn_t = sin(tav)
-              cs_t = cos(tav)
-              d_t = dth(2)
-              da_t=quarter*sn_t*d_t
-            else if (j.eq.ntm) then
-              tav=half*(t(ntm)+t(ntm-1))
-              sn_t = sin(tav)
-              cs_t = cos(tav)
-              d_t = dth(ntm)
-              da_t=quarter*sn_t*d_t
-            else
-              sn_t = sin(t(j))
-              cs_t = cos(t(j))
-              d_t = dt(j)
-              da_t = sn_t*d_t
-            end if
+        do concurrent (i=1:npm-1,j=1:ntm)                              &
+                       reduce(+:h_fluxp_tmp,h_fluxm_tmp,h_fluxp_pn_tmp,&
+                                h_fluxm_pn_tmp,h_area_pn_tmp,          &
+                                h_fluxp_ps_tmp,h_fluxm_ps_tmp,         &
+                                h_area_ps_tmp,eqd1,eqd2,h_ax_dipole_tmp)
+          if (j.eq.1) then
+            tav=half*(t(1)+t(2))
+            sn_t = sin(tav)
+            cs_t = cos(tav)
+            d_t = dth(2)
+            da_t=quarter*sn_t*d_t
+          else if (j.eq.ntm) then
+            tav=half*(t(ntm)+t(ntm-1))
+            sn_t = sin(tav)
+            cs_t = cos(tav)
+            d_t = dth(ntm)
+            da_t=quarter*sn_t*d_t
+          else
+            sn_t = sin(t(j))
+            cs_t = cos(t(j))
+            d_t = dt(j)
+            da_t = sn_t*d_t
+          end if
 !
-            if (i.eq.1) then
-              da_p=half*dph(1)
-            else if (i.eq.npm-1) then
-              da_p=half*dph(npm-1)
-            else
-              da_p=dp(i)
-            end if
-            cs_p = cos(p(i))
-            sn_p = sin(p(i))
+          if (i.eq.1) then
+            da_p=half*dph(1)
+          else if (i.eq.npm-1) then
+            da_p=half*dph(npm-1)
+          else
+            da_p=dp(i)
+          end if
+          cs_p = cos(p(i))
+          sn_p = sin(p(i))
 !
-            fv = f(j,i,k)*da_t*da_p
+          fv = f(j,i,k)*da_t*da_p
 !
 ! ****** Fluxes.
 !
-            if (fv.gt.0.) then
-              h_fluxp_tmp = h_fluxp_tmp + fv
-            else
-              h_fluxm_tmp = h_fluxm_tmp + fv
-            end if
+          if (fv.gt.0.) then
+            h_fluxp_tmp = h_fluxp_tmp + fv
+          else
+            h_fluxm_tmp = h_fluxm_tmp + fv
+          end if
 !
 ! ****** Polar fluxes and areas.
 !
-            if (t(j).le.pole_flux_lat_limit*d2r) then
-              if (fv.gt.0.) then
-                h_fluxp_pn_tmp = h_fluxp_pn_tmp + fv
-              else
-                h_fluxm_pn_tmp = h_fluxm_pn_tmp + fv
-              end if
-              h_area_pn_tmp = h_area_pn_tmp + da_t*da_p
+          if (t(j).le.pole_flux_lat_limit*d2r) then
+            if (fv.gt.0.) then
+              h_fluxp_pn_tmp = h_fluxp_pn_tmp + fv
+            else
+              h_fluxm_pn_tmp = h_fluxm_pn_tmp + fv
             end if
+            h_area_pn_tmp = h_area_pn_tmp + da_t*da_p
+          end if
 !
-            if (t(j).ge.pi-pole_flux_lat_limit*d2r) then
-              if (fv.gt.0.) then
-                h_fluxp_ps_tmp = h_fluxp_ps_tmp + fv
-              else
-                h_fluxm_ps_tmp = h_fluxm_ps_tmp + fv
-              end if
-              h_area_ps_tmp = h_area_ps_tmp + da_t*da_p
+          if (t(j).ge.pi-pole_flux_lat_limit*d2r) then
+            if (fv.gt.0.) then
+              h_fluxp_ps_tmp = h_fluxp_ps_tmp + fv
+            else
+              h_fluxm_ps_tmp = h_fluxm_ps_tmp + fv
             end if
+            h_area_ps_tmp = h_area_ps_tmp + da_t*da_p
+          end if
 !
 ! ****** Dipoles.
 !
-            eqd1 = eqd1 + f(j,i,k)*sn_t*cs_p*da_t*da_p
-            eqd2 = eqd2 + f(j,i,k)*sn_t*sn_p*da_t*da_p
+          eqd1 = eqd1 + f(j,i,k)*sn_t*cs_p*da_t*da_p
+          eqd2 = eqd2 + f(j,i,k)*sn_t*sn_p*da_t*da_p
 !
-            h_ax_dipole_tmp = h_ax_dipole_tmp + f(j,i,k)*cs_t*da_t*da_p
+          h_ax_dipole_tmp = h_ax_dipole_tmp + f(j,i,k)*cs_t*da_t*da_p
 !
-          enddo
         enddo
-!$omp end parallel do
 !
 ! ****** Set fluxes to be in units of Mx and
 ! ****** polar areas to be in units of cm.
@@ -3220,8 +3210,6 @@ subroutine update_flow
       integer :: j,k,i
       real(r_typ) :: br_abs_max
       real(r_typ) :: vrigid_pole
-      real(r_typ), dimension(:), allocatable :: vt_npole,vt_spole
-      real(r_typ), dimension(:), allocatable :: vp_npole,vp_spole
       real(r_typ) :: p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,cp,cph
 !
 !-----------------------------------------------------------------------
@@ -3254,16 +3242,13 @@ subroutine update_flow
           flow_needs_updating = .true.
         end if
 !
-! ***** Add in flows from linked ConFlow algorithm.
-!       TO BE DEV: if (flow_from_conflow) call add_flow_from_conflow (metadata_structure,flow_array)
-!
 ! ***** Add in analytic meridianal flow model.
 !
-        if (flow_mf_model.eq.1) call add_flow_meridianal_aft
+        if (flow_mf_model.eq.1) call add_flow_meridianal_analytic
 !
 ! ***** Add in analytic differential rotation model.
 !
-        if (flow_dr_model.eq.1) call add_flow_differential_rotation_aft
+        if (flow_dr_model.eq.1) call add_flow_differential_rotation_analytic
 !
 ! ***** Add in constant angular phi velocity (rigid rotation)
 !
@@ -3281,7 +3266,7 @@ subroutine update_flow
           enddo
         end if
 !
-! ***** Add in rotated rigid rotation velocity.
+! ***** Add in rotated rigid rotation velocity (might not be right).
 !
         if (flow_rigid_omega .ne. 0.) then
           vrigid_pole = flow_rigid_omega*km_s_to_rs_hr
@@ -3323,86 +3308,17 @@ subroutine update_flow
         if (flow_attenuate) then
 !
 ! ****** Use MAX(|Br|) of two staggered Br cells around velocity vectors.
+! ****** We do not update the polar boundary ghost cell for vt.
 !
           do concurrent (i=1:nr,k=2:npm-1,j=2:nt-1)
             br_abs_max = MAX(ABS(f(j-1,k,i)),ABS(f(j,k,i)))
             vt(j,k,i) = vt(j,k,i)*(one - tanh(br_abs_max*flow_attenuate_value_i_rvec(i)))
           enddo
 !
-          do concurrent (i=1:nr,k=2:np-1,j=2:ntm-1)
+          do concurrent (i=1:nr,k=2:np-1,j=1:ntm)
             br_abs_max = MAX(ABS(f(j,k-1,i)),ABS(f(j,k,i)))
             vp(j,k,i) = vp(j,k,i)*(one - tanh(br_abs_max*flow_attenuate_value_i_rvec(i)))
           enddo
-!
-! ****** Set poles. Maybe not needed since field is weak at pole?
-!
-          allocate (vt_npole(nr))
-          allocate (vt_spole(nr))
-          allocate (vp_npole(nr))
-          allocate (vp_spole(nr))
-!$acc enter data create(vt_npole,vt_spole,vp_npole,vp_spole)
-!
-          do concurrent (i=1:nr)
-            vt_npole(i) = 0.
-            vt_spole(i) = 0.
-            vp_npole(i) = 0.
-            vp_spole(i) = 0.
-          enddo
-!
-!$omp parallel do   collapse(2) default(shared)
-!$acc parallel loop collapse(2) default(present)
-          do i=1,nr
-            do k=2,npm-1
-!$omp atomic update
-!$acc atomic update
-              vt_npole(i) = vt_npole(i) + vt(   2,k,i)*dp(k)
-!$omp atomic update
-!$acc atomic update
-              vt_spole(i) = vt_spole(i) + vt(ntm1,k,i)*dp(k)
-            enddo
-          enddo
-!$omp end parallel do
-!
-!$omp parallel do   collapse(2) default(shared)
-!$acc parallel loop collapse(2) default(present)
-          do i=1,nr
-            do k=2,npm1
-!$omp atomic update
-!$acc atomic update
-              vp_npole(i) = vp_npole(i) + vp(    2,k,i)*dph(k)
-!$omp atomic update
-!$acc atomic update
-              vp_spole(i) = vp_spole(i) + vp(ntm-1,k,i)*dph(k)
-            enddo
-          enddo
-!$omp end parallel do
-!
-! ****** Attenuate pole value to set new v bc (f has same val for all pole pts, use 1)
-!
-          do concurrent (i=1:nr)
-            vt_npole(i) = vt_npole(i)*twopi_i*(one - tanh(f(1,1,i)*flow_attenuate_value_i_rvec(i)))
-            vt_spole(i) = vt_spole(i)*twopi_i*(one - tanh(f(ntm,1,i)*flow_attenuate_value_i_rvec(i)))
-            vp_npole(i) = vp_npole(i)*twopi_i*(one - tanh(f(1,1,i)*flow_attenuate_value_i_rvec(i)))
-            vp_spole(i) = vp_spole(i)*twopi_i*(one - tanh(f(ntm,1,i)*flow_attenuate_value_i_rvec(i)))
-          enddo
-!
-! ****** Now set the pole:
-!
-          do concurrent (i=1:nr,k=1:npm)
-            vt( 1,k,i) = two*vt_spole(i)-vt(   2,k,i)
-            vt(nt,k,i) = two*vt_spole(i)-vt(ntm1,k,i)
-          enddo
-!
-          do concurrent (i=1:nr,k=1:np)
-            vp(  1,k,i) = two*vp_spole(i)-vp(    2,k,i)
-            vp(ntm,k,i) = two*vp_spole(i)-vp(ntm-1,k,i)
-          enddo
-!
-!$acc exit data delete(vt_npole,vt_spole,vp_npole,vp_spole)
-          deallocate (vt_npole)
-          deallocate (vt_spole)
-          deallocate (vp_npole)
-          deallocate (vp_spole)
 !
 ! ****** Set periodicity
 !
@@ -4683,25 +4599,18 @@ subroutine get_dtime_diffusion_euler (dtime_exp)
 !
 !-----------------------------------------------------------------------
 !
-! *** Estimate maximum eigenvalue of all realizations using Gershgorin disks:
+! *** Estimate maximum eigenvalue of all realizations
+! *** using Gershgorin disks:
 !
       max_eig = 0.
 !
-!$omp parallel do   collapse(3) default(shared)  reduction(max:max_eig)
-!$acc parallel loop collapse(3) default(present) reduction(max:max_eig)
-      do i=1,nr
-        do k=2,npm-1
-          do j=2,ntm-1
-              gersh_rad = 0.
-!$acc loop seq
-              do d=1,5
-                gersh_rad = gersh_rad+abs(coef(j,k,d,i))
-              enddo
-              max_eig = max(gersh_rad,max_eig)
-          enddo
+      do concurrent (i=1:nr,k=2:npm-1,j=2:ntm-1) reduce(max:max_eig)
+        gersh_rad = zero
+        do d=1,5
+          gersh_rad = gersh_rad+ABS(coef(j,k,d,i))
         enddo
+        max_eig = MAX(gersh_rad,max_eig)
       enddo
-!$omp end parallel do
 !
 ! *** Compute the Euler time-step bound.
 !
@@ -4748,7 +4657,6 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
       integer :: i,j,k,ierr
       real(r_typ) :: axabsmax, dtime_in, tmp
       real(r_typ) :: dt_tmp_tm, dt_tmp_tp, dt_tmp_pm, dt_tmp_pp
-      real(r_typ) :: dt_tmp_tmpm, dt_tmp_tppm, dt_tmp_tmpp, dt_tmp_tppp
       real(r_typ), dimension(:,:,:), allocatable :: Af
       real(r_typ), parameter :: safe = 0.95_r_typ
       real(r_typ), parameter :: fmin = 1e-16_r_typ
@@ -4772,18 +4680,11 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
 !
       axabsmax = -one
 !
-!$omp parallel do   collapse(3) default(shared)  reduction(max:axabsmax)
-!$acc parallel loop collapse(3) default(present) reduction(max:axabsmax)
-      do i=1,nr
-        do k=1,npm
-          do j=1,ntm
-            if (ABS(f(j,k,i)) .gt. fmin) then
-              axabsmax = MAX(ABS(Af(j,k,i)),axabsmax)
-            end if
-          enddo
-        enddo
+      do concurrent (i=1:nr,k=1:npm,j=1:ntm) reduce(max:axabsmax)
+        if (ABS(f(j,k,i)) .gt. fmin) then
+          axabsmax = MAX(ABS(Af(j,k,i)),axabsmax)
+        end if
       enddo
-!$omp end parallel do
 !
 ! ****** Get maximum over all MPI ranks.
 !
@@ -4796,89 +4697,51 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
 !
       if (axabsmax .gt. zero) then
 !
-!$omp parallel do   collapse(3) default(shared) reduction(min:dtime_ptl)
-!$acc parallel loop collapse(3) default(present) reduction(min:dtime_ptl) copyin(axabsmax)
-        do i=1,nr
-          do k=2,npm-1
-            do j=2,ntm-1
+        do concurrent (i=1:nr,k=2:npm-1,j=2:ntm-1) reduce(min:dtime_ptl)
 !
 ! ****** If we are at the location of max(|F|), calculate the PTL.
 ! ****** If there are multiple locations of |F|=max(|F|), take min(PTL).
 !
-              if (axabsmax .eq. ABS(Af(j,k,i)) .and. &
-                  ABS(f(j,k,i)) .gt. fmin) then
+          if (axabsmax .eq. ABS(Af(j,k,i)) .and. &
+              ABS(f(j,k,i)) .gt. fmin) then
 !
-                if ((f(j,k,i)-f(j-1,k,i))*(Af(j,k,i)-Af(j-1,k,i)).lt.0) then
-                  dt_tmp_tm = safe*ABS( f(j,k,i) -   f(j-1,k,i))/ &
-                                   ABS(Af(j,k,i) -  Af(j-1,k,i))
-                else
-                  dt_tmp_tm = dtime_ptl
-                end if
+            if ((f(j,k,i)-f(j-1,k,i))*(Af(j,k,i)-Af(j-1,k,i)).lt.0) then
+              dt_tmp_tm = safe*ABS( f(j,k,i) -   f(j-1,k,i))/ &
+                               ABS(Af(j,k,i) -  Af(j-1,k,i))
+            else
+              dt_tmp_tm = dtime_ptl
+            end if
 
-                if ((f(j,k,i)-f(j+1,k,i))*(Af(j,k,i)-Af(j+1,k,i)).lt.0) then
-                  dt_tmp_tp = safe*ABS( f(j,k,i) -   f(j+1,k,i))/ &
-                                   ABS(Af(j,k,i) -  Af(j+1,k,i))
-                else
-                  dt_tmp_tp = dtime_ptl
-                end if
+            if ((f(j,k,i)-f(j+1,k,i))*(Af(j,k,i)-Af(j+1,k,i)).lt.0) then
+              dt_tmp_tp = safe*ABS( f(j,k,i) -   f(j+1,k,i))/ &
+                               ABS(Af(j,k,i) -  Af(j+1,k,i))
+            else
+              dt_tmp_tp = dtime_ptl
+            end if
 
-                if ((f(j,k,i)-f(j,k-1,i))*(Af(j,k,i)-Af(j,k-1,i)).lt.0) then
-                  dt_tmp_pm = safe*ABS( f(j,k,i) -   f(j,k-1,i))/ &
-                                   ABS(Af(j,k,i) -  Af(j,k-1,i))
-                else
-                  dt_tmp_pm = dtime_ptl
-                end if
+            if ((f(j,k,i)-f(j,k-1,i))*(Af(j,k,i)-Af(j,k-1,i)).lt.0) then
+              dt_tmp_pm = safe*ABS( f(j,k,i) -   f(j,k-1,i))/ &
+                               ABS(Af(j,k,i) -  Af(j,k-1,i))
+            else
+              dt_tmp_pm = dtime_ptl
+            end if
 
-                if ((f(j,k,i)-f(j,k+1,i))*(Af(j,k,i)-Af(j,k+1,i)).lt.0) then
-                  dt_tmp_pp = safe*ABS( f(j,k,i) -   f(j,k+1,i))/ &
-                                   ABS(Af(j,k,i) -  Af(j,k+1,i))
-                else
-                  dt_tmp_pp = dtime_ptl
-                end if
+            if ((f(j,k,i)-f(j,k+1,i))*(Af(j,k,i)-Af(j,k+1,i)).lt.0) then
+              dt_tmp_pp = safe*ABS( f(j,k,i) -   f(j,k+1,i))/ &
+                               ABS(Af(j,k,i) -  Af(j,k+1,i))
+            else
+              dt_tmp_pp = dtime_ptl
+            end if
 !
-! ***** Diagonals.
+            tmp = MIN(dt_tmp_tm,   dt_tmp_tp,   dt_tmp_pm,   dt_tmp_pp)
 !
-                if ((f(j,k,i)-f(j-1,k-1,i))*(Af(j,k,i)-Af(j-1,k-1,i)).lt.0) then
-                  dt_tmp_tmpm = safe*ABS( f(j,k,i) -   f(j-1,k-1,i))/ &
-                                     ABS(Af(j,k,i) -  Af(j-1,k-1,i))
-                else
-                  dt_tmp_tmpm = dtime_ptl
-                end if
+          else
+            tmp = HUGE(one)
+          end if
 !
-                if ((f(j,k,i)-f(j+1,k-1,i))*(Af(j,k,i)-Af(j+1,k-1,i)).lt.0) then
-                  dt_tmp_tppm = safe*ABS( f(j,k,i) -   f(j+1,k-1,i))/ &
-                                     ABS(Af(j,k,i) -  Af(j+1,k-1,i))
-                else
-                  dt_tmp_tppm = dtime_ptl
-                end if
+          dtime_ptl = MIN(tmp,dtime_ptl)
 !
-                if ((f(j,k,i)-f(j-1,k+1,i))*(Af(j,k,i)-Af(j-1,k+1,i)).lt.0) then
-                  dt_tmp_tmpp = safe*ABS( f(j,k,i) -   f(j-1,k+1,i))/ &
-                                     ABS(Af(j,k,i) -  Af(j-1,k+1,i))
-                else
-                  dt_tmp_tmpp = dtime_ptl
-                end if
-!
-                if ((f(j,k,i)-f(j+1,k+1,i))*(Af(j,k,i)-Af(j+1,k+1,i)).lt.0) then
-                  dt_tmp_tppp = safe*ABS( f(j,k,i) -   f(j+1,k+1,i))/ &
-                                     ABS(Af(j,k,i) -  Af(j+1,k+1,i))
-                else
-                  dt_tmp_tppp = dtime_ptl
-                end if
-!
-                tmp = MIN(dt_tmp_tm,   dt_tmp_tp,   dt_tmp_pm,   dt_tmp_pp,&
-                          dt_tmp_tmpm, dt_tmp_tppm, dt_tmp_tmpp, dt_tmp_tppp)
-!
-              else
-                tmp = HUGE(one)
-              end if
-!
-              dtime_ptl = MIN(tmp,dtime_ptl)
-!
-            enddo
-          enddo
         enddo
-!$omp end parallel do
 !
         wtime_tmp_mpi = MPI_Wtime()
         call MPI_Allreduce (MPI_IN_PLACE,dtime_ptl,1,ntype_real,  &
@@ -4888,117 +4751,6 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
         if (verbose) write (*,*) '   GET_DTIME_DIFFUSION_PTL: PTL timestep      = ',dtime_ptl
 !
 ! ****** Don't let the new dt be smaller than the previous one.
-!
-        if (dtime_ptl .lt. dtime_in) dtime_ptl = dtime_in
-!
-        if (verbose) write (*,*) '   GET_DTIME_DIFFUSION_PTL: PTL timestep used = ',dtime_ptl
-      end if
-!
-!$acc exit data delete(Af)
-      deallocate (Af)
-!
-end subroutine
-!#######################################################################
-subroutine get_dtime_diffusion_ptl_v1 (dtime_ptl)
-!
-!-----------------------------------------------------------------------
-!
-! ****** Get the practical time step limit for diffusion.
-! ****** Version 1.
-!
-!-----------------------------------------------------------------------
-!
-      use number_types
-      use mpidefs
-      use mesh
-      use constants
-      use timing
-      use input_parameters, ONLY : verbose
-      use fields, ONLY : f
-!
-!-----------------------------------------------------------------------
-!
-      implicit none
-!
-!-----------------------------------------------------------------------
-!
-      real(r_typ), INTENT(INOUT) :: dtime_ptl
-!
-!-----------------------------------------------------------------------
-!
-      integer :: i,j,k,ierr
-      real(r_typ) :: axabsmax, dtime_in, tmp
-      real(r_typ), dimension(:,:,:), allocatable :: Af
-      real(r_typ), parameter :: safe = 0.95_r_typ
-      real(r_typ), parameter :: fmin = 1e-16_r_typ
-!
-!-----------------------------------------------------------------------
-!
-      dtime_in = dtime_ptl
-      dtime_ptl = HUGE(one)
-!
-      if (verbose) then
-        write (*,*) ' '
-        write (*,*) '   GET_DTIME_DIFFUSION_PTL: dtime_in          = ',dtime_in
-      end if
-!
-      allocate (Af(ntm,npm,nr))
-!$acc enter data create(Af)
-!
-      call diffusion_operator_cd (f,Af)
-!
-      axabsmax = -one
-!
-!$omp parallel do   collapse(3) default(shared)  reduction(max:axabsmax)
-!$acc parallel loop collapse(3) default(present) reduction(max:axabsmax)
-      do i=1,nr
-        do k=2,npm-1
-          do j=2,ntm-1
-            if (ABS(f(j,k,i)) .gt. fmin) then
-              axabsmax = MAX(ABS(Af(j,k,i)),axabsmax)
-            end if
-          enddo
-        enddo
-      enddo
-!$omp end parallel do
-!
-! ****** Get maximum over all MPI ranks.
-!
-      wtime_tmp_mpi = MPI_Wtime()
-      call MPI_Allreduce (MPI_IN_PLACE,axabsmax,1,ntype_real,     &
-                          MPI_MAX,MPI_COMM_WORLD,ierr)
-      wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
-!
-      if (verbose) write (*,*) '   GET_DTIME_DIFFUSION_PTL: MAX(|F|)          = ',axabsmax
-!
-      if (axabsmax .gt. zero) then
-        dtime_ptl = 0.0
-!
-!$omp parallel do   collapse(3) default(shared) reduction(max:dtime_ptl)
-!$acc parallel loop collapse(3) default(present) reduction(max:dtime_ptl) copyin(axabsmax)
-        do i=1,nr
-          do k=2,npm-1
-            do j=2,ntm-1
-              if (axabsmax .eq. ABS(Af(j,k,i))                    &
-                  .and. ABS(f(j,k,i)) .gt. fmin) then
-                tmp = safe*half*ABS(f(j,k,i))/ABS(Af(j,k,i))
-              else
-                tmp = 0.0
-              end if
-              dtime_ptl = MAX(tmp,dtime_ptl)
-            enddo
-          enddo
-        enddo
-!$omp end parallel do
-!
-        wtime_tmp_mpi = MPI_Wtime()
-        call MPI_Allreduce (MPI_IN_PLACE,dtime_ptl,1,ntype_real,  &
-                            MPI_MAX,MPI_COMM_WORLD,ierr)
-        wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
-!
-! ****** Don't let the new dt be smaller than the previous one.
-!
-        if (verbose) write (*,*) '   GET_DTIME_DIFFUSION_PTL: PTL timestep      = ',dtime_ptl
 !
         if (dtime_ptl .lt. dtime_in) dtime_ptl = dtime_in
 !
@@ -6330,7 +6082,7 @@ subroutine set_mesh
       st_i(1) = 0.
       st_i(ntm) = 0.
 !
-      sth(:) = sin(th(:))
+      sth(:) = sin(ABS(th(:)))
       sth_i(2:ntm1) = one/sth(2:ntm1)
       sth_i(1) = 0.
       sth_i(nt) = 0.
@@ -6865,11 +6617,11 @@ subroutine load_source
 !
 end subroutine
 !#######################################################################
-subroutine add_flow_differential_rotation_aft
+subroutine add_flow_differential_rotation_analytic
 !
 !-----------------------------------------------------------------------
 !
-! ****** Add the AFT differential rotation flow to vp.
+! ****** Add analytical differential rotation flow to vp.
 !
 !-----------------------------------------------------------------------
 !
@@ -6899,11 +6651,11 @@ subroutine add_flow_differential_rotation_aft
 !
 end subroutine
 !#######################################################################
-subroutine add_flow_meridianal_aft
+subroutine add_flow_meridianal_analytic
 !
 !-----------------------------------------------------------------------
 !
-! ****** Add the AFT meridianal flow to vt.
+! ****** Add analytical meridianal flow to vt.
 !
 !-----------------------------------------------------------------------
 !
@@ -6968,19 +6720,12 @@ subroutine get_flow_dtmax (dtmaxflow)
 !
       dtmax = huge(one)
 !
-!$omp parallel do   collapse(3) default(shared)  reduction (min:dtmax)
-!$acc parallel loop collapse(3) default(present) reduction (min:dtmax)
-      do i=1,nr
-        do k=2,npm-1
-          do j=2,ntm-1
-            kdotv = MAX(ABS(vt(j,k,i)),ABS(vt(j+1,k,i)))*dt_i(j) &
-                  + MAX(ABS(vp(j,k,i)),ABS(vp(j,k+1,i)))*st_i(j)*dp_i(k)
-            deltat = half/MAX(kdotv,small_value)
-            dtmax = MIN(dtmax,deltat)
-          enddo
-        enddo
+      do concurrent (i=1:nr,k=2:npm-1,j=2:ntm-1) reduce(min:dtmax)
+        kdotv = MAX(ABS(vt(j,k,i)),ABS(vt(j+1,k,i)))*dt_i(j) &
+              + MAX(ABS(vp(j,k,i)),ABS(vp(j,k+1,i)))*st_i(j)*dp_i(k)
+        deltat = half/MAX(kdotv,small_value)
+        dtmax = MIN(dtmax,deltat)
       enddo
-!$omp end parallel do
 !
       dtmaxflow = safety*dtmax
 !
@@ -7296,7 +7041,7 @@ subroutine advection_operator_upwind (ftemp,aop)
 !
       integer :: i,j,k
       real(r_typ) :: cct,ccp
-      real(r_typ), dimension(:), allocatable :: fn,fs
+      real(r_typ) :: fn,fs
       real(r_typ), dimension(:,:,:), allocatable :: flux_t,flux_p
 !
 !-----------------------------------------------------------------------
@@ -7340,44 +7085,28 @@ subroutine advection_operator_upwind (ftemp,aop)
 !
 ! ****** Get the advection operator at the poles.
 !
-      allocate (fn(nr))
-      allocate (fs(nr))
-!$acc enter data create(fn,fs)
-!
       do concurrent (i=1:nr)
-        fn(i) = zero
-        fs(i) = zero
-      enddo
-!
-!$omp parallel do   collapse(2) default(shared)
-!$acc parallel loop collapse(2) default(present)
-        do i=1,nr
-          do k=2,npm-1
-!$omp atomic update
-!$acc atomic update
-            fn(i) = fn(i) + flux_t(   2,k,i)*dp(k)
-!$omp atomic update
-!$acc atomic update
-            fs(i) = fs(i) + flux_t(ntm1,k,i)*dp(k)
-          enddo
+        fn = 0.
+        fs = 0.
+        do concurrent (k=2:npm-1) reduce(+:fn,fs)
+          fn = fn + flux_t(   2,k,i)*dp(k)
+          fs = fs + flux_t(ntm1,k,i)*dp(k)
         enddo
-!$omp end parallel do
 ! ****** Note that the south pole needs a sign change since the
 ! ****** theta flux direction is reversed.
-        do concurrent (i=1:nr,k=2:npm-1)
-          aop(  1,k,i) =  fn(i)*bc_flow_npole_fac
-          aop(ntm,k,i) = -fs(i)*bc_flow_spole_fac
+        do concurrent (k=2:npm-1)
+          aop(  1,k,i) =  fn*bc_flow_npole_fac
+          aop(ntm,k,i) = -fs*bc_flow_spole_fac
         enddo
+      enddo
 !
 ! ****** Set periodic boundary condition.
 !
       call set_periodic_bc_3d (aop,ntm,npm,nr)
 !
-!$acc exit data delete(flux_t,flux_p,fn,fs)
+!$acc exit data delete(flux_t,flux_p)
       deallocate (flux_t)
       deallocate (flux_p)
-      deallocate (fn)
-      deallocate (fs)
 !
 end subroutine
 !#######################################################################
@@ -7421,7 +7150,7 @@ subroutine advection_operator_weno3 (ftemp,aop)
       real(r_typ) :: OM0p,OM1p,OM0m,OM1m
       real(r_typ) :: up,um
       real(r_typ) :: cct
-      real(r_typ), dimension(:), allocatable :: fn,fs
+      real(r_typ) :: fn,fs
       real(r_typ), dimension(:,:,:), allocatable :: flux_t,flux_p
       real(r_typ), dimension(:,:,:), allocatable :: LP,LN
 !
@@ -7576,44 +7305,29 @@ subroutine advection_operator_weno3 (ftemp,aop)
 !
 ! ****** Get the advection operator at the poles.
 !
-      allocate (fn(nr))
-      allocate (fs(nr))
-!$acc enter data create(fn,fs)
-!
+
       do concurrent (i=1:nr)
-        fn(i) = zero
-        fs(i) = zero
-      enddo
-!
-!$omp parallel do   collapse(2) default(shared)
-!$acc parallel loop collapse(2) default(present)
-      do i=1,nr
-        do k=2,npm-1
-!$omp atomic update
-!$acc atomic update
-          fn(i) = fn(i) + flux_t(   2,k,i)*dp(k)
-!$omp atomic update
-!$acc atomic update
-          fs(i) = fs(i) + flux_t(ntm1,k,i)*dp(k)
+        fn = zero
+        fs = zero
+        do concurrent (k=2:npm-1) reduce(+:fn,fs)
+          fn = fn + flux_t(   2,k,i)*dp(k)
+          fs = fs + flux_t(ntm1,k,i)*dp(k)
         enddo
-      enddo
-!$omp end parallel do
 ! ****** Note that the south pole needs a sign change since the
 ! ****** theta flux direction is reversed.
-      do concurrent (i=1:nr,k=2:npm-1)
-        aop(  1,k,i) =  fn(i)*bc_flow_npole_fac
-        aop(ntm,k,i) = -fs(i)*bc_flow_spole_fac
+        do concurrent (k=2:npm-1)
+          aop(  1,k,i) =  fn*bc_flow_npole_fac
+          aop(ntm,k,i) = -fs*bc_flow_spole_fac
+        enddo
       enddo
 !
 ! ****** Set periodic phi boundary condition.
 !
       call set_periodic_bc_3d (aop,ntm,npm,nr)
 !
-!$acc exit data delete(flux_t,flux_p,fn,fs)
+!$acc exit data delete(flux_t,flux_p)
       deallocate (flux_t)
       deallocate (flux_p)
-      deallocate (fn)
-      deallocate (fs)
 !
 end subroutine
 !#######################################################################
@@ -7639,7 +7353,7 @@ subroutine diffusion_operator_cd (x,y)
 !-----------------------------------------------------------------------
 !
       integer :: i,j,k
-      real(r_typ), dimension(:), allocatable :: fn2_fn1,fs2_fs1
+      real(r_typ) :: fn2_fn1,fs2_fs1
       real(r_typ), dimension(ntm,npm,nr), INTENT(IN) :: x
       real(r_typ), dimension(ntm,npm,nr), INTENT(OUT) :: y
 !
@@ -7650,55 +7364,35 @@ subroutine diffusion_operator_cd (x,y)
 ! ****** Compute inner points.
 !
       do concurrent (i=1:nr,k=2:npm-1,j=2:ntm-1)
-        y(j,k,i) =  coef(j,k,1,i)*x(j,  k-1,i) &
-                  + coef(j,k,2,i)*x(j-1,k  ,i) &
-                  + coef(j,k,3,i)*x(j  ,k  ,i) &
-                  + coef(j,k,4,i)*x(j+1,k  ,i) &
+        y(j,k,i) =  coef(j,k,1,i)*x(j,  k-1,i)  &
+                  + coef(j,k,2,i)*x(j-1,k  ,i)  &
+                  + coef(j,k,3,i)*x(j  ,k  ,i)  &
+                  + coef(j,k,4,i)*x(j+1,k  ,i)  &
                   + coef(j,k,5,i)*x(j,  k+1,i)
       enddo
 !
 ! ****** Compute boundary points.
 !
-! ****** Get the m=0 components near the poles.
-!
-      allocate (fn2_fn1(nr))
-      allocate (fs2_fs1(nr))
-!$acc enter data create(fn2_fn1,fs2_fs1)
-!
       do concurrent (i=1:nr)
-        fn2_fn1(i) = zero
-        fs2_fs1(i) = zero
-      enddo
-!
-!$omp parallel do   collapse(2) default(shared)
-!$acc parallel loop collapse(2) default(present)
-      do i=1,nr
-        do k=2,npm-1
-!$omp atomic update
-!$acc atomic update
-          fn2_fn1(i) = fn2_fn1(i) + (diffusion_coef(1    ,k,i)     &
-                                  +  diffusion_coef(2    ,k,i))    &
-                                  * (x(2    ,k,i) - x(1  ,k,i))*dp(k)
-!$omp atomic update
-!$acc atomic update
-          fs2_fs1(i) = fs2_fs1(i) + (diffusion_coef(nt-1 ,k,i)     &
-                                  +  diffusion_coef(nt   ,k,i))    &
-                                  * (x(ntm-1,k,i) - x(ntm,k,i))*dp(k)
+        fn2_fn1 = zero
+        fs2_fs1 = zero
+        do concurrent (k=2:npm-1) reduce(+:fn2_fn1,fs2_fs1)
+          fn2_fn1 = fn2_fn1 + (diffusion_coef(1    ,k,i)        &
+                            +  diffusion_coef(2    ,k,i))       &
+                             * (x(2    ,k,i) - x(1  ,k,i))*dp(k)
+          fs2_fs1 = fs2_fs1 + (diffusion_coef(nt-1 ,k,i)        &
+                            +  diffusion_coef(nt   ,k,i))       &
+                             * (x(ntm-1,k,i) - x(ntm,k,i))*dp(k)
         enddo
-      enddo
-!$omp end parallel do
-!
-      do concurrent (i=1:nr,k=1:npm)
-        y(  1,k,i) = fn2_fn1(i)*dt_i(  1)*dt_i(  1)*pi_i
-        y(ntm,k,i) = fs2_fs1(i)*dt_i(ntm)*dt_i(ntm)*pi_i
+        do concurrent (k=1:npm)
+          y(  1,k,i) = fn2_fn1*dt_i(  1)*dt_i(  1)*pi_i
+          y(ntm,k,i) = fs2_fs1*dt_i(ntm)*dt_i(ntm)*pi_i
+        enddo
       enddo
 !
 ! ****** Set the periodic boundary conditions.
 !
       call set_periodic_bc_3d (y,ntm,npm,nr)
-!$acc exit data delete(fn2_fn1,fs2_fs1)
-      deallocate (fn2_fn1)
-      deallocate (fs2_fs1)
 !
 end subroutine
 !#######################################################################
@@ -8572,6 +8266,10 @@ end subroutine
 !   - Added realizations for analytic flow profile parameters for
 !     differential rotation and meridianal flows.
 !
+! 10/18/2023, RC, Version 0.29.0:
+!   - Refactored to avoid the need for atomics.
+!   - Replaced reduction OpenACC/MP loops with do concurrent reduce.
+!     This requires a Fortran 2023 compiler, or preprocessing to work.
 !-----------------------------------------------------------------------
 !
 !#######################################################################

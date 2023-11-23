@@ -2,10 +2,6 @@ DEV TASKS FOR HIPFT:
 
  - Conflow realizations: May be multiple flow map file sets, or with later auto-gen, seed or other conflow parameters - or possibly longitude shifts?
 
- - Cleanup the python script that generates hipft history diagnostics from a series of hipft output maps
-
- - Update history compare script to allow N history files with a more automatic way to specify them (realizations).
-
  - Make testsuite:  Small map versions of standard runs
 
  - Write documentation (mkdocs? git io?)
