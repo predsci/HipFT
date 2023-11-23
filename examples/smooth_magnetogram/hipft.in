@@ -1,0 +1,23 @@
+&hipft_input_parameters
+!
+  initial_map_filename = 'hmi_synoptic_mr_polfil_720s_cr2255_pslt_pt_1024x512.h5'
+!
+  output_map_root_filename = 'hmi_synoptic_mr_polfil_720s_cr2255_pslt_pt_1024x512'
+!  
+  diffusion_coef_factor = 3.0
+!
+  time_end = 1.0
+!
+  advance_diffusion = .true.
+!
+  diffusion_coef_grid = .true.
+!
+/
+!
+!  DIFFUSE
+!
+!  This run uses HipFT to smooth a 
+!  Br map.  The amount of diffusion 
+!  can be modified to be stronger or weaker by 
+!  changing "diffusion_coef_factor" to be higher or lower.
+

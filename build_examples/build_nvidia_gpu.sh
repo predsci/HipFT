@@ -24,7 +24,7 @@ HDF5_LIB_FLAGS="-lhdf5_fortran -lhdf5hl_fortran -lhdf5 -lhdf5_hl"
 # Please set the compile flags based on your compiler and hardware setup.
 ###########################################################################
 
-FFLAGS="-O3 -march=native -mp=gpu -stdpar=gpu -gpu=cc60,cc70,cc75,cc80,cc86,cc90,nomanaged -Minfo=accel"
+FFLAGS="-O3 -march=native -mp=gpu -stdpar=gpu -gpu=cc60,cc70,cc75,cc80,cc86,cc89,cc90,nomanaged -Minfo=accel"
 
 ###########################################################################
 # Specify src filename:  Use hipft_gcc.f90 for GCC, otherwise use hipft.f90
@@ -38,10 +38,13 @@ SRCFILE="hipft.f90"
 
 HIPFT_HOME=$PWD
 
+echo "Entering src directory..."
 pushd ${HIPFT_HOME}/src >> /dev/null
+echo "Removing old Makefile..."
 if [ -e Makefile ]; then
   \rm Makefile
 fi 
+echo "Generating Makefile from Makefile.template..."
 sed \
   -e "s#<FC>#${FC}#g" \
   -e "s#<FFLAGS>#${FFLAGS}#g" \
@@ -50,10 +53,9 @@ sed \
   -e "s#<HDF5_LIB_DIR>#${HDF5_LIB_DIR}#g" \
   -e "s#<HDF5_LIB_FLAGS>#${HDF5_LIB_FLAGS}#g" \
   Makefile.template > Makefile
-echo "make 1>build.log 2>build.err"
-make clean
-make 1>build.log 2>build.err
-
-echo "cp ${HIPFT_HOME}/src/hipft ${HIPFT_HOME}/bin/hipft"
+echo "Compiling code..."
+make clean 1>/dev/null 2>/dev/null ; make 1>build.log 2>build.err
+echo "Copying hipft executable to: ${HIPFT_HOME}/bin/hipft"
 \cp ${HIPFT_HOME}/src/hipft ${HIPFT_HOME}/bin/hipft
+echo "Build complete!"
 

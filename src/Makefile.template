@@ -10,7 +10,7 @@ SRCFILE = <SRCFILE>
 
 all: $(OBJS)
 	$(FC) $(FFLAGS) $(OBJS) $(LDFLAGS) -o hipft
-	rm *.modmic *.mod *.o 2>/dev/null
+	rm -f *.modmic *.mod *.o 2>/dev/null
 
 clean:
 	rm -f hipft 2>/dev/null

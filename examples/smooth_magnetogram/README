@@ -1,0 +1,8 @@
+!
+!  DIFFUSE
+!
+!  This run uses HipFT to smooth a 
+!  Br map.  The amount of diffusion 
+!  can be modified to be stronger or weaker by 
+!  changing "diffusion_coef_factor" to be higher or lower.
+
