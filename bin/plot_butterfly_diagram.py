@@ -2,7 +2,7 @@
 import argparse
 import signal
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -23,199 +23,324 @@ def argParsing():
   parser = argparse.ArgumentParser(description='plot_butterfly_diagram: This tool saves a plot of a 2D h5 butterfly diagram.')
 
   parser.add_argument(
-            'iFile',
-            help='Name of 2D hdf/h5 file')
+    'iFile',
+    help='Name of 2D hdf/h5 file')
 
   parser.add_argument('-o',
-            help='Name of output png',
-            dest='oFile',
-            required=False)
+    help='Name of output png',
+    dest='oFile',
+    required=False)
 
   parser.add_argument('-cmin',
-            help='Colormap Minimum',
-            dest='cmin',
-            type=float,
-            required=False)
+    help='Colormap Minimum',
+    dest='cmin',
+    type=float,
+    required=False)
 
   parser.add_argument('-cmax',
-            help='Colormap Maximum',
-            dest='cmax',
-            type=float,
-            required=False)
+    help='Colormap Maximum',
+    dest='cmax',
+    type=float,
+    required=False)
 
   parser.add_argument('-csym',
-            help='Make colormap center at 0 if there is negative data.',
-            dest='csym',
-            action='store_true',
-            default=False,
-            required=False)
+    help='Make colormap center at 0 if there is negative data.',
+    dest='csym',
+    action='store_true',
+    default=False,
+    required=False)
 
   parser.add_argument('-unit_label',
-            help='Label for colorbar (units)',
-            dest='unit_label',
-            default=' ',
-            required=False)
+    help='Label for colorbar (units)',
+    dest='unit_label',
+    default=' ',
+    required=False)
 
   parser.add_argument('-unit_fac',
-            help='Unit factor to multiply data',
-            dest='unit_fac',
-            default='1.0',
-            type=float,
-            required=False)
+    help='Unit factor to multiply data',
+    dest='unit_fac',
+    default='1.0',
+    type=float,
+    required=False)
 
   parser.add_argument('-title',
-            help='Title to show on plot',
-            dest='title',
-            default=' ',
-            required=False)
+    help='Title to show on plot',
+    dest='title',
+    default=' ',
+    required=False)
 
   parser.add_argument('-k',
-            help='Plot with black background',
-            dest='k',
-            action='store_true',
-            default=False,
-            required=False)
+    help='Plot with black background',
+    dest='k',
+    action='store_true',
+    default=False,
+    required=False)
 
   parser.add_argument('-nogrid',
-            help='Do not plot grid lines',
-            dest='nogrid',
-            action='store_true',
-            default=False,
-            required=False)
+    help='Do not plot grid lines',
+    dest='nogrid',
+    action='store_true',
+    default=False,
+    required=False)
 
   parser.add_argument('-finegrid',
-            help='Make the grid more fine.',
-            dest='finegrid',
-            action='store_true',
-            default=False,
-            required=False)
+    help='Make the grid more fine.',
+    dest='finegrid',
+    action='store_true',
+    default=False,
+    required=False)
 
   parser.add_argument('-noax',
-            help='Turn off axis and display image flush with border.',
-            dest='noax',
-            action='store_true',
-            default=False,
-            required=False)
+    help='Turn off axis and display image flush with border.',
+    dest='noax',
+    action='store_true',
+    default=False,
+    required=False)
 
   parser.add_argument('-noscales',
-            help='Turn off axis scales.',
-            dest='noscales',
-            action='store_true',
-            default=False,
-            required=False)
+    help='Turn off axis scales.',
+    dest='noscales',
+    action='store_true',
+    default=False,
+    required=False)
 
   parser.add_argument('-nocb',
-            help='Turn off colorbar.',
-            dest='nocb',
-            action='store_true',
-            default=False,
-            required=False)
+    help='Turn off colorbar.',
+    dest='nocb',
+    action='store_true',
+    default=False,
+    required=False)
 
   parser.add_argument('-cmap',
-            help='String of colormap name.  Can be any PSI colormap or matplotlib colormap. Run plot_psi_colormaps to view all PSI-specific maps.',
-            dest='cmap',
-            default='psi_blue_red',
-            required=False)
+    help='String of colormap name.  Can be any PSI colormap or matplotlib colormap. Run plot_psi_colormaps to view all PSI-specific maps.',
+    dest='cmap',
+    default='psi_blue_red',
+    required=False)
 
   parser.add_argument('-smooth',
-            help='Use smooth shading for plot.',
-            dest='smooth',
-            action='store_true',
-            default=False,
-            required=False)
+    help='Use smooth shading for plot.',
+    dest='smooth',
+    action='store_true',
+    default=False,
+    required=False)
 
   parser.add_argument('-gridlines',
-            help='Plot gridlines.',
-            dest='gridlines',
-            action='store_true',
-            default=False,
-            required=False)
+    help='Plot gridlines.',
+    dest='gridlines',
+    action='store_true',
+    default=False,
+    required=False)
 
   parser.add_argument('-uniform',
-            help='Ignore scales and plot uniform',
-            dest='uscales',
-            action='store_true',
-            default=False,
-            required=False)
+    help='Ignore scales and plot uniform',
+    dest='uscales',
+    action='store_true',
+    default=False,
+    required=False)
 
   parser.add_argument('-xmin',
-            help='Set xmin.',
-            dest='xmin',
-            type=float,
-            required=False)
+    help='Set xmin.',
+    dest='xmin',
+    type=float,
+    required=False)
 
   parser.add_argument('-xmax',
-            help='Set xmax.',
-            dest='xmax',
-            type=float,
-            required=False)
+    help='Set xmax.',
+    dest='xmax',
+    type=float,
+    required=False)
 
   parser.add_argument('-ymin',
-            help='Set ymin.',
-            dest='ymin',
-            type=float,
-            required=False)
+    help='Set ymin.',
+    dest='ymin',
+    type=float,
+    required=False)
 
   parser.add_argument('-ymax',
-            help='Set ymax.',
-            dest='ymax',
-            type=float,
-            required=False)
+    help='Set ymax.',
+    dest='ymax',
+    type=float,
+    required=False)
 
   parser.add_argument('-dpi',
-            help='DPI for the resulting image.',
-            dest='dpi',
-            type=int,
-            default=200,
-            required=False)
+    help='DPI for the resulting image.',
+    dest='dpi',
+    type=int,
+    default=200,
+    required=False)
 
   parser.add_argument('-x_cbar',
-            help='Place the colorbar on the x-axis',
-            dest='x_cbar',
-            action='store_true',
-            default=False,
-            required=False)
+    help='Place the colorbar on the x-axis',
+    dest='x_cbar',
+    action='store_true',
+    default=False,
+    required=False)
 
   parser.add_argument('-bgtrans',
-            help='Make background outside of plot transparent.',
-            dest='bgtrans',
-            action='store_false',
-            default=True,
-            required=False)
-
-  parser.add_argument('-xunits',
-            help='Units of the x-axis.',
-            dest='xunits',
-            default='years',
-            required=False)
+    help='Make background outside of plot transparent.',
+    dest='bgtrans',
+    action='store_false',
+    default=True,
+    required=False)
 
   parser.add_argument('-v',
-            help='Print details as script runs.',
-            dest='verbose',
-            action='store_true',
-            default=False,
-            required=False)
+    help='Print details as script runs.',
+    dest='verbose',
+    action='store_true',
+    default=False,
+    required=False)
 
   parser.add_argument('-c',
-            help='Cadence of how many pixels to skip.',
-            dest='cadence',
-            default=0,
-            required=False)
+    help='Cadence of how many pixels to skip.',
+    dest='cadence',
+    default=0,
+    required=False)
 
-  parser.add_argument('-xc',
-            help='Cadence of xunits to skip (Default ever year).',
-            dest='xcadence',
-            default=1,
-            required=False)
+  parser.add_argument('-utstart',
+    action='store_true',
+    help='Use UT start date',
+    dest='utstart',
+    required=False)
+    
+  parser.add_argument('-utstartxtick',
+    help='UT date of first xtick: YYYYMMDDTHH:MM:SS',
+    dest='utstartxtick',
+    required=False)
+    
+  parser.add_argument('-xunits',
+    help='Units of the x-axis (date, seconds, minutes, hours, days, weeks, cr, or years).',
+    dest='xunits',
+    default='hours',
+    required=False)
+
+  parser.add_argument('-xcrpos',
+    help='Carrington rotation marker location (start, center, end).',
+    dest='xcrpos',
+    default='start',
+    required=False)
+
+  parser.add_argument('-xformat',
+    help='Format for the date option where // is treated as a newline (example: %H:%M:%S//%Y/%m/%d).',
+    dest='xformat',
+    default='%H:%M:%S//%Y/%m/%d',
+    required=False)
+
+  parser.add_argument('-xcadence',
+    help='Cadence of xc_units for xaxis tick marks (default is matplotlib auto-ticks cadence).',
+    dest='xcadence',
+    required=False)
+
+  parser.add_argument('-xcadence_units',
+    help='Units for x-axis tick cadence (default is xunits) (seconds, minutes, hours, days, weeks, cr, months, or years).',
+    dest='xc_units',
+    required=False)
+
+  parser.add_argument('-xslantdeg',
+    help='Flag to slant x-axis labels by a desired degree.',
+    dest='slant',
+    required=False)
+
+  parser.add_argument('-xha',
+    help='Horizontal alignment of slanted x-axis labels (left, center, or right) (default:center).',
+    dest='ha',
+    default='center',
+    required=False)
+
+  parser.add_argument('-xrmode', 
+    action='store_true',
+    help='Set text rotation mode to "anchor".',
+    dest='rmode',
+    required=False)
+
+  parser.add_argument('-xma',
+    help='Multi line alignment of slanted x-axis labels (left, center, or right) (default:center).',
+    dest='ma',
+    default='center',
+    required=False)
+
+  parser.add_argument('-fsize',
+    help='Font size',
+    dest='fsize',
+    default=18,
+    required=False)
+
+  parser.add_argument('-fsize_xticklabels',
+    help='Font size for xtick labels',
+    dest='xlabelfsize',
+    default=18,
+    required=False)
+
+  parser.add_argument('-3d',
+    action='store_true',
+    help='Flag to denote 3d h5 file.',
+    dest='dim3',
+    required=False)
+
+  parser.add_argument('-slice',
+    help='Slice to use for averaging if 3d.',
+    dest='slice', 
+    type=int,
+    default=1,
+    required=False)
+
+  parser.add_argument('-slices',
+    help='Slices to use for averaging if 3d in format: 1 2 3',
+    dest='slices', 
+    type=int, 
+    nargs='+',
+    required=False)
+
+  parser.add_argument('-sall',
+    action='store_true',
+    help='Do all slices',
+    dest='sall', 
+    required=False)
 
   return parser.parse_args()
 
+
+
 def run(args):
+
   # Load colormaps:
   psipals.load()
 
-  # Read the data:
-  xvec, yvec, data = ps.rdhdf_2d(args.iFile)
+  if (args.oFile is None):
+    if (str(args.iFile).endswith('h5')):
+      n = 3
+    else:
+      n = 4
+    oFile = args.iFile[0:len(args.iFile) - n] + ".png"
+  else:
+    oFile = args.oFile
+    if '.png' not in oFile:
+      oFile = oFile + '.png'
+
+  if bool(args.dim3):
+    if (args.sall):
+      xvec, yvec, zvec, data_in = ps.rdhdf_3d(args.iFile)
+      for islice in range(len(zvec)):
+        oFileNew = oFile.replace('.png','_sl'+str(int(zvec[islice]))+'.png')
+        data = np.squeeze(data_in[islice,:,:])
+        plot(args, xvec, yvec, data, oFileNew)
+    elif (args.slices):
+      xvec, yvec, zvec, data_in = ps.rdhdf_3d(args.iFile)
+      for islice in args.slices:
+        oFileNew = oFile.replace('.png','_sl'+str(islice)+'.png')
+        data = np.squeeze(data_in[islice-1,:,:])
+        plot(args, xvec, yvec, data, oFileNew)
+    else:
+      xvec, yvec, zvec, data_in = ps.rdhdf_3d(args.iFile)
+      data = np.squeeze(data_in[int(args.slice)-1,:,:])
+      plot(args, xvec, yvec, data, oFile)
+  else:
+    # Read the data:
+    xvec, yvec, data = ps.rdhdf_2d(args.iFile)
+    plot(args, xvec, yvec, data, oFile)
+
+
+
+def plot(args, xvec, yvec, data, oFile):
 
   #thin out data
   skip = int(args.cadence)+1
@@ -233,10 +358,10 @@ def run(args):
 
   # Set up uniform grid scales if requested:
   if (args.uscales):
-    xvec_plot = np.array(range(0, len(xvec)))
+    xvec_plot = np.array(range(0, len(xvec)))/3600
     yvec_plot = np.array(range(0, len(yvec)))
   else:
-    xvec_plot = xvec
+    xvec_plot = xvec/3600
     yvec_plot = yvec
 
   # Modify scales to be on a half-mesh of size N+1
@@ -286,7 +411,7 @@ def run(args):
     cmin = min(cmin, -np.abs(cmax))
     cmax = max(cmax, np.abs(cmin))
 
-  fsize = 18
+  fsize = args.fsize
 
   if (args.k):
     fc = 'k'
@@ -321,30 +446,13 @@ def run(args):
   plt.xlim(xmin=xmin, xmax=xmax)
   plt.ylim(ymin=ymin, ymax=ymax)
 
+  xmn = np.min(xvec_plot)
+  xmx = np.max(xvec_plot)
 
-  if args.xunits == "years":
-    startTimeYear = datetime.fromtimestamp(xvec_plot[0]).strftime('%Y')
-    if xvec_plot[0] > datetime.strptime(startTimeYear,'%Y').timestamp():
-      startTimeYear=int(startTimeYear)+1
-    else:
-      startTimeYear=int(startTimeYear)
-    endTimeYear = datetime.fromtimestamp(xvec_plot[-1]).strftime('%Y')
-    if xvec_plot[-1] < datetime.strptime(endTimeYear,'%Y').timestamp():
-      endTimeYear=int(endTimeYear)-1
-    else:
-      endTimeYear=int(endTimeYear)
 
-    locsYear = list(range(startTimeYear, endTimeYear+1))
-    locs = [datetime.strptime(str(jtime),'%Y').timestamp() for jtime in locsYear]
-
-    labels = [str(itime) for itime in locsYear]
-
-    xskip = int(args.xcadence)
-    locs = locs[::xskip]
-    labels = labels[::xskip]
-
-    plt.xticks(locs,labels)
-    plt.xlabel(r'Years', {'fontsize': fsize, 'color': tc})
+  init_locs = plt.xticks()[0]
+  locs, labels, utstartSecs = get_xticks(args,xmn,xmx,init_locs)
+  xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs)
 
   xdtmi = np.abs(xmax-xmin)/15.0
 
@@ -429,18 +537,380 @@ def run(args):
   if (args.nocb):
     cb.remove()
 
-  if (args.oFile is None):
-    if (str(args.iFile).endswith('h5')):
-      n = 3
-    else:
-      n = 4
-    oFile = args.iFile[0:len(args.iFile) - n] + ".png"
-  else:
-    oFile = args.oFile
-
   if args.verbose:
     print('{}'.format(oFile))
   fig.savefig(oFile, bbox_inches="tight", pad_inches=0, dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
+
+
+#
+# ****** x-axis label and ticks
+#  
+
+
+def get_xticks(args,xmn,xmx,init_locs):
+  seconds = 1
+  minutes = 60
+  hours = 3600
+  days = 86400
+  weeks = 604800
+  months = -100
+  cr = 2356586
+  years = 31556952
+  default = hours
+  
+  xcUnitsSec = default
+  if (args.xc_units):
+    if args.xc_units == 'years':
+      xcUnitsSec = years
+    elif args.xc_units == 'cr':
+      xcUnitsSec = cr
+    elif args.xc_units == 'months':
+      if (args.xunits != 'date'):
+        raise Exception("Can only use 'months' with xunits of date")
+    elif args.xc_units == 'weeks':
+      xcUnitsSec = weeks
+    elif args.xc_units == 'days':
+      xcUnitsSec = days
+    elif args.xc_units == 'hours':
+      xcUnitsSec = hours
+    elif args.xc_units == 'minutes':
+      xcUnitsSec = minutes
+    elif args.xc_units == 'seconds':
+      xcUnitsSec = seconds
+  else:
+    if args.xunits == 'years':
+      xcUnitsSec = years
+    elif args.xunits == 'cr':
+      xcUnitsSec = cr
+    elif args.xunits == 'weeks':
+      xcUnitsSec = weeks
+    elif args.xunits == 'days':
+      xcUnitsSec = days
+    elif args.xunits == 'hours':
+      xcUnitsSec = hours
+    elif args.xunits == 'minutes':
+      xcUnitsSec = minutes
+    elif args.xunits == 'seconds':
+      xcUnitsSec = seconds
+      
+  if (args.utstart):
+    utstartSecs = xmn
+  else:
+    utstartSecs = 0
+  initLocs_uttime = init_locs*hours
+  xmn_uttime = xmn*hours
+  xmx_uttime = xmx*hours
+  if args.xunits == "date":
+    if (args.utstart):
+      locs, labels = date_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime)
+    else:
+      raise Exception("Did not specify a utstart")
+  elif args.xunits == "seconds":
+    locs, labels = since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,seconds)
+  elif args.xunits == "minutes":
+    locs, labels = since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,minutes)
+  elif args.xunits == "hours":
+    locs, labels = since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,hours)
+  elif args.xunits == "days":
+    locs, labels = since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,days)
+  elif args.xunits == "weeks":
+    locs, labels = since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,weeks)
+  elif args.xunits == "cr":
+    if (args.utstart): 
+      locs, labels = cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime)
+    else:
+      locs, labels = since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,cr)
+  elif args.xunits == "years":
+    locs, labels = since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,years)
+  locs = (np.array(locs)-utstartSecs)/3600
+  labels = [label.replace('//','\n') for label in labels]
+  return locs, labels, utstartSecs
+
+
+def date_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime):
+  locs = []
+  labels = []
+  if (args.xc_units == 'months'):
+    xformat = '%m/%Y/%d/%H/%M/%S'
+    if (args.xcadence):
+      cadence = args.xcadence
+    else:
+      tempArray = np.array(initLocs_uttime)
+      cadence = int(np.average(np.diff(tempArray))/2678400)
+      if cadence == 0:
+        cadence = 1 
+    currDate = datetime.utcfromtimestamp(xmn_uttime).strftime(xformat)
+    locs.append(xmn_uttime)
+    currDate=currDate.split('/')
+    currDate[0]=str(int(currDate[0])+cadence)
+    if int(currDate[0]) > 12:
+      tempM = int(currDate[0])
+      currDate[0]=str(tempM%12)
+      currDate[1]=str(int(currDate[1])+int(tempM/12))
+    currDate='/'.join(currDate)
+    currDateSeconds = datetime.strptime(currDate,xformat).replace(tzinfo=timezone.utc).timestamp()
+    while currDateSeconds <= xmx_uttime:
+      locs.append(currDateSeconds)
+      currDate=currDate.split('/')
+      currDate[0]=str(int(currDate[0])+cadence)
+      if int(currDate[0]) > 12:
+        tempM = int(currDate[0])
+        currDate[0]=str(tempM%12)
+        currDate[1]=str(int(currDate[1])+int(tempM/12))
+      currDate='/'.join(currDate)
+      currDateSeconds = datetime.strptime(currDate,xformat).replace(tzinfo=timezone.utc).timestamp()
+  elif (args.xunits == 'years' or args.xc_units == 'years'):
+    xformat = '%Y/%m/%d/%H/%M/%S'
+    if (args.xcadence):
+      cadence = args.xcadence
+    else:
+      tempArray = np.array(initLocs_uttime)
+      cadence = int(np.average(np.diff(tempArray))/31556952)
+      if cadence == 0:
+        cadence = 1 
+    currDate = datetime.utcfromtimestamp(xmn_uttime).strftime(xformat)
+    locs.append(xmn_uttime)
+    currDate=currDate.split('/')
+    currDate[0]=str(int(currDate[0])+cadence)
+    currDate='/'.join(currDate)
+    currDateSeconds = datetime.strptime(currDate,xformat).replace(tzinfo=timezone.utc).timestamp()
+    while currDateSeconds <= xmx_uttime:
+      locs.append(currDateSeconds)
+      currDate=currDate.split('/')
+      currDate[0]=str(int(currDate[0])+cadence)
+      currDate='/'.join(currDate)
+      currDateSeconds = datetime.strptime(currDate,xformat).replace(tzinfo=timezone.utc).timestamp()
+  else:
+    if (args.xcadence):
+      cadence = xcUnitsSec*int(args.xcadence)
+    else:
+      tempArray = np.array(initLocs_uttime)
+      cadence = np.average(np.diff(tempArray)) 
+    if (args.utstartxtick):
+      extraSeconds = datetime.strptime(args.utstartxtick,'%Y%m%dT%H:%M:%S').replace(tzinfo=timezone.utc).timestamp()
+      currDate = xmn_uttime+extraSeconds
+    else:
+      currDate = xmn_uttime
+    locs.append(currDate)
+    skip = int(cadence)
+    currDate = currDate + skip
+    while currDate <= xmx_uttime:
+      locs.append(currDate)
+      currDate = currDate + skip
+  for loc in locs:
+    labels.append(datetime.utcfromtimestamp(loc).strftime(args.xformat))
+  return locs, labels
+  
+
+def since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,secTimeUnit):
+  locs = []
+  labels = []
+  if (args.xcadence):
+    cadence = xcUnitsSec*int(args.xcadence)
+  else:
+    tempArray = np.array(initLocs_uttime)
+    cadence = np.average(np.diff(tempArray)) 
+  currDate = xmn_uttime
+  locs.append(currDate)
+  skip = int(cadence)
+  currDate = currDate + skip
+  while currDate <= xmx_uttime:
+    locs.append(currDate)
+    currDate = currDate + skip
+  labelOffSet = int(locs[0]/secTimeUnit)
+  for loc in locs:
+      labels.append(str(int(loc/secTimeUnit)-labelOffSet))
+  return locs, labels
+
+
+def cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime):
+  locs = []
+  labels = []
+  xformat = '%Y%m%dT%H:%M:%S'
+  if (args.xcadence):
+    if (args.xc_units):
+      if (args.xc_units == 'cr'):
+        endOffset = 0 
+        if (args.xcrpos == 'end'):
+          endOffset = 1
+        cr_num = int(carrington_rotation_number(np.datetime64(int(xmn_uttime),'s')))
+        if (args.xcrpos == 'center'):
+          cr_num = cr_num-0.5
+          currDate = int(carrington_rotation_time(cr_num).unix)
+          if currDate < xmn_uttime:
+            cr_num = cr_num+1
+            currDate = int(carrington_rotation_time(cr_num).unix)
+        else:
+          currDate = int(carrington_rotation_time(cr_num).unix)
+        locs.append(currDate)
+        labels.append(str(int(cr_num)-endOffset))
+        cr_num = cr_num+int(args.xcadence)
+        currDate = int(carrington_rotation_time(cr_num).unix)
+        while currDate <= xmx_uttime:
+          locs.append(currDate)
+          labels.append(str(int(cr_num)-endOffset))
+          cr_num = cr_num+int(args.xcadence)
+          currDate = int(carrington_rotation_time(cr_num).unix)
+      else:
+        endOffset = 0 
+        if (args.xcrpos == 'end'):
+          endOffset = 1
+        cr_num = int(carrington_rotation_number(np.datetime64(int(xmn_uttime),'s')))
+        if (args.xcrpos == 'center'):
+          cr_num = cr_num-0.5
+          currDate = int(carrington_rotation_time(cr_num).unix)
+          if currDate < xmn_uttime:
+            cr_num = cr_num+1
+            currDate = int(carrington_rotation_time(cr_num).unix)
+        else:
+          currDate = int(carrington_rotation_time(cr_num).unix)
+        locs.append(currDate)
+        labels.append(str(int(cr_num)-endOffset))
+        cr_num = float(carrington_rotation_number(np.datetime64(int(currDate+xcUnitsSec*int(args.xcadence)),'s')))
+        currDate = int(carrington_rotation_time(cr_num).unix)
+        while currDate <= xmx_uttime:
+          locs.append(currDate)
+          labels.append(str(int(cr_num)-endOffset))
+          cr_num = float(carrington_rotation_number(np.datetime64(int(currDate+xcUnitsSec*int(args.xcadence)),'s')))
+          currDate = int(carrington_rotation_time(cr_num).unix)
+    else:
+      endOffset = 0 
+      if (args.xcrpos == 'end'):
+        endOffset = 1
+      cr_num = int(carrington_rotation_number(np.datetime64(int(xmn_uttime),'s')))
+      if (args.xcrpos == 'center'):
+        cr_num = cr_num-0.5
+        currDate = int(carrington_rotation_time(cr_num).unix)
+        if currDate < xmn_uttime:
+          cr_num = cr_num+1
+          currDate = int(carrington_rotation_time(cr_num).unix)
+      else:
+        currDate = int(carrington_rotation_time(cr_num).unix)
+      locs.append(currDate)
+      labels.append(str(int(cr_num)-endOffset))
+      cr_num = cr_num+int(args.xcadence)
+      currDate = int(carrington_rotation_time(cr_num).unix)
+      while currDate <= xmx_uttime:
+        locs.append(currDate)
+        labels.append(str(int(cr_num)-endOffset))
+        cr_num = cr_num+int(args.xcadence)
+        currDate = int(carrington_rotation_time(cr_num).unix)
+  else:
+    endOffset = 0 
+    if (args.xcrpos == 'end'):
+      endOffset = 1
+    cr_num = int(carrington_rotation_number(np.datetime64(int(xmn_uttime),'s')))
+    if (args.xcrpos == 'center'):
+      cr_num = cr_num-0.5
+      currDate = int(carrington_rotation_time(cr_num).unix)
+      if currDate < xmn_uttime:
+        cr_num = cr_num+1
+        currDate =  int(carrington_rotation_time(cr_num).unix)
+    else:
+      currDate = int(carrington_rotation_time(cr_num).unix)
+    locs.append(currDate)
+    labels.append(str(int(cr_num)-endOffset))
+    cr_num = cr_num+1
+    currDate = int(carrington_rotation_time(cr_num).unix)
+    while currDate <= xmx_uttime:
+      locs.append(currDate)
+      labels.append(str(int(cr_num)-endOffset))
+      cr_num = cr_num+1
+      currDate = int(carrington_rotation_time(cr_num).unix)
+  return locs, labels
+
+
+def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
+  if (args.rmode):
+    rmode = 'anchor'
+  else:
+    rmode = 'default'
+  if args.xunits == "date":
+    plt.xlabel('UT Date', {'fontsize': args.fsize, 'color': tc})
+    ax.tick_params(axis='x',labelsize=args.xlabelfsize)
+    if (args.slant):
+      plt.xticks(locs,labels,rotation=int(args.slant), ha=args.ha, rotation_mode=rmode, ma=args.ma)
+    else:
+      plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
+  elif args.xunits == "seconds":
+    if (args.slant):
+      plt.xticks(locs,labels,rotation=int(args.slant), ha=args.ha, rotation_mode=rmode, ma=args.ma)
+    else:
+      plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
+    if (args.utstart): 
+      plt.xlabel('Seconds since '+ datetime.utcfromtimestamp(utstartSecs).strftime('UT-%Y-%m-%dT%H:%M:%S'), {'fontsize': args.fsize, 'color': tc})
+    else:
+      plt.xlabel('Seconds', {'fontsize': args.fsize, 'color': tc})
+    ax.tick_params(axis='x',labelsize=args.xlabelfsize)   
+  elif args.xunits == "minutes":
+    if (args.slant):
+      plt.xticks(locs,labels,rotation=int(args.slant), ha=args.ha, rotation_mode=rmode, ma=args.ma)
+    else:
+      plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
+    if (args.utstart): 
+      plt.xlabel('Minutes since '+ datetime.utcfromtimestamp(utstartSecs).strftime('UT-%Y-%m-%dT%H:%M:%S'), {'fontsize': args.fsize, 'color': tc})
+    else:
+      plt.xlabel('Minutes', {'fontsize': args.fsize, 'color': tc})
+    ax.tick_params(axis='x',labelsize=args.xlabelfsize)  
+  elif args.xunits == "hours":
+    if (args.slant):
+      plt.xticks(locs,labels,rotation=int(args.slant), ha=args.ha, rotation_mode=rmode, ma=args.ma)
+    else:
+      plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
+    if (args.utstart): 
+      plt.xlabel('Hours since '+ datetime.utcfromtimestamp(utstartSecs).strftime('UT-%Y-%m-%dT%H:%M:%S'), {'fontsize': args.fsize, 'color': tc})
+    else:
+      plt.xlabel('Hours', {'fontsize': args.fsize, 'color': tc})
+    ax.tick_params(axis='x',labelsize=args.xlabelfsize)  
+  elif args.xunits == "days":
+    if (args.slant):
+      plt.xticks(locs,labels,rotation=int(args.slant), ha=args.ha, rotation_mode=rmode, ma=args.ma)
+    else:
+      plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
+    if (args.utstart): 
+      plt.xlabel('Days since '+ datetime.utcfromtimestamp(utstartSecs).strftime('UT-%Y-%m-%dT%H:%M:%S'), {'fontsize': args.fsize, 'color': tc})
+    else:
+      plt.xlabel('Days', {'fontsize': args.fsize, 'color': tc})
+    ax.tick_params(axis='x',labelsize=args.xlabelfsize)  
+  elif args.xunits == "weeks":
+    if (args.slant):
+      plt.xticks(locs,labels,rotation=int(args.slant), ha=args.ha, rotation_mode=rmode, ma=args.ma)
+    else:
+      plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
+    if (args.utstart): 
+      plt.xlabel('Weeks since '+ datetime.utcfromtimestamp(utstartSecs).strftime('UT-%Y-%m-%dT%H:%M:%S'), {'fontsize': args.fsize, 'color': tc})
+    else:
+      plt.xlabel('Weeks', {'fontsize': args.fsize, 'color': tc})
+    ax.tick_params(axis='x',labelsize=args.xlabelfsize)  
+  elif args.xunits == "cr":
+    if (args.slant):
+      plt.xticks(locs,labels,rotation=int(args.slant), ha=args.ha, rotation_mode=rmode, ma=args.ma)
+    else:
+      plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
+    if (args.utstart): 
+      if (args.xcrpos == 'start'):
+        plt.xlabel('Carrington Rotation', {'fontsize': args.fsize, 'color': tc})
+      else: 
+        plt.xlabel('Carrington Rotation ('+args.xcrpos+')', {'fontsize': args.fsize, 'color': tc})
+    else:
+      if (args.xcrpos == 'start'):
+        plt.xlabel('Carrington Rotation', {'fontsize': args.fsize, 'color': tc})
+      else: 
+        plt.xlabel('Carrington Rotation ('+args.xcrpos+')', {'fontsize': args.fsize, 'color': tc})
+    ax.tick_params(axis='x',labelsize=args.xlabelfsize) 
+  elif args.xunits == "years":
+    if (args.slant):
+      plt.xticks(locs,labels,rotation=int(args.slant), ha=args.ha, rotation_mode=rmode, ma=args.ma)
+    else:
+      plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
+    if (args.utstart): 
+      plt.xlabel('Years since '+ datetime.utcfromtimestamp(utstartSecs).strftime('UT-%Y-%m-%dT%H:%M:%S'), {'fontsize': args.fsize, 'color': tc})
+    else:
+      plt.xlabel('Years', {'fontsize': args.fsize, 'color': tc})
+    ax.tick_params(axis='x',labelsize=args.xlabelfsize)  
+  else:
+    plt.xlabel('Hours', {'fontsize': args.fsize, 'color': tc})
+    ax.tick_params(axis='x',labelsize=args.xlabelfsize)
 
 
 def main():
