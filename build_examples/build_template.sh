@@ -13,10 +13,12 @@
 # this lowest level directory (not from the build_examples folder).
 #
 #################################################################
-# "mpif90" is assumed to be in your PATH and points to 
-# your chosen MPI library/compiler.
 #################################################################
-#
+# Enter your MPI compiler (typically "mpif90").
+#################################################################
+
+FC=
+
 #################################################################
 # Please set the location of the HDF5 include & library files. 
 # Make sure the HDF5 LIBRARY is COMPILED with 
@@ -39,25 +41,33 @@ HDF5_LIB_FLAGS=
 FFLAGS=
 
 ###########################################################################
-#             END OF USER CONFIG.  DO NOT EDIT BELOW.                     #
+# Specify src filename:  Use hipft_gcc.f90 for GCC, otherwise use hipft.f90
 ###########################################################################
-###########################################################################
-###########################################################################
+
+SRCFILE=
+
 ###########################################################################
 ###########################################################################
 ###########################################################################
 
 HIPFT_HOME=$PWD
 
-cd ${HIPFT_HOME}/src
-cp Makefile.template Makefile
-sed -i "s#<FFLAGS>#${FFLAGS}#g" Makefile
-sed -i "s#<HDF5_INCLUDE_DIR>#${HDF5_INCLUDE_DIR}#g" Makefile
-sed -i "s#<HDF5_LIB_DIR>#${HDF5_LIB_DIR}#g" Makefile
-sed -i "s#<HDF5_LIB_FLAGS>#${HDF5_LIB_FLAGS}#g" Makefile
+pushd ${HIPFT_HOME}/src >> /dev/null
+if [ -e Makefile ]; then
+  \rm Makefile
+fi 
+sed \
+  -e "s#<FC>#${FC}#g" \
+  -e "s#<FFLAGS>#${FFLAGS}#g" \
+  -e "s#<SRCFILE>#${SRCFILE}#g" \
+  -e "s#<HDF5_INCLUDE_DIR>#${HDF5_INCLUDE_DIR}#g" \
+  -e "s#<HDF5_LIB_DIR>#${HDF5_LIB_DIR}#g" \
+  -e "s#<HDF5_LIB_FLAGS>#${HDF5_LIB_FLAGS}#g" \
+  Makefile.template > Makefile
 echo "make 1>build.log 2>build.err"
+make clean
 make 1>build.log 2>build.err
 
 echo "cp ${HIPFT_HOME}/src/hipft ${HIPFT_HOME}/bin/hipft"
-cp ${HIPFT_HOME}/src/hipft ${HIPFT_HOME}/bin/hipft
+\cp ${HIPFT_HOME}/src/hipft ${HIPFT_HOME}/bin/hipft
 

@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.28.0'
-      character(*), parameter :: cdate='12/18/2023'
+      character(*), parameter :: cvers='0.29.0'
+      character(*), parameter :: cdate='11/22/2023'
 !
 end module
 !#######################################################################
@@ -82,13 +82,13 @@ module constants
 !
       real(r_typ), parameter :: zero = 0.0_r_typ
       real(r_typ), parameter :: one = 1.0_r_typ
-      integer*8,   parameter :: one_int = 1
+      integer(8),   parameter :: one_int = 1
       real(r_typ), parameter :: two = 2.0_r_typ
-      integer*8,   parameter :: two_int = 2
+      integer(8),   parameter :: two_int = 2
       real(r_typ), parameter :: three = 3._r_typ
-      integer*8,   parameter :: three_int = 3
+      integer(8),   parameter :: three_int = 3
       real(r_typ), parameter :: four = 4._r_typ
-      integer*8,   parameter :: four_int = 4
+      integer(8),   parameter :: four_int = 4
       real(r_typ), parameter :: six = 6._r_typ
       real(r_typ), parameter :: sixth = 0.16666666666666666_r_typ
       real(r_typ), parameter :: nine = 9._r_typ
@@ -155,8 +155,8 @@ module output
 !
 ! ****** File sequence number.
 !
-      integer*8 :: idx_out = 0
-      integer*8 :: idx_hist = 0
+      integer(8) :: idx_out = 0
+      integer(8) :: idx_hist = 0
 !
       integer, parameter :: IO_HIST_NUM = 20
       integer, parameter :: IO_HIST_SOL = 21
@@ -198,7 +198,7 @@ module globals
 !
 ! ****** Current step.
 !
-      integer*8 :: ntime = 0
+      integer(8) :: ntime = 0
 !
 ! ****** Current time-step.
 !
@@ -208,7 +208,7 @@ module globals
 ! ****** Explicit Euler diffusion stable time-step and number of cycles.
 !
       real(r_typ) :: dtime_diffusion_euler = 0.
-      integer*8 :: n_stable_diffusion_cycles = 1
+      integer(8) :: n_stable_diffusion_cycles = 1
       logical :: auto_sc=.false.
 !
 ! ****** Explicit Euler advection stable time-step.
@@ -218,7 +218,7 @@ module globals
 !
 ! ****** Current output file sequence number.
 !
-      integer*8 :: output_seq = 0
+      integer(8) :: output_seq = 0
 !
 ! ****** Flag to indicate the flow needs updating.
 !
@@ -383,7 +383,7 @@ module sts
 !
       implicit none
 !
-      integer*8 :: sts_s
+      integer(8) :: sts_s
 !
       logical :: need_to_load_sts = .true.
 !
@@ -1077,7 +1077,7 @@ subroutine initialize_mpi
 ! ****** Set the GPU device number based on the shared rank.
 ! ****** This assumes the code was launched with 1 MPI rank per GPU.
 !
-!$acc set device_num(iprocsh)
+      call omp_set_default_device (iprocsh)
 !
       wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
 !
@@ -1161,7 +1161,7 @@ subroutine setup
         allocate (vp(ntm,np,nr))
         vt(:,:,:) = 0.
         vp(:,:,:) = 0.
-!$acc enter data copyin(vt,vp)
+!$omp target enter data map(to:vt,vp)
       end if
 !
       call set_unchanging_quantities
@@ -1794,8 +1794,8 @@ subroutine load_initial_condition
 ! ****** Have to put this on and off GPU since the routines
 !        are GPU-only.
 !
-!$acc enter data create (f_local,fval_u0,f_tmp2d)
-!$acc enter data copyin (s1,s2)
+!$omp target enter data map(alloc:f_local,fval_u0,f_tmp2d)
+!$omp target enter data map(to:s1,s2)
         do i=1,n3
           call tesseral_spherical_harmonic (0,6,s1,s2,n1,n2,f_tmp2d)
           do concurrent(k=1:n2,j=1:n1)
@@ -1806,8 +1806,8 @@ subroutine load_initial_condition
             fval_u0(j,k,i) = f_tmp2d(j,k)
           enddo
         enddo
-!$acc update self (f_local,fval_u0)
-!$acc exit data delete (f_local,fval_u0,f_tmp2d,s1,s2)
+!$omp target update from(f_local,fval_u0)
+!$omp target exit data map(delete:f_local,fval_u0,f_tmp2d,s1,s2)
 !
         fval_u0(:,:,:) = 1000.0_r_typ*(f_local(:,:,:) +               &
                               sqrt(14.0_r_typ/11.0_r_typ)*fval_u0(:,:,:))
@@ -1923,7 +1923,7 @@ subroutine load_initial_condition
 !
         deallocate (fout)
 !
-!$acc enter data copyin(fval_u0)
+!$omp target enter data map(to:fval_u0)
 !
       elseif (validation_run .eq. 2) then
 !
@@ -2024,7 +2024,7 @@ subroutine load_initial_condition
         f(ntm,:,i) = fs1(i)*twopi_i
       enddo
 !
-!$acc enter data copyin(f)
+!$omp target enter data map(to:f)
 !
 ! ****** Clean up memory.
 !
@@ -2110,7 +2110,7 @@ subroutine set_realization_parameters
           diffusion_coef_constant_rvec(i) =                           &
             diffusion_coef_constants(local_realization_indices(i))
         enddo
-!$acc enter data copyin(diffusion_coef_constant_rvec)
+!$omp target enter data map(to:diffusion_coef_constant_rvec)
       end if
 !
 ! ****** Set up flow attenuation arrays.
@@ -2125,7 +2125,7 @@ subroutine set_realization_parameters
             flow_attenuate_value_i_rvec(i) = HUGE(one)
           end if
         enddo
-!$acc enter data copyin(flow_attenuate_value_i_rvec)
+!$omp target enter data map(to:flow_attenuate_value_i_rvec)
       end if
 !
 ! ****** Set up AFT differential rotation flow arrays.
@@ -2139,8 +2139,8 @@ subroutine set_realization_parameters
           flow_dr_coef_p2_rvec(i) = flow_dr_coef_p2_values(local_realization_indices(i))
           flow_dr_coef_p4_rvec(i) = flow_dr_coef_p4_values(local_realization_indices(i))
         enddo
-!$acc enter data copyin(flow_dr_coef_p0_rvec,flow_dr_coef_p2_rvec, &
-!$acc                   flow_dr_coef_p4_rvec)
+!$omp target enter data map(to:flow_dr_coef_p0_rvec,&
+!$omp flow_dr_coef_p2_rvec,flow_dr_coef_p4_rvec)
       end if
 !
 ! ****** Set up AFT meridianal flow arrays.
@@ -2154,8 +2154,8 @@ subroutine set_realization_parameters
           flow_mf_coef_p3_rvec(i) = flow_mf_coef_p3_values(local_realization_indices(i))
           flow_mf_coef_p5_rvec(i) = flow_mf_coef_p5_values(local_realization_indices(i))
         enddo
-!$acc enter data copyin(flow_mf_coef_p1_rvec,flow_mf_coef_p3_rvec, &
-!$acc                   flow_mf_coef_p5_rvec)
+!$omp target enter data map(to:flow_mf_coef_p1_rvec,&
+!$omp flow_mf_coef_p3_rvec,flow_mf_coef_p5_rvec)
       end if
 !
 ! ****** Set up data assimilation arrays.
@@ -2166,14 +2166,14 @@ subroutine set_realization_parameters
         allocate (assimilate_data_lat_limit_tidx0_rvec(nr))
         allocate (assimilate_data_lat_limit_tidx1_rvec(nr))
 !
-!$acc enter data create (assimilate_data_lat_limit_tidx0_rvec, &
-!$acc                    assimilate_data_lat_limit_tidx1_rvec)
+!$omp target enter data map(alloc:assimilate_data_lat_limit_tidx0_rvec,&
+!$omp assimilate_data_lat_limit_tidx1_rvec)
 !
         do i=1,nr
           assimilate_data_lat_limit_rvec(i) =                         &
             assimilate_data_lat_limits(local_realization_indices(i))
         enddo
-!$acc enter data copyin(assimilate_data_lat_limit_rvec)
+!$omp target enter data map(to:assimilate_data_lat_limit_rvec)
 !
         do concurrent (i=1:nr)
           assimilate_data_lat_limit_tidx0_rvec(i) = -1
@@ -2191,8 +2191,8 @@ subroutine set_realization_parameters
             assimilate_data_mu_limit_rvec(i) =                        &
               assimilate_data_mu_limits(local_realization_indices(i))
           enddo
-!$acc enter data copyin (assimilate_data_mu_power_rvec, &
-!$acc                    assimilate_data_mu_limit_rvec)
+!$omp target enter data map(to:assimilate_data_mu_power_rvec,&
+!$omp assimilate_data_mu_limit_rvec)
 !
         end if
 !
@@ -2301,7 +2301,7 @@ subroutine tesseral_spherical_harmonic (m, l, pvec, tvec, np, nt, Y)
 !
 ! ****** Create the temporary arrays on the GPU.
 !
-!$acc enter data create(cos_tvec, Pold, Poldold, Pl)
+!$omp target enter data map(alloc:cos_tvec,pold,poldold,pl)
 !
       do concurrent(i=1:nt)
 !
@@ -2381,7 +2381,7 @@ subroutine tesseral_spherical_harmonic (m, l, pvec, tvec, np, nt, Y)
 !
 ! ****** Remove the temporary arrays from the GPU:
 !
-!$acc exit data delete(cos_tvec, Pold, Poldold, Pl)
+!$omp target exit data map(delete:cos_tvec,pold,poldold,pl)
 !
 end subroutine
 !#######################################################################
@@ -2679,7 +2679,7 @@ subroutine write_map (fname)
 !
 !-----------------------------------------------------------------------
 !
-!$acc update self(f)
+!$omp target update from(f)
 !
 ! ****** Write out file in pt format with single point overlap in phi.
 !
@@ -2780,7 +2780,7 @@ subroutine write_flows (idx_str)
 !
 !-----------------------------------------------------------------------
 !
-!$acc update self(vt,vp)
+!$omp target update from(vt,vp)
 !
       full_filename = trim(output_flows_directory)//'/'// &
                       trim(output_flows_root_filename)// &
@@ -2983,7 +2983,7 @@ subroutine analysis_step
 !
       if (validation_run .eq. 1) then
         allocate (fval(npm-1,ntm,nr))
-!$acc enter data create (fval)
+!$omp target enter data map(alloc:fval)
 !
         do concurrent (k=1:nr,j=1:ntm,i=1:npm-1)
           fval(i,j,k) = fval_u0(i,j,k)*                                  &
@@ -3027,7 +3027,7 @@ subroutine analysis_step
       enddo
 !
       if (validation_run .eq. 1) then
-!$acc exit data delete (fval)
+!$omp target exit data map(delete:fval)
       end if
 !
 ! ****** Get integrated metrics.
@@ -3045,11 +3045,10 @@ subroutine analysis_step
         eqd2 = 0.
         h_ax_dipole_tmp = 0.
 !
-        do concurrent (i=1:npm-1,j=1:ntm)                              &
-                       reduce(+:h_fluxp_tmp,h_fluxm_tmp,h_fluxp_pn_tmp,&
-                                h_fluxm_pn_tmp,h_area_pn_tmp,          &
-                                h_fluxp_ps_tmp,h_fluxm_ps_tmp,         &
-                                h_area_ps_tmp,eqd1,eqd2,h_ax_dipole_tmp)
+        do concurrent (i=1:npm-1,j=1:ntm) reduce(+:h_fluxp_tmp,h_fluxm_tmp,h_fluxp_pn_tmp)&
+                                          reduce(+:h_fluxm_pn_tmp,h_area_pn_tmp)          &
+                                          reduce(+:h_fluxp_ps_tmp,h_fluxm_ps_tmp)         &
+                                          reduce(+:h_area_ps_tmp,eqd1,eqd2,h_ax_dipole_tmp)
           if (j.eq.1) then
             tav=half*(t(1)+t(2))
             sn_t = sin(tav)
@@ -3398,7 +3397,7 @@ subroutine add_flow_from_files
        endif
        call MPI_Bcast (new_flow_t,flow_t_size,ntype_real,0,MPI_COMM_WORLD,ierr)
        wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
-!$acc enter data copyin (new_flow_t)
+!$omp target enter data map(to:new_flow_t)
 !
 ! ****** copy, transpose, and convert units.
 !
@@ -3409,7 +3408,7 @@ subroutine add_flow_from_files
        do concurrent (k=1:nr,i=1:nt)
          vt(i,npm,k) = vt(i,2,k)
        enddo
-!$acc exit data delete (new_flow_t)
+!$omp target exit data map(delete:new_flow_t)
        deallocate(new_flow_t)
 !
 ! ****** VP (NTM,NP)
@@ -3426,14 +3425,14 @@ subroutine add_flow_from_files
        endif
        call MPI_Bcast (new_flow_p,flow_p_size,ntype_real,0,MPI_COMM_WORLD,ierr)
        wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
-!$acc enter data copyin (new_flow_p)
+!$omp target enter data map(to:new_flow_p)
 !
 ! ****** copy, transpose, and convert units.
 !.
        do concurrent (k=1:nr,j=1:np,i=1:ntm)
          vp(i,j,k) = m_s_to_rs_hr*new_flow_p(j,i)
        enddo
-!$acc exit data delete (new_flow_p)
+!$omp target exit data map(delete:new_flow_p)
        deallocate(new_flow_p)
 !
 ! ******  TODO:  Add error checking here (make sure scales match run
@@ -3567,7 +3566,8 @@ subroutine load_flow_from_files
 !
       allocate (flow_from_file_vt_old(nt,npm,nr))
       allocate (flow_from_file_vp_old(ntm,np,nr))
-!$acc enter data create (flow_from_file_vt_old,flow_from_file_vp_old)
+!$omp target enter data map(alloc:flow_from_file_vt_old,&
+!$omp flow_from_file_vp_old)
 !
       do concurrent (i=1:nr,k=1:npm,j=1:nt)
         flow_from_file_vt_old(j,k,i) = 0.
@@ -3829,13 +3829,13 @@ subroutine update_field
 ! ******  TODO:  Add error checking here
 !               (make sure scales match run until interp is added)
 !
-!$acc enter data copyin(new_data2d)
+!$omp target enter data map(to:new_data2d)
         allocate(new_data(npm_nd,ntm_nd,nslices,nr))
-!$acc enter data create (new_data)
+!$omp target enter data map(alloc:new_data)
         do concurrent(i=1:nr,j=1:nslices,k=1:ntm_nd,l=1:npm_nd)
           new_data(l,k,j,i) = new_data2d(l,k,j)
         enddo
-!$acc exit data delete(new_data2d)
+!$omp target exit data map(delete:new_data2d)
         deallocate(new_data2d)
 !
 ! ****** Modify the data based on user choices.
@@ -3877,7 +3877,7 @@ subroutine update_field
 !
 ! ****** Clean up.
 !
-!$acc exit data delete(new_data)
+!$omp target exit data map(delete:new_data)
         deallocate(new_data)
 !
 ! ****** Update position in map list and next map time.
@@ -4541,7 +4541,7 @@ subroutine load_diffusion_matrix
 !
       allocate (coef(2:ntm-1,2:npm-1,5,nr))
       coef(:,:,:,:)=0.
-!$acc enter data copyin(coef)
+!$omp target enter data map(to:coef)
 !
 ! ****** Set coef for internal points and phi boundary point at k=1.
 !
@@ -4672,7 +4672,7 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
       end if
 !
       allocate (Af(ntm,npm,nr))
-!$acc enter data create(Af)
+!$omp target enter data map(alloc:af)
 !
       call diffusion_operator_cd (f,Af)
 !
@@ -4757,7 +4757,7 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
         if (verbose) write (*,*) '   GET_DTIME_DIFFUSION_PTL: PTL timestep used = ',dtime_ptl
       end if
 !
-!$acc exit data delete(Af)
+!$omp target exit data map(delete:af)
       deallocate (Af)
 !
 end subroutine
@@ -4807,7 +4807,7 @@ subroutine diffusion_step_sts_cd (dtime_local)
       allocate (ykm1(ntm,npm,nr))
       allocate (ukm1(ntm,npm,nr))
       allocate (ukm2(ntm,npm,nr))
-!$acc enter data create(u0,dty0,ykm1,ukm1,ukm2)
+!$omp target enter data map(alloc:u0,dty0,ykm1,ukm1,ukm2)
 !
       call diffusion_operator_cd (f,dty0)
 !
@@ -4837,7 +4837,7 @@ subroutine diffusion_step_sts_cd (dtime_local)
 !
       enddo
 !
-!$acc exit data delete(u0,dty0,ykm1,ukm1,ukm2)
+!$omp target exit data map(delete:u0,dty0,ykm1,ukm1,ukm2)
       deallocate (u0,dty0,ykm1,ukm1,ukm2)
 !
 end subroutine
@@ -4900,7 +4900,7 @@ subroutine load_sts_rkl2 (dtime_local)
 ! ****** Allocate super-time-step coefficent arrays.
 !
       if (need_to_load_sts.and..not.first) then
-!$acc exit data delete(sts_uj,sts_vj,sts_ubj,sts_gj)
+!$omp target exit data map(delete:sts_uj,sts_vj,sts_ubj,sts_gj)
         deallocate (sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
       end if
 !
@@ -4910,7 +4910,7 @@ subroutine load_sts_rkl2 (dtime_local)
         allocate (sts_ubj(sts_s))
         allocate (sts_gj(sts_s))
         allocate (sts_b(sts_s))
-!$acc enter data create(sts_uj,sts_vj,sts_ubj,sts_gj)
+!$omp target enter data map(alloc:sts_uj,sts_vj,sts_ubj,sts_gj)
         if (first) first=.false.
       end if
 !
@@ -4943,7 +4943,7 @@ subroutine load_sts_rkl2 (dtime_local)
         sts_gj(j) = (sts_b(j-1) - one)*sts_ubj(j)
       enddo
 !
-!$acc update device(sts_uj,sts_vj,sts_ubj,sts_gj)
+!$omp target update to(sts_uj,sts_vj,sts_ubj,sts_gj)
 !
       if (verbose) then
         write (*,*) ' '
@@ -5016,7 +5016,7 @@ subroutine load_sts_rkg2 (dtime_local)
 ! ****** Allocate super-time-step coefficent arrays.
 !
       if (need_to_load_sts.and..not.first) then
-!$acc exit data delete(sts_uj,sts_vj,sts_ubj,sts_gj)
+!$omp target exit data map(delete:sts_uj,sts_vj,sts_ubj,sts_gj)
         deallocate (sts_uj,sts_vj,sts_ubj,sts_gj,sts_b)
       end if
 !
@@ -5026,7 +5026,7 @@ subroutine load_sts_rkg2 (dtime_local)
         allocate (sts_ubj(sts_s))
         allocate (sts_gj(sts_s))
         allocate (sts_b(sts_s))
-!$acc enter data create(sts_uj,sts_vj,sts_ubj,sts_gj)
+!$omp target enter data map(alloc:sts_uj,sts_vj,sts_ubj,sts_gj)
         if (first) first=.false.
       end if
 !
@@ -5058,7 +5058,7 @@ subroutine load_sts_rkg2 (dtime_local)
         sts_ubj(j) = sts_uj(j)*w
         sts_gj(j) = (half*j*(j + one)*sts_b(j-1) - one)*sts_ubj(j)
       enddo
-!$acc update device(sts_uj,sts_vj,sts_ubj,sts_gj)
+!$omp target update to(sts_uj,sts_vj,sts_ubj,sts_gj)
 !
       if (verbose) then
         write (*,*) ' '
@@ -6111,8 +6111,8 @@ subroutine set_mesh
       allocate (pout(npm1))
       pout(:) = p(1:npm1)
 !
-!$acc enter data copyin (t,p,dt,dt_i,st,st_i,ct,dp,dp_i,th,ph, &
-!$acc                    dth,dth_i,sth,sth_i,cth,dph,dph_i)
+!$omp target enter data map(to:t,p,dt,dt_i,st,st_i,ct,dp,dp_i,th,ph,&
+!$omp dth,dth_i,sth,sth_i,cth,dph,dph_i)
 end subroutine
 !#######################################################################
 subroutine load_diffusion
@@ -6282,7 +6282,7 @@ subroutine load_diffusion
       end if
 !
       diffusion_coef(:,:,:) = diffusion_coef_factor*diffusion_coef(:,:,:)
-!$acc enter data copyin(diffusion_coef)
+!$omp target enter data map(to:diffusion_coef)
 !
       call load_diffusion_matrix
 !
@@ -6376,11 +6376,9 @@ subroutine load_weno
       call set_periodic_bc_1d (D_P_Tp,np)
       call set_periodic_bc_1d (D_MC_Tp,np)
 !
-!$acc enter data copyin(D_C_CPt,D_C_MCt,                 &
-!$acc                   D_M_Tt, D_CP_Tt,D_P_Tt, D_MC_Tt, &
-!$acc                   D_C_CPp,D_C_MCp,                 &
-!$acc                   D_M_Tp, D_CP_Tp,D_P_Tp, D_MC_Tp, &
-!$acc                   alpha_t,alpha_p)
+!$omp target enter data map(to:d_c_cpt,d_c_mct,d_m_tt,d_cp_tt,d_p_tt,&
+!$omp d_mc_tt,d_c_cpp,d_c_mcp,d_m_tp,d_cp_tp,d_p_tp,d_mc_tp,alpha_t,&
+!$omp alpha_p)
 !
 end subroutine
 !#######################################################################
@@ -6785,7 +6783,7 @@ subroutine diffusion_step_fe_cd (dtime_local)
 ! ****** Allocate temporary field.
 !
       allocate (fold(ntm,npm,nr))
-!$acc enter data create(fold)
+!$omp target enter data map(alloc:fold)
 !
 ! ****** Subcycle at a stable time-step.
 !
@@ -6802,7 +6800,7 @@ subroutine diffusion_step_fe_cd (dtime_local)
 !
       enddo
 !
-!$acc exit data delete(fold)
+!$omp target exit data map(delete:fold)
       deallocate (fold)
 !
 end subroutine
@@ -6836,7 +6834,7 @@ subroutine advection_step_fe (dtime_local)
 !-----------------------------------------------------------------------
 !
       allocate (aop(ntm,npm,nr))
-!$acc enter data create(aop)
+!$omp target enter data map(alloc:aop)
 !
       call advection_operator (f,aop)
 !
@@ -6844,7 +6842,7 @@ subroutine advection_step_fe (dtime_local)
         f(j,k,i) = f(j,k,i) - dtime_local*aop(j,k,i)
       enddo
 !
-!$acc exit data delete(aop)
+!$omp target exit data map(delete:aop)
       deallocate (aop)
 !
 end subroutine
@@ -6883,7 +6881,7 @@ subroutine advection_step_rk3tvd (dtime_local)
 !
       allocate (f1(ntm,npm,nr))
       allocate (aop(ntm,npm,nr))
-!$acc enter data create(f1,aop)
+!$omp target enter data map(alloc:f1,aop)
 !
       call advection_operator (f,aop)
       do concurrent (i=1:nr,k=1:npm,j=1:ntm)
@@ -6907,7 +6905,7 @@ subroutine advection_step_rk3tvd (dtime_local)
 !
 ! ****** Deallocate temporary arrays.
 !
-!$acc exit data delete(f1,aop)
+!$omp target exit data map(delete:f1,aop)
       deallocate (f1)
       deallocate (aop)
 !
@@ -6947,7 +6945,7 @@ subroutine advection_step_ssprk43 (dtime_local)
 !
       allocate (f1(ntm,npm,nr))
       allocate (aop(ntm,npm,nr))
-!$acc enter data create(f1,aop)
+!$omp target enter data map(alloc:f1,aop)
 !
       call advection_operator (f,aop)
       do concurrent (i=1:nr,k=1:npm,j=1:ntm)
@@ -6976,7 +6974,7 @@ subroutine advection_step_ssprk43 (dtime_local)
 !
 ! ****** Deallocate temporary arrays.
 !
-!$acc exit data delete(f1,aop)
+!$omp target exit data map(delete:f1,aop)
       deallocate (f1)
       deallocate (aop)
 !
@@ -7051,7 +7049,7 @@ subroutine advection_operator_upwind (ftemp,aop)
 !
       allocate (flux_t(nt,npm,nr))
       allocate (flux_p(ntm,np,nr))
-!$acc enter data create(flux_t,flux_p)
+!$omp target enter data map(alloc:flux_t,flux_p)
 !
 ! ****** Compute the fluxes at the cell faces.
 !
@@ -7104,7 +7102,7 @@ subroutine advection_operator_upwind (ftemp,aop)
 !
       call set_periodic_bc_3d (aop,ntm,npm,nr)
 !
-!$acc exit data delete(flux_t,flux_p)
+!$omp target exit data map(delete:flux_t,flux_p)
       deallocate (flux_t)
       deallocate (flux_p)
 !
@@ -7162,7 +7160,7 @@ subroutine advection_operator_weno3 (ftemp,aop)
       allocate (flux_t(nt,npm,nr))
       allocate (LP(ntm,npm,nr))
       allocate (LN(ntm,npm,nr))
-!$acc enter data create(flux_t,LP,LN)
+!$omp target enter data map(alloc:flux_t,lp,ln)
 !
 ! ****** Compute Lax-Friedrichs fluxes.
 !
@@ -7219,7 +7217,7 @@ subroutine advection_operator_weno3 (ftemp,aop)
 !
       enddo
 !
-!$acc exit data delete (LP,LN)
+!$omp target exit data map(delete:lp,ln)
       deallocate (LP)
       deallocate (LN)
 !
@@ -7228,7 +7226,7 @@ subroutine advection_operator_weno3 (ftemp,aop)
       allocate (flux_p(ntm,np,nr))
       allocate (LP(ntm,0:npm,nr))
       allocate (LN(ntm,0:npm,nr))
-!$acc enter data create(flux_p,LP,LN)
+!$omp target enter data map(alloc:flux_p,lp,ln)
 !
 ! ****** Compute flux splitting:
 !
@@ -7287,7 +7285,7 @@ subroutine advection_operator_weno3 (ftemp,aop)
 !
       call set_periodic_bc_3d (flux_p,ntm,np,nr)
 !
-!$acc exit data delete (LP,LN)
+!$omp target exit data map(delete:lp,ln)
       deallocate (LP)
       deallocate (LN)
 !
@@ -7325,7 +7323,7 @@ subroutine advection_operator_weno3 (ftemp,aop)
 !
       call set_periodic_bc_3d (aop,ntm,npm,nr)
 !
-!$acc exit data delete(flux_t,flux_p)
+!$omp target exit data map(delete:flux_t,flux_p)
       deallocate (flux_t)
       deallocate (flux_p)
 !
@@ -8266,10 +8264,15 @@ end subroutine
 !   - Added realizations for analytic flow profile parameters for
 !     differential rotation and meridianal flows.
 !
-! 10/18/2023, RC, Version 0.29.0:
+! 11/22/2023, RC, Version 0.29.0:
 !   - Refactored to avoid the need for atomics.
 !   - Replaced reduction OpenACC/MP loops with do concurrent reduce.
 !     This requires a Fortran 2023 compiler, or preprocessing to work.
+!     The proper preprocessing is part of the GCC build scripts.
+!   - Replaced OpenACC data movementa nd device selection with 
+!     OpenMP target data movements and device selection API call.
+!     This allows code to compile to Intel GPUs with IFX.
+!
 !-----------------------------------------------------------------------
 !
 !#######################################################################

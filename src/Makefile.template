@@ -1,4 +1,4 @@
-FC = mpif90
+FC = <FC>
 
 FFLAGS = <FFLAGS> -I<HDF5_INCLUDE_DIR>
 
@@ -6,14 +6,18 @@ OBJS = hipft.o
 
 LDFLAGS = -L<HDF5_LIB_DIR> <HDF5_LIB_FLAGS>
 
+SRCFILE = <SRCFILE>
+
 all: $(OBJS)
 	$(FC) $(FFLAGS) $(OBJS) $(LDFLAGS) -o hipft
-	rm *.mod *.o 2>/dev/null
+	rm *.modmic *.mod *.o 2>/dev/null
 
 clean:
 	rm -f hipft 2>/dev/null
-	rm -f *.mod *.o 2>/dev/null
+	rm -f *.modmic *.mod *.o 2>/dev/null
+	rm -f hipft_gcc.f90 2>/dev/null
 
 hipft.o: hipft.f90
-	$(FC) -c $(FFLAGS) $<
-
+	sed -e 's/ reduce(.*$$/ /' hipft.f90 > hipft_gcc.f90  
+	$(FC) -c $(FFLAGS) -c $(SRCFILE) -o hipft.o
+	rm -f hipft_gcc.f90 2>/dev/null
