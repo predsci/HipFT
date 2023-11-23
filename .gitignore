@@ -30,3 +30,11 @@
 *.exe
 *.out
 *.app
+
+# Other
+*.log
+*.err
+*~
+src/hipft
+src/Makefile
+src/Makefile_*
