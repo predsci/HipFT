@@ -39,3 +39,4 @@ bin/hipft
 src/hipft
 src/Makefile
 src/Makefile_*
+bin/__pycache__

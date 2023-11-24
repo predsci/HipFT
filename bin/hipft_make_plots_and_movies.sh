@@ -27,23 +27,23 @@ do
   elif [[ "$Slice" = "all" ]]; then
     for i in $(seq 1 $TWOD)
     do
-      extract -mp -z0 $i -z1 $i $file tmp_file.h5
+      hipft_extract_realization.py $file -r $i -o tmp_file.h5
       fslice=$(printf %06d\\n $i)
       plot2d -cmin -25 -cmax 25 -dpi $DPI -tp -ll -finegrid -unit_label $LABEL tmp_file.h5 -o "$(basename $file .h5)_r$fslice.png"
     done
   elif [[ $Slice -ne "" ]]; then
     if [[ $Slice -gt $TWOD  ]]; then
       echo "Slice requested is outside range defaulting to last slice : $TWOD"
-      extract -mp -z0 $TWOD -z1 $TWOD $file tmp_file.h5
+      hipft_extract_realization.py $file -r $TWOD -o tmp_file.h5
       fslice=$(printf %06d\\n $TWOD)
       plot2d -cmin -25 -cmax 25 -dpi $DPI -tp -ll -finegrid -unit_label $LABEL tmp_file.h5 -o "$(basename $file .h5)_r$fslice.png"
     else
-      extract -mp -z0 $Slice -z1 $Slice $file tmp_file.h5
+      hipft_extract_realization.py $file -r $Slice -o tmp_file.h5
       fslice=$(printf %06d\\n $Slice)
       plot2d -cmin -25 -cmax 25 -dpi $DPI -tp -ll -finegrid -unit_label $LABEL tmp_file.h5 -o "$(basename $file .h5)_r$fslice.png"
     fi
   else
-    extract -mp -z0 1 -z1 1 $file tmp_file.h5
+    hipft_extract_realization.py $file -r 1 -o tmp_file.h5
     plot2d -cmin -25 -cmax 25 -dpi $DPI -tp -ll -finegrid -unit_label $LABEL tmp_file.h5 -o "$(basename $file .h5)_r000001.png"
   fi
 done
