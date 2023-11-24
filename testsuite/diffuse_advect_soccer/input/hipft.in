@@ -1,0 +1,56 @@
+&hipft_input_parameters
+!
+  verbose = .true.
+  output_single_precision = .false.
+!
+  res_nt = 180
+  res_np = 360
+!
+  n_realizations = 4
+!
+  validation_run = 1
+!
+  time_end = 672.0
+  dt_max = 1.0
+!
+  advance_diffusion = .true.
+!
+  diffusion_coef_constants = 100.0,200.0,400.0,800.0
+!
+! ****** Activate the flow advance.
+!
+  advance_flow = .true.
+!
+! ****** Add a rigid rotation vp velocity (km/s) of omega*sin(theta).
+!
+  flow_vp_rigid_omega = 1.8076624395655556
+!
+/
+!
+! Soccer Ball Diffusion-Advection
+! -------------------------------
+!
+! This run uses the built-in analytic validation mode of HipFT
+! to run the "Soccer Ball" solution
+! (see https://www.chebfun.org/examples/sphere/SphereHeatConduction.html).
+!
+! The solution is for diffusion, but here we also add a 
+! ridged rotation velocity in the phi direction
+! to rotate the solution as its diffusing around exactly one revolution.
+!
+! Therefore, the final output should match the diffused solution.
+!
+! When the run is completed, you can plot the code's final
+! output and the outputted analytic solution with:
+!
+!    ${HIPFT_HOME}/bin/plot2d -tp -ll -finegrid -cmin -1000 -cmax 1000 hipft_brmap_final.h5
+!    ${HIPFT_HOME}/bin/plot2d -tp -ll -finegrid -cmin -1000 -cmax 1000 hipft_brmap_final_analytic.h5 
+!
+! To see the validation, run the history plotter as:
+!
+!    ${HIPFT_HOME}/bin/hipft_plot_histories.py -valrun
+!
+! The resulting history_val.png should look oscillatory 
+! (since the solution is symmetric over partial rotations.)
+!
+

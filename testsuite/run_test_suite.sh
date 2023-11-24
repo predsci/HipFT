@@ -22,6 +22,7 @@ echo $hipftexe
 
 AVAIL_TEST_RUNS_LIST="
 diffuse_soccer
+diffuse_advect_soccer
 "
 #advect_tp_blob
 #advect_t_blob

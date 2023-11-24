@@ -14,7 +14,7 @@ import psipals
 import psimath
 
 ############################
-#  PLOT2D:  Version 1.3.5  #
+#  PLOT2D:  Version 1.3.6  #
 ############################
 # To do: 
 #  - Add horizontal line (-y_hline)
@@ -226,6 +226,7 @@ def argParsing():
             dest='c_levels',
             nargs='*',
             type=str,
+            default='0.0',
             required=False)
 
   parser.add_argument('-x_vline',
