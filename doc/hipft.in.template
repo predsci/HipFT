@@ -1,8 +1,15 @@
 &hipft_input_parameters
 !
+! ****** Resolution ********
+! ****** These are autoset when reading in an initial_map_filename *****
+! ****** They are currently only used for validation runs.
+!
+  res_nt = 0
+  res_np = 0
+!
 ! ****** Initial map ********
 !
-  initial_map_filename = 'br_input.h5'
+  initial_map_filename = ''
 !
 ! ****** Output options           ********
 ! ****** Time cadence is in hours ********
@@ -16,6 +23,7 @@
   output_map_2d               = .true.
   output_flows                = .false.
   output_history_time_cadence = 0.0
+  output_single_precision     = .true.
 !
 ! ****** Number of realizations ********
 !
@@ -71,14 +79,27 @@
 !
   flow_attenuate = .false.
   flow_attenuate_value = 500.0
-!  flow_attenuate_values = <List of comma-seperated values equal to # of realizations>
+  !flow_attenuate_values = <List of comma-seperated values equal to # of realizations>
 !
-! ****** Add in analytic differential roation and meridianal flow models.
-! ****** For each, setting "1" sets the model/params used in the AFT code.
-! ****** Usually want to set to 0 if using flows from files (e.g. conflow).
+! ****** Analytic differential roation and meridianal flow models.
+! ****** For each, setting "1" sets the model/params used often in the AFT model.
 !
   flow_dr_model = 0
   flow_mf_model = 0
+!  
+  flow_dr_coef_p0_value = 46.0_r_typ
+  flow_dr_coef_p2_value = -262.0_r_typ
+  flow_dr_coef_p4_value = -379.0_r_typ
+  !flow_dr_coef_p0_values = <List of comma-seperated values equal to # of realizations>
+  !flow_dr_coef_p2_values = <List of comma-seperated values equal to # of realizations>
+  !flow_dr_coef_p4_values = <List of comma-seperated values equal to # of realizations>
+!
+  flow_mf_coef_p1_value = 22.0_r_typ
+  flow_mf_coef_p3_value = 11.0_r_typ
+  flow_mf_coef_p5_value = -28.0_r_typ
+  !flow_mf_coef_p1_values = <List of comma-seperated values equal to # of realizations>
+  !flow_mf_coef_p3_values = <List of comma-seperated values equal to # of realizations>
+  !flow_mf_coef_p5_values = <List of comma-seperated values equal to # of realizations>
 !
 ! ****** Time dependent flows from file (used for conflow).
 !
@@ -106,7 +127,7 @@
   advance_diffusion = .false.
 !
   diffusion_coef_constant = 0.0
-!  diffusion_coef_constants = <List of comma-seperated values equal to # of realizations>
+  !diffusion_coef_constants = <List of comma-seperated values equal to # of realizations>
   diffusion_coef_filename = ' '
   diffusion_coef_grid = .false.
   diffusion_coef_factor = 7.43162901307967e-09 ! (km2/sec to Rs^2/hour)
@@ -139,11 +160,11 @@
 !
   assimilate_data_custom_from_mu = .false.
   assimilate_data_lat_limit = 0.
-!  assimilate_data_lat_limits = <List of comma-seperated values equal to # of realizations>
+  !assimilate_data_lat_limits = <List of comma-seperated values equal to # of realizations>
   assimilate_data_mu_power = 4.0
-!  assimilate_data_mu_powers = <List of comma-seperated values equal to # of realizations>
+  !assimilate_data_mu_powers = <List of comma-seperated values equal to # of realizations>
   assimilate_data_mu_limit = 0.1
-!  assimilate_data_mu_limits = <List of comma-seperated values equal to # of realizations>
+  !assimilate_data_mu_limits = <List of comma-seperated values equal to # of realizations>
 !
 ! ****** Debugging verbose output flag ********
 !

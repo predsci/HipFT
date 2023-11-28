@@ -481,6 +481,8 @@ module input_parameters
       integer, private :: i
 !
 ! ****** Resolution ********
+! ****** These are autoset when reading in an initial_map_filename *****
+! ****** They are currently only used for validation runs.
 !
       integer :: res_nt = 0
       integer :: res_np = 0
