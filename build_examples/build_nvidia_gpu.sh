@@ -57,5 +57,6 @@ echo "Compiling code..."
 make clean 1>/dev/null 2>/dev/null ; make 1>build.log 2>build.err
 echo "Copying hipft executable to: ${HIPFT_HOME}/bin/hipft"
 \cp ${HIPFT_HOME}/src/hipft ${HIPFT_HOME}/bin/hipft
-echo "Build complete!"
+echo "Build complete!  Please add the following to your shell:"
+echo "export PATH=${HIPFT_HOME}/bin:\$PATH"
 

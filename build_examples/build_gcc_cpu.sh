@@ -36,12 +36,23 @@ SRCFILE="hipft_gcc.f90"
 ###########################################################################
 ###########################################################################
 
+if [ -z "${OMP_NUM_THREADS}" ]
+then
+  echo "ERROR!  OMP_NUM_THREADS is not set!"
+  echo "        For GCC, this is required at compile time in order to run in"
+  echo "        parallel across CPU threads.  Set to 1 for single threaded runs."
+  exit 1
+fi
+
 HIPFT_HOME=$PWD
 
+echo "Entering src directory..."
 pushd ${HIPFT_HOME}/src >> /dev/null
+echo "Removing old Makefile..."
 if [ -e Makefile ]; then
   \rm Makefile
 fi 
+echo "Generating Makefile from Makefile.template..."
 sed \
   -e "s#<FC>#${FC}#g" \
   -e "s#<FFLAGS>#${FFLAGS}#g" \
@@ -50,10 +61,10 @@ sed \
   -e "s#<HDF5_LIB_DIR>#${HDF5_LIB_DIR}#g" \
   -e "s#<HDF5_LIB_FLAGS>#${HDF5_LIB_FLAGS}#g" \
   Makefile.template > Makefile
-echo "make 1>build.log 2>build.err"
-make clean
-make 1>build.log 2>build.err
-
-echo "cp ${HIPFT_HOME}/src/hipft ${HIPFT_HOME}/bin/hipft"
+echo "Compiling code..."
+make clean 1>/dev/null 2>/dev/null ; make 1>build.log 2>build.err
+echo "Copying hipft executable to: ${HIPFT_HOME}/bin/hipft"
 \cp ${HIPFT_HOME}/src/hipft ${HIPFT_HOME}/bin/hipft
+echo "Build complete!  Please add the following to your shell:"
+echo "export PATH=${HIPFT_HOME}/bin:\$PATH"
 

@@ -18,5 +18,24 @@
   diffusion_coef_constants = 100.0,200.0,400.0,800.0
 !
 /
-! Diffusion-only test using the soccerball function.
 !
+! Soccer Ball Diffusion
+! ---------------------
+!
+! This run uses the built-in analytic validation mode of HipFT
+! to run the "Soccer Ball" solution
+! (see https://www.chebfun.org/examples/sphere/SphereHeatConduction.html).
+!
+! The final output should match the diffused solution.
+!
+! When the run is completed, you can plot the code's final
+! output and the outputted analytic solution with:
+!
+!    ${HIPFT_HOME}/bin/plot2d -tp -ll -finegrid -cmin -1000 -cmax 1000 hipft_brmap_final.h5
+!    ${HIPFT_HOME}/bin/plot2d -tp -ll -finegrid -cmin -1000 -cmax 1000 hipft_brmap_final_analytic.h5 
+!
+! To see the validation, run the history plotter as:
+!
+!    ${HIPFT_HOME}/bin/hipft_plot_histories.py -valrun
+!
+

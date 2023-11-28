@@ -28,15 +28,14 @@
 
 # Executables
 *.exe
-*.out
 *.app
 
 # Other
-*.log
-*.err
 *~
 bin/hipft
 src/hipft
 src/Makefile
 src/Makefile_*
 bin/__pycache__
+testsuite/*/run/*
+

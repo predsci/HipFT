@@ -20,4 +20,3 @@ clean:
 hipft.o: hipft.f90
 	sed -e 's/ reduce(.*$$/ /' hipft.f90 > hipft_gcc.f90  
 	$(FC) -c $(FFLAGS) -c $(SRCFILE) -o hipft.o
-	rm -f hipft_gcc.f90 2>/dev/null

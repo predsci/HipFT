@@ -1,9 +1,53 @@
 #!/bin/bash
 
-# HIPFT TESTSUITE
-# Two main categories of tests:
-#   - Those with exact analytic solutions.
-#   - Those that wil be compared to previous runs.
+trap ctrl_c INT
+
+function ctrl_c() {
+  ${echo} "${cR}==> Caught CTRL-C, shutting down!${cX}"
+  exit 1
+}
+
+function display_help {
+echo "       _    _ _       ______ _______ "
+echo "      | |  | (_)     |  ____|__   __|"
+echo "      | |__| |_ _ __ | |__     | |"
+echo "      |  __  | | '_ \|  __|    | |"
+echo "      | |  | | | |_) | |       | |"
+echo "      |_|  |_|_| .__/|_|       |_|"
+echo "               | |"
+echo "               |_|"
+echo ""
+echo "      TEST SUITE v1.0.0"
+echo "USAGE:   ./run_test_suite.sh"
+echo ""
+echo "By default, the above command will run the test suite on all"
+echo "default tests using the 'hipft' executable from the '../bin/'"
+echo "folder (assuming it has been built)."
+echo ""
+echo "OPTIONS:"
+echo ""
+echo "Non-flag options '-opt=' are specified as '-opt=<OPTION>'."
+echo ""
+echo "-nochecksetup   Don't check the environment."
+echo ""
+echo "-hipftexe=      Use this to run the testsuite on a specific hipft executable."
+echo "                This should be a full path and is useful for development tests."
+echo ""
+echo "-test=          Comma-seperated list of subset of tests to run."
+echo "                Also can be used to run non-standard/experimental tests."
+echo ""
+echo "-nocleanup      By default, only the initial and final conditions of a run are "
+echo "                kept in the run folders. Set this to keep the full run."
+echo ""
+echo "-clear          Remove all previous test suite runs and results - CAREFUL!"
+echo ""
+echo "-norun          Does not run the MAS code.  Checks for a previous run and compares if found."
+echo ""
+echo "-nocompare      Do not compare the runs to their reference runs."
+echo ""
+echo "-nocolor        Disable color text output."
+echo ""
+}
 
 #Set number of processors to use for testsuite:
 #(All tests use the same number of procs for now).
@@ -16,9 +60,7 @@ nochecksetup=0
 nocolor=0
 setrefdata=0
 algnum=3
-
-hipftexe="${PWD}/../src/hipft"
-echo $hipftexe
+hipftexe="hipft"
 
 AVAIL_TEST_RUNS_LIST="
 diffuse_soccer
@@ -42,9 +84,6 @@ case $i in
     -nocompare)
     nocompare=1
     ;;
-    -novis)
-    novis=1
-    ;;
     -nocleanup)
     nocleanup=1
     ;;
@@ -64,17 +103,26 @@ case $i in
     -hipftexe=*)
     hipftexe="${i#*=}"
     ;;
+    -h)
+    display_help
+    exit 0
+    ;;
+    --help)
+    display_help
+    exit 0
+    ;;    
     *)
     echo "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
-    echo "%%%% Warning!  Unknown option! %%%%"
+    echo "ERROR!  Unknown option: $i"
     echo "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
+    display_help
+    exit 1    
     ;;
 esac
 done
 
 # ****** Get test suite parameters ******
 WD=${PWD}
-RESULTSDIR=${WD}/results
 BINDIR=${WD}/../bin
 SRCDIR=${WD}/../src
 ROOTDIR=${WD}/..
@@ -103,13 +151,6 @@ else
   echo="echo"
 fi
 
-trap ctrl_c INT
-
-function ctrl_c() {
-  ${echo} "${cR}==> Caught CTRL-C, shutting down!${cX}"
-  exit 1
-}
-
 #rm ${TSLOG} 1>/dev/null 2>/dev/null
 
 #touch ${TSLOG}
@@ -129,7 +170,7 @@ ${echo} "${cY}   |  |___ [__   |     [__  |  | |  |  |___                       
 ${echo} "${cY}   |  |___ ___]  |     ___] |__| |  |  |___                           ${cX}"
 ${echo} "${vY}                                                                      ${cX}"
 ${echo} "${cB}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%${cX}"
-${echo} "Welcome to the HIPFT test suite!!!"
+${echo} "Welcome to the HIPFT test suite!"
 #
 # ****** Test for correct prerequisites and environment ******
 #
@@ -189,19 +230,27 @@ then
 # Check that the HipFT bin directory is in the user's path, if not, add it.
 #
   ${echo} "==> Checking PATH...."
-  PTEST=$(which hipft_plot_histories_compare.py)
+  PTEST=$(which hipft)
   if [ -z "${PTEST}" ]
   then
-    ${echo} "${cY}==> ERROR HipFT BIN folder is not in the PATH!${cX}"
+    ${echo} "${cY}==> WARNING: HipFT is not in the PATH!${cX}"
     ${echo} "${cY}==> Appending ${BINDIR} to PATH...${cX}"
     export PATH="${BINDIR}:${PATH}"
   fi
-  PTEST=$(which hipft_plot_histories_compare.py)
+  PTEST=$(which hipft)
   if [ -z "${PTEST}" ]; then
     ${echo} "${cR}==> ERROR! HipFT bin PATH problem!${cX}"
     exit 1
   fi
-${echo} "${cG}==> Everything seems OK to run HipFT test suite!${cX}"
+  ${echo} "${cG}==> Using HIPFT binary: $PTEST ${cX}"
+
+  if [ -z "${OMP_NUM_THREADS}" ]; then
+    ${echo} "${cY}==> WARNING: OMP_NUM_THREADS is not set.${cX}"
+    ${echo} "${cY}==> If running on CPUs, run may not be parallelized.${cX}"
+    ${echo} "${cY}==> For GCC, OMP_NUM_THREADS needs to be set at compile time!${cX}"
+  fi
+    
+  ${echo} "${cG}==> Everything seems OK to run HipFT test suite!${cX}"
 fi
 #
 # ****** Check that user is running the tests and really wants to set ref data:
@@ -229,16 +278,6 @@ then
     ${echo} "==> ${cR}Aborting!${cX}"
     exit 0
   fi
-fi
-
-#
-# ****** Remove previous comparison results if making new ones.
-#
-if [ ${nocompare} == 0 ]
-then
-  rm ${RESULTSDIR}/files/* 2>/dev/null
-  rm ${RESULTSDIR}/files/* 2>/dev/null
-  rm ${RESULTSDIR}/hipft_testsuite_results.txt 2>/dev/null
 fi
 
 ########################################################################
@@ -306,7 +345,7 @@ do
   if [ ${norun} == 0 ]
   then
 
-    if [ -e ${RUNDIR}/hipft.out ]
+    if [ -e ${RUNDIR}/hipft_run_parameters_used.out ]
     then
       ${echo} "==> Clearing run directory..."
       rm -fr ${RUNDIR}/*
@@ -326,7 +365,7 @@ do
   fi
 
   # Check that a completed run exists in the run folder
-  if [ ! -e ${RUNDIR}/hipft.out ]
+  if [ ! -e ${RUNDIR}/hipft_brmap_final.h5 ]
   then
     if [ ${norun} == 1 ]
     then
@@ -335,23 +374,7 @@ do
       exit 1
     fi
   fi
-
-#  run_completed_test=$(grep "RUN COMPLETE" ${RUNDIR}/eprem.log)
-
-#  if [ -z "${run_completed_test}" ]
-#  then
-#   ${echo} "${cR}!!!> ERROR! Test ${TESTNAME} did not seem to run correctly!${cX}"
-#   exit 1
-#  fi
-
-  # Generate images etc.
-#  if [ ${novis} == 0 ]
-#  then
-#    ${echo} "======================================================="
-#    ${echo} "${cB}==> GENERATING IMAGES OF RUN${cX}"
-#    ${echo} "======================================================="
-#  fi
-
+  
   if [ ${setrefdata} -eq 1 ] && [ ${norun} -eq 0 ]
   then
     ${echo} "${cR}=======================================================${cX}"
@@ -362,7 +385,34 @@ do
     rm -fr ${REFDIR}/* 2>/dev/null
     ${echo} "${cR}==> Copying current run data into reference directory...${cX}"
     cp ${RUNDIR}/* ${REFDIR}/
+    rm -f ${REFDIR}/*.h5
   fi
+
+  # Get timing data:
+  TIME_RUN_TMP=($(grep "Wall clock time" ${RUNDIR}/hipft.log))
+  TIME_RUN_TMP=${TIME_RUN_TMP[3]}
+
+  TIME_REF_TMP=($(grep "Wall clock time" ${REFDIR}/hipft.log))
+  TIME_REF_TMP=${TIME_REF_TMP[3]}
+
+  SPEEDUP_TMP=`python3 -c "print(${TIME_REF_TMP}/${TIME_RUN_TMP})"`
+
+  TIME_RUN[${Ti}]=$(printf "%8.3f" ${TIME_RUN_TMP})
+  TIME_REF[${Ti}]=$(printf "%8.3f" ${TIME_REF_TMP})
+  SPEEDUP[${Ti}]=$(printf "%5.2f" ${SPEEDUP_TMP})
+
+  ${echo} "${cG}==> Test completed in:               ${TIME_RUN[${Ti}]} seconds.${cX}"
+  ${echo} "${cG}==> Speedup compared to reference run: ${SPEEDUP[${Ti}]} x${cX}"
+
+# Generate images etc.
+#  if [ ${novis} == 0 ]
+#  then
+#    ${echo} "======================================================="
+#    ${echo} "${cB}==> GENERATING IMAGES OF RUN${cX}"
+#    ${echo} "======================================================="
+#  fi
+
+
 #
 # ****** Compare run data.
 #
@@ -371,26 +421,18 @@ do
     ${echo} "======================================================="
     ${echo} "${cB}==> COMPARING RUN DATA TO REFERENCE DATA${cX}"
     ${echo} "======================================================="
-    ${echo} "==> Running comparison script on all obs files..."
-    result_file=${RESULTSDIR}/files/${TESTNAME}_hipft_compare_run.txt
-    rm $result_file 2>/dev/null
-    touch $result_file
-    echo "=======================================================" >> $result_file
-    echo "${TESTNAME} RESULTS" >> $result_file
-    echo "=======================================================" >> $result_file
-    hipft_compare_run.sh ${REFDIR} ${RUNDIR} >> $result_file
-    #See if run passed:
-    PASS_FAIL[${Ti}]=$(tail -n 2 $result_file | head -n 1)
-    passfailcomp=( ${PASS_FAIL[${Ti}]} )
+    ${echo} "==> Running comparison..."
 
-    if [ "${passfailcomp[0]}" = "FAIL" ]
+    PASS_FAIL[${Ti}]=$(hipft_compare_run_diags.py ${REFDIR} ${RUNDIR})
+
+    if [ "${PASS_FAIL[${Ti}]}" = "0" ]
     then
-      ${echo} "${cR}==> Test seems to have FAILED!${cX}"
-    else
       ${echo} "${cG}==> Test seems to have PASSED!${cX}"
+    else
+      ${echo} "${cR}==> Test seems to have FAILED!${cX}"
+      ${echo} "${cR}==> ${PASS_FAIL[${Ti}]} ${cX}"
+      PASS_FAIL[${Ti}]=1
     fi
-    ${echo} "==> Adding comparison to summary file..."
-    cat $result_file >> ${RESULTSDIR}/hipft_testsuite_results.txt
   fi
 #
 # ****** Cleanup run data.
@@ -410,34 +452,27 @@ done
 ${echo} "${cC}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%${cX}"
 
 
-
-
 # Display summary and timing results.
 if [ ${nocompare} == 0 ]
 then
-  ${echo} "${cY}==================================================${cX}"
+  ${echo} "${cY}=================================================================${cX}"
   ${echo} "${cY}Summary of test results:${cX}"
-  ${echo} "${cY}==================================================${cX}"
-  echo "==================================================" > ${RESULTSDIR}/passfail.txt
-  echo "Summary of test results:" >> ${RESULTSDIR}/passfail.txt
-  echo "==================================================" >> ${RESULTSDIR}/passfail.txt
+  ${echo} "${cY}=================================================================${cX}"
 
   Ti=0
+    ${echo} "$(printf "%-25s  %9s  %8s  %8s  %7s" "Test name" "PASS/FAIL" "Run-time" "Ref-time" "Speedup")"
+  ${echo} "${cY}=================================================================${cX}"    
   for TESTNAME in ${TEST_RUNS_LIST}
   do
     Ti=$((${Ti}+1))
     passfailcomp=( ${PASS_FAIL[${Ti}]} )
-    if [ "${passfailcomp[0]}" = "FAIL" ]; then
-      ${echo} "$(printf "%-25s %-25s" ${TESTNAME} ${cR}"${PASS_FAIL[${Ti}]}"${cX})"
-      echo "$(printf "%-25s %-25s" ${TESTNAME} "${PASS_FAIL[${Ti}]}")">> ${RESULTSDIR}/passfail.txt
+    if [ "${passfailcomp[0]}" = "1" ]; then
+      pf="${cR}FAIL     ${cX}"
     else
-      ${echo} "$(printf "%-25s %-25s" ${TESTNAME} ${cG}"${PASS_FAIL[${Ti}]}"${cX})"
-      echo "$(printf "%-25s %-25s" ${TESTNAME} "${PASS_FAIL[${Ti}]}")" >> ${RESULTSDIR}/passfail.txt
+      pf="${cG}PASS     ${cX}"
     fi
+    ${echo} "$(printf "%-25s  %9s  %8s  %8s  %7s" "${TESTNAME}" "${pf}" "${TIME_RUN[${Ti}]}" "${TIME_REF[${Ti}]}" "${SPEEDUP[${Ti}]}")"
   done
-  echo "=======================================================" >> ${RESULTSDIR}/passfail.txt
-  cat ${RESULTSDIR}/hipft_testsuite_results.txt >> ${RESULTSDIR}/passfail.txt
-  mv ${RESULTSDIR}/passfail.txt ${RESULTSDIR}/hipft_testsuite_results.txt
 fi
 
 ${echo} "${cC}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%${cX}"
