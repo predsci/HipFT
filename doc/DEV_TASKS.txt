@@ -2,8 +2,6 @@ DEV TASKS FOR HIPFT:
 
  - Conflow realizations: May be multiple flow map file sets, or with later auto-gen, seed or other conflow parameters - or possibly longitude shifts?
 
- - Make testsuite:  Small map versions of standard runs
-
  - Write documentation (mkdocs? git io?)
 
 

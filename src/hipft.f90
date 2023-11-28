@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.29.0'
-      character(*), parameter :: cdate='11/22/2023'
+      character(*), parameter :: cvers='0.30.0'
+      character(*), parameter :: cdate='11/28/2023'
 !
 end module
 !#######################################################################
@@ -82,13 +82,13 @@ module constants
 !
       real(r_typ), parameter :: zero = 0.0_r_typ
       real(r_typ), parameter :: one = 1.0_r_typ
-      integer(8),   parameter :: one_int = 1
+      integer(8),  parameter :: one_int = 1
       real(r_typ), parameter :: two = 2.0_r_typ
-      integer(8),   parameter :: two_int = 2
+      integer(8),  parameter :: two_int = 2
       real(r_typ), parameter :: three = 3._r_typ
-      integer(8),   parameter :: three_int = 3
+      integer(8),  parameter :: three_int = 3
       real(r_typ), parameter :: four = 4._r_typ
-      integer(8),   parameter :: four_int = 4
+      integer(8),  parameter :: four_int = 4
       real(r_typ), parameter :: six = 6._r_typ
       real(r_typ), parameter :: sixth = 0.16666666666666666_r_typ
       real(r_typ), parameter :: nine = 9._r_typ
@@ -4655,8 +4655,7 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
 !-----------------------------------------------------------------------
 !
       integer :: i,j,k,ierr
-      real(r_typ) :: axabsmax, dtime_in, tmp
-      real(r_typ) :: dt_tmp_tm, dt_tmp_tp, dt_tmp_pm, dt_tmp_pp
+      real(r_typ) :: axabsmax, dtime_in, deltau, deltaf
       real(r_typ), dimension(:,:,:), allocatable :: Af
       real(r_typ), parameter :: safe = 0.95_r_typ
       real(r_typ), parameter :: fmin = 1e-16_r_typ
@@ -4672,7 +4671,7 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
       end if
 !
       allocate (Af(ntm,npm,nr))
-!$omp target enter data map(alloc:af)
+!$omp target enter data map(alloc:Af)
 !
       call diffusion_operator_cd (f,Af)
 !
@@ -4705,48 +4704,35 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
           if (axabsmax .eq. ABS(Af(j,k,i)) .and. &
               ABS(f(j,k,i)) .gt. fmin) then
 !
-            if ((f(j,k,i)-f(j-1,k,i))*(Af(j,k,i)-Af(j-1,k,i)).lt.0) then
-              dt_tmp_tm = safe*ABS( f(j,k,i) -   f(j-1,k,i))/ &
-                               ABS(Af(j,k,i) -  Af(j-1,k,i))
-            else
-              dt_tmp_tm = dtime_ptl
-            end if
-
-            if ((f(j,k,i)-f(j+1,k,i))*(Af(j,k,i)-Af(j+1,k,i)).lt.0) then
-              dt_tmp_tp = safe*ABS( f(j,k,i) -   f(j+1,k,i))/ &
-                               ABS(Af(j,k,i) -  Af(j+1,k,i))
-            else
-              dt_tmp_tp = dtime_ptl
-            end if
-
-            if ((f(j,k,i)-f(j,k-1,i))*(Af(j,k,i)-Af(j,k-1,i)).lt.0) then
-              dt_tmp_pm = safe*ABS( f(j,k,i) -   f(j,k-1,i))/ &
-                               ABS(Af(j,k,i) -  Af(j,k-1,i))
-            else
-              dt_tmp_pm = dtime_ptl
-            end if
-
-            if ((f(j,k,i)-f(j,k+1,i))*(Af(j,k,i)-Af(j,k+1,i)).lt.0) then
-              dt_tmp_pp = safe*ABS( f(j,k,i) -   f(j,k+1,i))/ &
-                               ABS(Af(j,k,i) -  Af(j,k+1,i))
-            else
-              dt_tmp_pp = dtime_ptl
-            end if
+            deltau =  f(j,k,i) -  f(j-1,k,i)
+            deltaf = Af(j,k,i) - Af(j-1,k,i)
+            if (deltau*deltaf.lt.0) dtime_ptl = MIN(-deltau/deltaf,dtime_ptl)
 !
-            tmp = MIN(dt_tmp_tm,   dt_tmp_tp,   dt_tmp_pm,   dt_tmp_pp)
+            deltau =  f(j,k,i) -  f(j+1,k,i)
+            deltaf = Af(j,k,i) - Af(j+1,k,i)
+            if (deltau*deltaf.lt.0) dtime_ptl = MIN(-deltau/deltaf,dtime_ptl)
 !
-          else
-            tmp = HUGE(one)
+            deltau =  f(j,k,i) -  f(j,k-1,i)
+            deltaf = Af(j,k,i) - Af(j,k-1,i)
+            if (deltau*deltaf.lt.0) dtime_ptl = MIN(-deltau/deltaf,dtime_ptl)
+!
+            deltau =  f(j,k,i) -  f(j,k+1,i)
+            deltaf = Af(j,k,i) - Af(j,k+1,i)
+            if (deltau*deltaf.lt.0) dtime_ptl = MIN(-deltau/deltaf,dtime_ptl)
           end if
 !
-          dtime_ptl = MIN(tmp,dtime_ptl)
-!
         enddo
+!
+! ****** Get global minimum across all MPI ranks.
 !
         wtime_tmp_mpi = MPI_Wtime()
         call MPI_Allreduce (MPI_IN_PLACE,dtime_ptl,1,ntype_real,  &
                             MPI_MIN,MPI_COMM_WORLD,ierr)
         wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+!
+! ****** Add safety factor.
+!
+        dtime_ptl = safe*dtime_ptl
 !
         if (verbose) write (*,*) '   GET_DTIME_DIFFUSION_PTL: PTL timestep      = ',dtime_ptl
 !
@@ -4757,7 +4743,7 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
         if (verbose) write (*,*) '   GET_DTIME_DIFFUSION_PTL: PTL timestep used = ',dtime_ptl
       end if
 !
-!$omp target exit data map(delete:af)
+!$omp target exit data map(delete:Af)
       deallocate (Af)
 !
 end subroutine
@@ -8269,9 +8255,12 @@ end subroutine
 !   - Replaced reduction OpenACC/MP loops with do concurrent reduce.
 !     This requires a Fortran 2023 compiler, or preprocessing to work.
 !     The proper preprocessing is part of the GCC build scripts.
-!   - Replaced OpenACC data movementa nd device selection with 
+!   - Replaced OpenACC data movementa nd device selection with
 !     OpenMP target data movements and device selection API call.
 !     This allows code to compile to Intel GPUs with IFX.
+!
+! 11/28/2023, RC, Version 0.30.0:
+!   - Cleaned up PTL routine to sync it with the version in MAS.
 !
 !-----------------------------------------------------------------------
 !

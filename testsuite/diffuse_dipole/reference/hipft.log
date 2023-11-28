@@ -1,0 +1,177 @@
+  
+    SET_REALIZATIONS: Realization distribution:
+    SET_REALIZATIONS: nr_arr            1
+    SET_REALIZATIONS: nr_disp_arr            0
+ 
+ 
+       _    _ _       ______ _______ 
+      | |  | (_)     |  ____|__   __|
+      | |__| |_ _ __ | |__     | |
+      |  __  | | '_ \|  __|    | |
+      | |  | | | |_) | |       | |
+      |_|  |_|_| .__/|_|       |_|
+               | |
+               |_|
+ 
+      Version: 0.30.0 of 11/28/2023
+ 
+  ****** HipFT: High Performance Flux Transport.
+ 
+         Authors:  Ronald M. Caplan
+                   Miko M. Stulajter
+                   Jon A. Linker
+                   Zoran Mikic
+ 
+         Predictive Science Inc.
+         www.predsci.com
+         San Diego, California, USA 92121
+ 
+ 
+ 
+ Run started at: 
+ 28 November  2023   1:56:24.693 PM      
+ 
+ Setup complete.
+ 
+ 
+ >running
+ 
+ 
+    UPDATE_TIMESTEP: dtime_old =     0.000000000000000     
+    UPDATE_TIMESTEP: dtime_endrun =     8760.000000000000     
+    UPDATE_TIMESTEP: dtime_end =     8760.000000000000     
+    UPDATE_TIMESTEP: dtime_global =     8760.000000000000     
+  
+    GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
+    GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =     3.545305379191615     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     111.3354396776834     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     111.3354396776834     
+  
+    LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
+    LOAD_STS:  Super-time-step used              =     111.3354396776834     
+    LOAD_STS:  Euler time-step                   =    1.8224870355809019E-004
+    LOAD_STS:  Number of STS iterations needed   =                      1915
+    LOAD_STS:  Number of Euler iterations needed =        610899
+    LOAD_STS:  Potential max speedup of STS      =     319.0069924377527      X
+  
+    DIFFUSION_STEP: --> Cycle #            1  SC:            79  dtcycle: 
+    111.3354396776834       time_stepped:     111.3354396776834     
+  
+    GET_DTIME_DIFFUSION_PTL: dtime_in          =     111.3354396776834     
+    GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =     2.159186966642553     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     51.39387173067220     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     111.3354396776834     
+  
+    LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
+    LOAD_STS:  Super-time-step used              =     111.3354396776834     
+    LOAD_STS:  Euler time-step                   =    1.8224870355809019E-004
+    LOAD_STS:  Number of STS iterations needed   =                      1915
+    LOAD_STS:  Number of Euler iterations needed =        610899
+    LOAD_STS:  Potential max speedup of STS      =     319.0069924377527      X
+  
+    DIFFUSION_STEP: --> Cycle #            2  SC:            78  dtcycle: 
+    111.3354396776834       time_stepped:     222.6708793553668     
+  
+    GET_DTIME_DIFFUSION_PTL: dtime_in          =     111.3354396776834     
+    GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =     1.455960531671955     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     84.88634034387920     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     111.3354396776834     
+  
+    LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
+    LOAD_STS:  Super-time-step used              =     111.3354396776834     
+    LOAD_STS:  Euler time-step                   =    1.8224870355809019E-004
+    LOAD_STS:  Number of STS iterations needed   =                      1915
+    LOAD_STS:  Number of Euler iterations needed =        610899
+    LOAD_STS:  Potential max speedup of STS      =     319.0069924377527      X
+  
+    DIFFUSION_STEP: --> Cycle #            3  SC:            77  dtcycle: 
+    111.3354396776834       time_stepped:     334.0063190330503     
+  
+    GET_DTIME_DIFFUSION_PTL: dtime_in          =     111.3354396776834     
+    GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =     1.047904939377436     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     833.0726871386311     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     833.0726871386311     
+  
+    LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
+    LOAD_STS:  Super-time-step used              =     833.0726871386311     
+    LOAD_STS:  Euler time-step                   =    1.8224870355809019E-004
+    LOAD_STS:  Number of STS iterations needed   =                      5237
+    LOAD_STS:  Number of Euler iterations needed =       4571077
+    LOAD_STS:  Potential max speedup of STS      =     872.8424799203281      X
+  
+    DIFFUSION_STEP: --> Cycle #            4  SC:            11  dtcycle: 
+    833.0726871386311       time_stepped:     1167.079006171681     
+  
+    GET_DTIME_DIFFUSION_PTL: dtime_in          =     833.0726871386311     
+    GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.3475798533428423     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     947.4924179573268     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     947.4924179573268     
+  
+    LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
+    LOAD_STS:  Super-time-step used              =     947.4924179573268     
+    LOAD_STS:  Euler time-step                   =    1.8224870355809019E-004
+    LOAD_STS:  Number of STS iterations needed   =                      5585
+    LOAD_STS:  Number of Euler iterations needed =       5198898
+    LOAD_STS:  Potential max speedup of STS      =     930.8680369612031      X
+  
+    DIFFUSION_STEP: --> Cycle #            5  SC:             9  dtcycle: 
+    947.4924179573268       time_stepped:     2114.571424129008     
+  
+    GET_DTIME_DIFFUSION_PTL: dtime_in          =     947.4924179573268     
+    GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.1232044673420928     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     1174.240614617474     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     1174.240614617474     
+  
+    LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
+    LOAD_STS:  Super-time-step used              =     1174.240614617474     
+    LOAD_STS:  Euler time-step                   =    1.8224870355809019E-004
+    LOAD_STS:  Number of STS iterations needed   =                      6217
+    LOAD_STS:  Number of Euler iterations needed =       6443068
+    LOAD_STS:  Potential max speedup of STS      =     1036.362721251818      X
+  
+    DIFFUSION_STEP: --> Cycle #            6  SC:             6  dtcycle: 
+    1174.240614617474       time_stepped:     3288.812038746482     
+  
+    GET_DTIME_DIFFUSION_PTL: dtime_in          =     1174.240614617474     
+    GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    4.6163426869118028E-002
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     5785.652115773181     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     5785.652115773181     
+  
+    LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
+    LOAD_STS:  Super-time-step used              =     5471.187961253518     
+    LOAD_STS:  Euler time-step                   =    1.8224870355809019E-004
+    LOAD_STS:  Number of STS iterations needed   =                     13421
+    LOAD_STS:  Number of Euler iterations needed =      30020450
+    LOAD_STS:  Potential max speedup of STS      =     2236.826561253632      X
+  
+    DIFFUSION_STEP: --> Cycle #            7  SC:             1  dtcycle: 
+    5471.187961253518       time_stepped:     8760.000000000000     
+    DIFFUSION_STEP: Total number of cycles =             7
+  
+Completed step:          1  Time:  8760.000000 /  8760.000000  dt:  8760.000000 (end)
+  
+ Final 2D data written out to br_smoothed_final.h5
+ 
+ Run completed at:
+ 28 November  2023   1:56:28.917 PM      
+ 
+----------------------------------------
+ 
+ Run time summary:
+ -----------------
+ 
+                                  Avg         Min         Max      S. Dev
+                                  ---         ---         ---      ------
+ Wall clock time:               4.297       4.297       4.297       0.000
+ --> Setup:                     0.073       0.073       0.073       0.000
+ --> Update:                    0.000       0.000       0.000       0.000
+ --> Flux transport:            4.217       4.217       4.217       0.000
+     --> Advecton:              0.000       0.000       0.000       0.000
+     --> Diffusion              4.217       4.217       4.217       0.000
+     --> Source:                0.000       0.000       0.000       0.000
+ --> Analysis:                  0.003       0.003       0.003       0.000
+ --> I/O:                       0.008       0.008       0.008       0.000
+ --> MPI overhead:              0.000       0.000       0.000       0.000
+ 
+----------------------------------------
+ 

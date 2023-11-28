@@ -33,7 +33,7 @@ def argParsing():
     required=True)
 
   parser.add_argument('-labels',
-    help='A comma separated list of labels to display in the plots for each run (default:"Run 1","Run 2",...)',
+    help='A comma separated list of labels to display in the plots for each run (default:"r1","r2",...)',
     type=str,
     default=' ')
 
@@ -183,7 +183,7 @@ def run(args):
   # if no label list is entered
   if arg_dict['labels'] == ' ':
       label_list = []
-      def_label = 'Run '
+      def_label = 'r'
       for i,dire in enumerate(hist_list):
           label_list.append(def_label+str(i+1))
 

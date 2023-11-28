@@ -1,0 +1,24 @@
+&hipft_input_parameters
+!
+  verbose=.true.
+!
+  initial_map_filename = 'br_input.h5'
+!
+  output_map_root_filename = 'br_smoothed'
+!  
+  diffusion_coef_constant = 500.0
+!
+  time_end = 8760.0
+!  
+  advance_diffusion = .true.
+!
+/
+!
+!  DIFFUSE DIPOLE
+!
+!  This diffuses a 1000 Gauss dipole for ~1 year
+!  at 500 km^2/s diffusivity.
+!  This tried to do the diffusion in 1 giant step,
+!  making the PTL time step limit kick in.
+!  Therefore, this is a good test of the PTL+STS.
+!
