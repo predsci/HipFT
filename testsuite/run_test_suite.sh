@@ -192,33 +192,22 @@ then
   PTEST=$(which python3)
   if [ -z "${PTEST}" ]
   then
-    PTEST=$(which python)
-    if [ -z "${PTEST}" ]
-    then
-      ${echo} "${cR}==> ERROR! Python does not seem to be installed!${cX}"
-      ${echo} "${cR}    Please install it.${cX}"
-      exit 1
-    else
-      PBIN=python
-    fi
-  else
-    PBIN=python3
+    ${echo} "${cR}==> ERROR! Python3 does not seem to be installed!${cX}"
+    ${echo} "${cR}    Please install it.${cX}"
+    exit 1
   fi
-  ${echo} "${cG}==> Python is installed!${cX}"
+  ${echo} "${cG}==> Python3 is installed!${cX}"
  #
  # Check for required packages.
  #
-  PYTHON_PKG_LIST="setuptools
-  argparse
+  PYTHON_PKG_LIST="argparse
+  sys
   numpy
-  jdcal
-  bottleneck
-  h5py
-  matplotlib"
+  "
 
   for pypkg in $PYTHON_PKG_LIST
   do
-    $PBIN -c "import ${pypkg}" 2>/dev/null
+    python3 -c "import ${pypkg}" 2>/dev/null
     pychk=$?
     if [ $pychk -eq 1 ]; then
       ${echo} "${cR}==> ERROR! Missing required package ${pypkg}.  Please install it and try again.${cX}"
