@@ -218,19 +218,18 @@ then
 # Check that the HipFT bin directory is in the user's path, if not, add it.
 #
   ${echo} "==> Checking PATH...."
-  PTEST=$(which hipft)
+  PTEST=$(which hipft_compare_run_diags.py)
   if [ -z "${PTEST}" ]
   then
-    ${echo} "${cY}==> WARNING: HipFT is not in the PATH!${cX}"
+    ${echo} "${cY}==> WARNING: HipFT bin is not in the PATH!${cX}"
     ${echo} "${cY}==> Appending ${BINDIR} to PATH...${cX}"
     export PATH="${BINDIR}:${PATH}"
   fi
-  PTEST=$(which hipft)
+  PTEST=$(which hipft_compare_run_diags.py)
   if [ -z "${PTEST}" ]; then
     ${echo} "${cR}==> ERROR! HipFT bin PATH problem!${cX}"
     exit 1
   fi
-  ${echo} "${cG}==> Using HIPFT binary: $PTEST ${cX}"
 
   if [ -z "${OMP_NUM_THREADS}" ]; then
     ${echo} "${cY}==> WARNING: OMP_NUM_THREADS is not set.${cX}"
