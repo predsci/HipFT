@@ -46,7 +46,7 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.30.0'
+      character(*), parameter :: cvers='0.30.1'
       character(*), parameter :: cdate='11/28/2023'
 !
 end module
@@ -1078,8 +1078,13 @@ subroutine initialize_mpi
 !
 ! ****** Set the GPU device number based on the shared rank.
 ! ****** This assumes the code was launched with 1 MPI rank per GPU.
+! ****** We have to put an OpenACC device selection directive here,
+! ****** as the NVIDIA compiler needs it for the device selection 
+! ****** for DC loops, while the omp device selection is used for 
+! ****** OpenMP target data movement directives.
 !
       call omp_set_default_device (iprocsh)
+!$acc set device_num(iprocsh)
 !
       wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
 !
@@ -8263,6 +8268,12 @@ end subroutine
 !
 ! 11/28/2023, RC, Version 0.30.0:
 !   - Cleaned up PTL routine to sync it with the version in MAS.
+!
+! 11/28/2023, RC, Version 0.30.1:
+!   - Added back in OpenACC device selection.  The NVIDIA 
+!     compiler needs this for device selection for DC loops
+!     even though it uses the omp version for omp data directives.
+!     This should not effect other compilers.
 !
 !-----------------------------------------------------------------------
 !
