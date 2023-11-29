@@ -67,10 +67,9 @@ diffuse_soccer
 diffuse_advect_soccer
 diffuse_dipole
 "
-#advect_tp_blob
 #advect_t_blob
 #advect_p_blob
-#advect_tp_diffuse_assim_atten_flowac_r3_map
+#diffuse_advect_flows_map
 #"
 
 TEST_RUNS_LIST=${AVAIL_TEST_RUNS_LIST}
