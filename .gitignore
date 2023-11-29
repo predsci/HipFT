@@ -38,4 +38,6 @@ src/Makefile
 src/Makefile_*
 bin/__pycache__
 testsuite/*/run/*
+!testsuite/*/run/.gitkeep
+
 
