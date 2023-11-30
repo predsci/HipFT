@@ -76,7 +76,7 @@ def argParsing():
     required=False)
 
   parser.add_argument('-xformat',
-    help='Format for the date option where // is treated as a newline (example: %H:%M:%S//%Y/%m/%d).',
+    help='Format for the date option where // is treated as a newline (example: %%H:%%M:%%S//%%Y/%%m/%%d).',
     dest='xformat',
     default='%H:%M:%S//%Y/%m/%d',
     required=False)

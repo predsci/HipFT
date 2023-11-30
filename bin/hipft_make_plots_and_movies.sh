@@ -26,33 +26,45 @@ CURRDIR=$PWD
 mkdir $DATADIR/plots
 cd $DATADIR/plots
 
+idx=0
 for file in ../*.h5 
 do
+
+  idx=$(($idx+1))
+  
+#   ADD UT TIME STUFF HERE.
+#   If no UT, use hours.
+
+# If the UT time dump file exists, use index to extract UT time for title.
+# If not, use original dump file to add  hours to title.
+
+  TITLE=" "
+
   TWOD=$(h5dump -d dim3 -H $file 2>/dev/null |tr '"' '\n' | grep DATASPACE\ \ SIMPLE | head -1 | tr -dc '^[0-9]/' | tr '/' '\n'| head -1)
 
   if [[ $TWOD -eq "" ]]; then
-    plot2d -cmin ${CMIN} -cmax ${CMAX} -dpi $DPI -tp -ll -finegrid -unit_label $LABEL $file -o "$(basename $file .h5).png"
+    plot2d -title ${TITLE} -cmin ${CMIN} -cmax ${CMAX} -dpi $DPI -tp -ll -finegrid -unit_label $LABEL $file -o "$(basename $file .h5).png"
   elif [[ "$Slice" = "all" ]]; then
     for i in $(seq 1 $TWOD)
     do
       hipft_extract_realization.py $file -r $i -o tmp_file.h5
       fslice=$(printf %06d\\n $i)
-      plot2d -cmin ${CMIN} -cmax ${CMAX} -dpi $DPI -tp -ll -finegrid -unit_label $LABEL tmp_file.h5 -o "$(basename $file .h5)_r$fslice.png"
+      plot2d -title ${TITLE} -cmin ${CMIN} -cmax ${CMAX} -dpi $DPI -tp -ll -finegrid -unit_label $LABEL tmp_file.h5 -o "$(basename $file .h5)_r$fslice.png"
     done
   elif [[ $Slice -ne "" ]]; then
     if [[ $Slice -gt $TWOD  ]]; then
       echo "Slice requested is outside range defaulting to last slice : $TWOD"
       hipft_extract_realization.py $file -r $TWOD -o tmp_file.h5
       fslice=$(printf %06d\\n $TWOD)
-      plot2d -cmin ${CMIN} -cmax ${CMAX} -dpi $DPI -tp -ll -finegrid -unit_label $LABEL tmp_file.h5 -o "$(basename $file .h5)_r$fslice.png"
+      plot2d -title ${TITLE} -cmin ${CMIN} -cmax ${CMAX} -dpi $DPI -tp -ll -finegrid -unit_label $LABEL tmp_file.h5 -o "$(basename $file .h5)_r$fslice.png"
     else
       hipft_extract_realization.py $file -r $Slice -o tmp_file.h5
       fslice=$(printf %06d\\n $Slice)
-      plot2d -cmin ${CMIN} -cmax ${CMAX} -dpi $DPI -tp -ll -finegrid -unit_label $LABEL tmp_file.h5 -o "$(basename $file .h5)_r$fslice.png"
+      plot2d -title ${TITLE} -cmin ${CMIN} -cmax ${CMAX} -dpi $DPI -tp -ll -finegrid -unit_label $LABEL tmp_file.h5 -o "$(basename $file .h5)_r$fslice.png"
     fi
   else
     hipft_extract_realization.py $file -r 1 -o tmp_file.h5
-    plot2d -cmin ${CMIN} -cmax ${CMAX} -dpi $DPI -tp -ll -finegrid -unit_label $LABEL tmp_file.h5 -o "$(basename $file .h5)_r000001.png"
+    plot2d -title ${TITLE} -cmin ${CMIN} -cmax ${CMAX} -dpi $DPI -tp -ll -finegrid -unit_label $LABEL tmp_file.h5 -o "$(basename $file .h5)_r000001.png"
   fi
 done
 

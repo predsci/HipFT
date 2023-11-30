@@ -7,16 +7,18 @@ from datetime import datetime, timezone
 def argParsing():
   parser = argparse.ArgumentParser(description='hipft_make_butterfly_diagram:  This tool makes the data for a butterfly diagram by averaging each hipft map along longitude, and then taking a running average of the results over the files.  The result is a single 2D file where each column is the running average of logitudinal averages.  By specifying a UT start time, the x-axis scales is set correctly for easy plotting.')
 
-  parser.add_argument('-folder',
-    help='Path to folder where output data is.',
+  parser.add_argument('rundir',
+    help='Path to the directory where hipft was run.')
+
+  parser.add_argument('-outpath',
+    help='Path to folder where output data is. Default: rundir/output_maps',
     dest='folder',
-    default='output_maps',
     required=False)
 #   Could grep for output_map_directory in hipft.in, if not there,
 #   use default.
 
-  parser.add_argument('-bfile',
-    help='Base file name.',
+  parser.add_argument('-basefn',
+    help='Base file name for output maps.',
     dest='bfile',
     default='hipft_brmap',
     required=False)
@@ -29,10 +31,9 @@ def argParsing():
     required=False)
 #   Could extract from data assimilation csv file combined with start index...  too much?    
 
-  parser.add_argument('-mapfile',
-    help='File path to the hipft_output_map_list file.',
+  parser.add_argument('-maplist',
+    help='Full path to the map file list.  Default: rundir/hipft_output_map_list.out',
     dest='mapfile',
-    default='hipft_output_map_list.out',
     required=False)
 
   parser.add_argument('-t0',
@@ -100,6 +101,12 @@ def argParsing():
 
 def run(args):
 
+
+  if (args.outpath is None):
+    args.outpath = args.rundir+'/output_maps'
+  if (args.mapfile is None):
+    args.mapfile = args.rundir+'/hipft_output_map_list.out'
+  
   ###### TIME ######
 
   if '/' in args.tfac:
