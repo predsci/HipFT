@@ -52,12 +52,12 @@ def argParsing():
     required=False)
 
   parser.add_argument('-utstart',
-    help='Start Date in UT: YYYYMMDDTHH:MM:SS',
+    help='Start Date in UT: YYYY-MM-DDTHH:MM:SS',
     dest='utstart',
     required=False)
     
   parser.add_argument('-utstartxtick',
-    help='UT date of first xtick: YYYYMMDDTHH:MM:SS',
+    help='UT date of first xtick: YYYY-MM-DDTHH:MM:SS',
     dest='utstartxtick',
     required=False)
     
@@ -790,7 +790,7 @@ def get_xticks(args,xmn,xmx,init_locs):
       xcUnitsSec = seconds
       
   if (args.utstart):
-    sDate = datetime.strptime(args.utstart, '%Y%m%dT%H:%M:%S')
+    sDate = datetime.strptime(args.utstart, '%Y-%m-%dT%H:%M:%S')
     utstartSecs = int(sDate.replace(tzinfo=timezone.utc).timestamp())
   else:
     utstartSecs = 0
@@ -884,7 +884,7 @@ def date_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime):
       tempArray = np.array(initLocs_uttime)
       cadence = np.average(np.diff(tempArray)) 
     if (args.utstartxtick):
-      currDate = datetime.strptime(args.utstartxtick,'%Y%m%dT%H:%M:%S').replace(tzinfo=timezone.utc).timestamp()
+      currDate = datetime.strptime(args.utstartxtick,'%Y-%m-%dT%H:%M:%S').replace(tzinfo=timezone.utc).timestamp()
     else:
       currDate = xmn_uttime
     locs.append(currDate)
@@ -922,10 +922,10 @@ def since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,secTimeUn
 def cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime):
   locs = []
   labels = []
-  xformat = '%Y%m%dT%H:%M:%S'
+  xformat = '%Y-%m-%dT%H:%M:%S'
 
   if (args.utstartxtick):
-    currDateSec = datetime.strptime(args.utstartxtick,'%Y%m%dT%H:%M:%S').replace(tzinfo=timezone.utc).timestamp()
+    currDateSec = datetime.strptime(args.utstartxtick,'%Y-%m-%dT%H:%M:%S').replace(tzinfo=timezone.utc).timestamp()
   else:
     currDateSec = xmn_uttime
 

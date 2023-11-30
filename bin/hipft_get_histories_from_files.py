@@ -36,7 +36,7 @@ def argParsing():
         required=True)
 
     parser.add_argument('-utstart',
-        help='Start Date in UT: YYYYMMDDTHH:MM:SS (default time in seconds: 0)',
+        help='Start Date in UT: YYYY-MM-DDTHH:MM:SS (default time in seconds: 0)',
         dest='utstart',
         required=False)
 
@@ -60,7 +60,7 @@ def run(args):
 
     if (args.utstart):
         hours = 3600
-        sDate = datetime.strptime(args.utstart, '%Y%m%dT%H:%M:%S')
+        sDate = datetime.strptime(args.utstart, '%Y-%m-%dT%H:%M:%S')
         time = int(sDate.replace(tzinfo=timezone.utc).timestamp())    
     else:
         time = 0

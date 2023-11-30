@@ -8,45 +8,54 @@ def argParsing():
   parser = argparse.ArgumentParser(description='hipft_make_butterfly_diagram:  This tool makes the data for a butterfly diagram by averaging each hipft map along longitude, and then taking a running average of the results over the files.  The result is a single 2D file where each column is the running average of logitudinal averages.  By specifying a UT start time, the x-axis scales is set correctly for easy plotting.')
 
   parser.add_argument('-folder',
-    help='Name of folder.',
+    help='Path to folder where output data is.',
     dest='folder',
-    required=True)
+    default='output_maps',
+    required=False)
+#   Could grep for output_map_directory in hipft.in, if not there,
+#   use default.
 
   parser.add_argument('-bfile',
     help='Base file name.',
     dest='bfile',
-    required=True)
+    default='hipft_brmap',
+    required=False)
+#   Could grep for output_map_root_filename in hipft.in, and use default otherwise.
 
   parser.add_argument('-utstart',
-    help='Start Date in UT: YYYYMMDDTHH:MM:SS',
+    help='Start Date in UT: YYYY-MM-DDTHH:MM:SS',
     dest='utstart',
-    default='00000000T00:00:00',
+    default='0000-00-00T00:00:00',
     required=False)
+#   Could extract from data assimilation csv file combined with start index...  too much?    
 
   parser.add_argument('-mapfile',
     help='File path to the hipft_output_map_list file.',
     dest='mapfile',
+    default='hipft_output_map_list.out',
     required=False)
 
   parser.add_argument('-t0',
     help='Sequence start index.',
     dest='t0',
-    required=True)
+    default=1,
+    required=False)
 
   parser.add_argument('-tf',
-    help='Sequence stop index.',
+    help='Sequence stop index. If not specified, all maps in mapfile are used.',
     dest='tf',
-    required=True)
+    required=False)
 
   parser.add_argument('-o',
     help='Name of output h5 file.',
     dest='oFile',
-    required=True)
+    default='butterfly.h5',
+    required=False)
 
   parser.add_argument('-tfac',
-    help='Time factor to get time into units of hours (Default is days so tfac=1/24.0).',
+    help='Time factor to get time into units of hours (HipFT time is in hours, so default tfac=1).',
     dest='tfac',
-    default='1/24',
+    default='1',
     required=False)
 
   parser.add_argument('-3d',
@@ -102,11 +111,29 @@ def run(args):
   ######################
 
   i = 0
+  time = []
+  count = 0
+  with open(mapfile, 'r') as infile:
+    FirstLine=True
+    for line in infile:
+        if FirstLine:
+            FirstLine=False
+        else:
+            time.append(int(float(line.split()[1]))*3600*tfac)
+            count = count + 1
+  time = np.array(time)
+  time = time[::skip]
+
+  if (args.tf is None):
+    args.tf = count
 
   iRange = list(range(int(args.t0),int(args.tf)+1))
+  
   #thin out range
   skip = int(args.cadence)+1
   iRange = iRange[::skip]
+  
+  liRange=len(iRange)
 
   firstPass = True
 
@@ -118,7 +145,7 @@ def run(args):
         xvec, yvec, zvec, data = ps.rdhdf_3d(filename)
         dim3 = len(zvec)
         if firstPass:
-          new_data=np.zeros((dim3,512, len(range(int(args.t0),int(args.tf)+1))))
+          new_data=np.zeros((dim3,len(yvec), len(range(int(args.t0),int(args.tf)+1))))
           firstPass = False
         ave_data = np.average(data, axis=2)
         new_data[:,:,i] = ave_data
@@ -126,7 +153,7 @@ def run(args):
       elif (args.slices):
         dim3 = len(args.slices)
         if firstPass:
-          new_data=np.zeros((dim3,512, len(range(int(args.t0),int(args.tf)+1))))
+          new_data=np.zeros((dim3,len(yvec), len(range(int(args.t0),int(args.tf)+1))))
           firstPass = False
         j = 0
         xvec, yvec, zvec, data_in = ps.rdhdf_3d(filename)
@@ -138,7 +165,7 @@ def run(args):
         i+=1
       else:
         if firstPass:
-          new_data=np.zeros((512, len(range(int(args.t0),int(args.tf)+1))))
+          new_data=np.zeros((len(yvec), len(range(int(args.t0),int(args.tf)+1))))
           firstPass = False
         xvec, yvec, zvec, data_in = ps.rdhdf_3d(filename)
         data = np.squeeze(data_in[int(args.slice)-1,:,:])
@@ -147,36 +174,17 @@ def run(args):
         i+=1
     else:
       if firstPass:
-        new_data=np.zeros((512, len(range(int(args.t0),int(args.tf)+1))))
+        new_data=np.zeros((len(yvec), len(range(int(args.t0),int(args.tf)+1))))
         firstPass = False
       xvec, yvec, data = ps.rdhdf_2d(filename)
       ave_data = np.average(data, axis=1)
       new_data[:,i] = ave_data
       i+=1
 
-  if args.mapfile is None:
-      mapfile = args.folder+"/hipft_output_map_list.out"
-  else:
-      mapfile=args.mapfile
-
-  time = []
-  with open(mapfile, 'r') as infile:
-    FirstLine=True
-    for line in infile:
-        if FirstLine:
-            FirstLine=False
-        else:
-            time.append(int(float(line.split()[1]))*3600*tfac)
-  time = np.array(time)
-
-  time = time[::skip]
-
-  liRange=len(iRange)
-
-  if args.utstart == "00000000T00:00:00":
+  if args.utstart == "0000-00-00T00:00:00":
     sDateSec = 0
   else:
-    sDate = datetime.strptime(args.utstart, '%Y%m%dT%H:%M:%S')
+    sDate = datetime.strptime(args.utstart, '%Y-%m-%dT%H:%M:%S')
     sDateSec = int(sDate.replace(tzinfo=timezone.utc).timestamp())
   uttime = time+sDateSec
 
@@ -189,7 +197,7 @@ def run(args):
 
 
 def writeOut3d(args,liRange,time,zvec,newData,uttime,yvec,dim3):
-  aveOut = np.zeros((dim3,512, liRange))
+  aveOut = np.zeros((dim3,len(yvec), liRange))
   aveIds = []
   for i in range(len(time)):
     for j in range (i, len(time)):
@@ -211,7 +219,7 @@ def writeOut3d(args,liRange,time,zvec,newData,uttime,yvec,dim3):
 
 
 def writeOut2d(args,liRange,time,newData,uttime,yvec):
-  aveOut = np.zeros((512, liRange))
+  aveOut = np.zeros((len(yvec), liRange))
   aveIds = []
   for i in range(len(time)):
     for j in range (i, len(time)):

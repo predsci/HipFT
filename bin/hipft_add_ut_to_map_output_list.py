@@ -16,16 +16,19 @@ signal.signal(signal.SIGINT, signal_handler)
 def argParsing():
   parser = argparse.ArgumentParser(description='hipft_add_ut_to_map_output_list:  This tool converts a hipft map output text file to one with UT dates based on a chosen start UT time (YYYY-MM-DDTHH:MM:SS).')
 
-  parser.add_argument('maplist',
-                      help='Name of the HipFT output map list text file')
-
   parser.add_argument('utstart',
                       help='Start Date in UT: YYYY-MM-DDTHH:MM:SS',
                       default='0000-00-00T00:00:00')
 
+  parser.add_argument('-maplist',
+                      default='hipft_output_map_list.out',
+                      required=False,
+                      help='Name of the HipFT output map list text file')
+
   parser.add_argument('-o',
                       dest='outfile',
-                      help='Name of output map text file',
+                      help='Choose name of output map text file with ut dates.',
+                      default='hipft_output_map_list_ut.out',
                       required=False)
 
   return parser.parse_args()
@@ -54,13 +57,8 @@ def run(args):
   uttime = time + sDateSec
 
   # Create map file with ut time column appended to end:
-  if (args.outfile is not None):
-    outfilename = 'hipft_output_map_list_ut.out'
-  else:
-    outfilename = args.outfile
-
-  outfile = open(outfilename,'w')
-  outfile = open(outfilename,'a')
+  outfile = open(args.outfile,'w')
+  outfile = open(args.outfile,'a')
   i = 0
 
   with open(mapfile, 'r') as infile:
