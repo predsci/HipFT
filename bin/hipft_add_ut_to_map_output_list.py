@@ -11,20 +11,20 @@ def signal_handler(signal, frame):
 
 signal.signal(signal.SIGINT, signal_handler)
 
+# Version 2.0
 
 def argParsing():
-  parser = argparse.ArgumentParser(description='hipft_add_ut_to_map_output_list:  This tool converts a hipft map output text file to one with UT dates based on a chosen start UT time.')
+  parser = argparse.ArgumentParser(description='hipft_add_ut_to_map_output_list:  This tool converts a hipft map output text file to one with UT dates based on a chosen start UT time (YYYY-MM-DDTHH:MM:SS).')
 
   parser.add_argument('maplist',
                       help='Name of the HipFT output map list text file')
 
   parser.add_argument('utstart',
-                      help='Start Date in UT: YYYYMMDDTHH:MM:SS',
-                      default='00000000T00:00:00')
+                      help='Start Date in UT: YYYY-MM-DDTHH:MM:SS',
+                      default='0000-00-00T00:00:00')
 
   parser.add_argument('-o',
                       dest='outfile',
-                      default='map_list_with_ut.out',
                       help='Name of output map text file',
                       required=False)
 
@@ -45,18 +45,22 @@ def run(args):
 
   time = np.array(time)
 
-  if args.utstart == "00000000T00:00:00":
+  if args.utstart == "0000-00-00T00:00:00":
     sDateSec = 0
   else:
-    sDate = datetime.strptime(args.utstart, '%Y%m%dT%H:%M:%S')
+    sDate = datetime.strptime(args.utstart, '%Y-%m-%dT%H:%M:%S')
     sDateSec = int(sDate.timestamp())
 
   uttime = time + sDateSec
 
   # Create map file with ut time column appended to end:
+  if (args.outfile is not None):
+    outfilename = 'hipft_output_map_list_ut.out'
+  else:
+    outfilename = args.outfile
 
-  outfile = open(args.outfile,'w')
-  outfile = open(args.outfile,'a')
+  outfile = open(outfilename,'w')
+  outfile = open(outfilename,'a')
   i = 0
 
   with open(mapfile, 'r') as infile:
@@ -66,7 +70,7 @@ def run(args):
             outfile.write(line[:-1] + ' UT(Sec) UT(Str)\n')
             FirstLine=False
         else:
-            outfile.write(line[:-1] + ' '+str(uttime[i])+ ' ' + datetime.strftime(datetime.fromtimestamp(uttime[i]),'%Y%m%dT%H:%M:%S')+'\n')
+            outfile.write(line[:-1] + ' '+str(uttime[i])+ ' ' + datetime.strftime(datetime.fromtimestamp(uttime[i]),'%Y-%m-%dT%H:%M:%S')+'\n')
             i = i+1
 
 
