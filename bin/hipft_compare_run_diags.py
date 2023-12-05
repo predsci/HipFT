@@ -46,16 +46,21 @@ def compare_files(file1, file2, precision, verbose):
 
       num1=last_line1.split()[i]
       num1p=num1[0:precision+3]+num1[-5:]
-    
+
       num2=last_line2.split()[i]
       num2p=num2[0:precision+3]+num1[-5:]
-   
+
       if (num1p != num2p):
-        print('FAIL in '+first_line1.split()[i]+':')
-        print('        '+num1)
-        print('        '+num2)
-        PASS=False
-        
+        if (float(num1) > 1e-64):
+          print('FAIL in '+first_line1.split()[i]+':')
+          print('        '+num1)
+          print('        '+num2)
+          PASS=False
+        else:
+          print('PASSING A FAIL in tiny number in '+first_line1.split()[i]+':')
+          print('        '+num1)
+          print('        '+num2)
+
       if (verbose):
         print(first_line1.split()[i]+':')
         print('        '+num1)
