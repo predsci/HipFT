@@ -1,0 +1,66 @@
+&hipft_input_parameters
+!
+! ****** Initial map and output options ********
+!
+  initial_map_filename = 'br_hmi_synoptic_mr_polfil_720s_cr2252_pslt_flxbal_remeshed.h5'
+  output_map_root_filename = 'hipft_brmap'
+!
+! ****** Number of realizations ********
+!
+  n_realizations = 8
+!
+! ****** Output map cadence and type ********
+! ****** Time cadence is in hours    ********
+!
+  output_map_time_cadence = 100.0
+!
+! ****** Time ********
+!
+  time_end = 672.0
+!
+! ****** Timestep ********
+!
+  dt_max = 0.25
+!
+!-----------------------------------------------------------------------
+!
+! ****** FLOWS ********
+!
+! ****** Activate the flow advance.
+!
+  advance_flow = .true.
+!
+! ****** Attenuate the veolcity based on the value of Br.
+! ****** This causes flow to be updated each step.
+! ****** The attenuate value is the saturation level in Gauss.
+!
+  flow_attenuate = .true.
+  flow_attenuate_values = 500.0,500.0,500.0,500.0,100000.0,100000.0,100000.0,100000.0
+!
+! ****** Built-in differential roation and meridianal flow models.
+! ****** For each, setting "1" sets the model/params used in the AFT code.
+!
+  flow_dr_model = 1
+  flow_mf_model = 1
+!
+!-----------------------------------------------------------------------
+!
+! ****** DIFFUSION ********
+!
+  advance_diffusion = .true.
+!
+  diffusion_coef_constants = 0.0,25.0,50.0,100.0,0.0,25.0,50.0,100.0
+!
+!-----------------------------------------------------------------------
+!
+/
+!
+! This test run uses an input map and then performs flux transport on it
+! for ~1 Carrington rotation (28 days) using WENO3 advection
+! and diffusion with variable diffusivity.
+! It uses analytic meridianal and differential rotation flows.
+! It also uses flow attenuation at a level of both 500 and 100000 Gauss
+! (the later essentially disabling it).
+! It computes eight realizations, varying the level of diffusion and
+! toggeling flow attenuation.
+!
