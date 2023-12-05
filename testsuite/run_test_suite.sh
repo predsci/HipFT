@@ -33,17 +33,26 @@ echo ""
 echo "-hipftexe=      Use this to run the testsuite on a specific hipft executable."
 echo "                This should be a full path and is useful for development tests."
 echo ""
+echo "-mpicall=       Use this to run the testsuite with a specific mpi calling mechanism."
+echo "                The call should end with '-np' or equivalent as the # of ranks will"
+echo "                be placed after the call. "
+echo "                For example, for GCC+OpenMPI, one could use: mpicall='mpirun -bind-to socket -np'"
+echo "                The default is 'mpirun -np'."
+echo ""
 echo "-test=          Comma-seperated list of subset of tests to run."
 echo "                Also can be used to run non-standard/experimental tests."
 echo ""
 echo "-nocleanup      By default, only the initial and final conditions of a run are "
 echo "                kept in the run folders. Set this to keep the full run."
 echo ""
-echo "-clear          Remove all previous test suite runs and results - CAREFUL!"
+echo "-cleanup        Remove all previous test suite runs (if they were run with -nocleanup)"
 echo ""
-echo "-norun          Does not run the MAS code.  Checks for a previous run and compares if found."
+echo "-norun          Does not run the HipFT code.  Checks for a previous run and compares if found."
 echo ""
 echo "-nocompare      Do not compare the runs to their reference runs."
+echo ""
+echo "-compareprec=   Set the precision for the comparisons (decimal place)"
+echo "                Default is 5."
 echo ""
 echo "-nocolor        Disable color text output."
 echo ""
@@ -54,13 +63,15 @@ echo ""
 NUM_PROCS=1
 norun=0
 nocompare=0
+compareprec=5
 novis=0
 nocleanup=0
+cleanup=0
 nochecksetup=0
 nocolor=0
 setrefdata=0
-algnum=3
 hipftexe="hipft"
+mpicall="mpirun -np"
 
 AVAIL_TEST_RUNS_LIST="
 diffuse_soccer
@@ -83,6 +94,9 @@ case $i in
     -nocompare)
     nocompare=1
     ;;
+    -compareprec=*)
+    compareprec="${i#*=}"
+    ;;    
     -nocleanup)
     nocleanup=1
     ;;
@@ -101,6 +115,15 @@ case $i in
     ;;
     -hipftexe=*)
     hipftexe="${i#*=}"
+    ;;
+    -mpicall=*)
+    mpicall="${i#*=}"
+    ;;
+    -cleanup)
+    cleanup=1
+    norun=1
+    nocompare=1
+    nochecksetup=1
     ;;
     -h)
     display_help
@@ -328,6 +351,12 @@ do
   fi
 
   cd ${RUNDIR}
+  
+  if [ ${cleanup} == 1 ]
+  then
+    ${echo} "==> Clearing run directory..."
+    rm -fr ${RUNDIR}/*
+  fi
 
   if [ ${norun} == 0 ]
   then
@@ -347,21 +376,39 @@ do
     ${echo} "${cB}==> RUNNING HIPFT${cX}"
     ${echo} "======================================================="
     ${echo} "==> Running hipft with command:"
-    ${echo} "==> mpiexec -np $NUM_PROCS ${hipftexe} hipft.in 1>hipft.log 2>hipft.err"
-    mpiexec -np $NUM_PROCS ${hipftexe} hipft.in 1>hipft.log 2>hipft.err
-  fi
+    ${echo} "==> ${mpicall} $NUM_PROCS ${hipftexe} hipft.in 1>hipft.log 2>hipft.err"
+    ${mpicall} $NUM_PROCS ${hipftexe} hipft.in 1>hipft.log 2>hipft.err
 
-  # Check that a completed run exists in the run folder
-  if [ ! -e ${RUNDIR}/hipft_brmap_final.h5 ]
-  then
-    if [ ${norun} == 1 ]
+    # Check that a completed run exists in the run folder
+    if [ ! -e ${RUNDIR}/hipft_brmap_final.h5 ]
     then
-      ${echo} "${cR}!!!> ERROR! Test ${TESTNAME} did not run correctly!${cX}"
-      ${echo} "${cR}!!!> Check the run folder: ${RUNDIR} ${cX}"
-      exit 1
+      if [ ${norun} == 1 ]
+      then
+        ${echo} "${cR}!!!> ERROR! Test ${TESTNAME} did not run correctly!${cX}"
+        ${echo} "${cR}!!!> Check the run folder: ${RUNDIR} ${cX}"
+        exit 1
+      fi
+    fi
+
+  # Get timing data:
+    TIME_RUN_TMP=($(grep "Wall clock time" ${RUNDIR}/hipft.log))
+    TIME_RUN_TMP=${TIME_RUN_TMP[3]}
+    TIME_RUN[${Ti}]=$(printf "%8.3f" ${TIME_RUN_TMP})
+    ${echo} "${cG}==> Test completed in:               ${TIME_RUN[${Ti}]} seconds.${cX}"
+    
+    if [ ${nocompare} == 0 ]
+    then
+      TIME_REF_TMP=($(grep "Wall clock time" ${REFDIR}/hipft.log))
+      TIME_REF_TMP=${TIME_REF_TMP[3]}
+
+      SPEEDUP_TMP=`python3 -c "print(${TIME_REF_TMP}/${TIME_RUN_TMP})"`
+      TIME_REF[${Ti}]=$(printf "%8.3f" ${TIME_REF_TMP})
+      SPEEDUP[${Ti}]=$(printf "%5.2f" ${SPEEDUP_TMP})
+
+      ${echo} "${cG}==> Speedup compared to reference run: ${SPEEDUP[${Ti}]} x${cX}"
     fi
   fi
-  
+
   if [ ${setrefdata} -eq 1 ] && [ ${norun} -eq 0 ]
   then
     ${echo} "${cR}=======================================================${cX}"
@@ -374,22 +421,6 @@ do
     cp ${RUNDIR}/* ${REFDIR}/
     rm -f ${REFDIR}/*.h5
   fi
-
-  # Get timing data:
-  TIME_RUN_TMP=($(grep "Wall clock time" ${RUNDIR}/hipft.log))
-  TIME_RUN_TMP=${TIME_RUN_TMP[3]}
-
-  TIME_REF_TMP=($(grep "Wall clock time" ${REFDIR}/hipft.log))
-  TIME_REF_TMP=${TIME_REF_TMP[3]}
-
-  SPEEDUP_TMP=`python3 -c "print(${TIME_REF_TMP}/${TIME_RUN_TMP})"`
-
-  TIME_RUN[${Ti}]=$(printf "%8.3f" ${TIME_RUN_TMP})
-  TIME_REF[${Ti}]=$(printf "%8.3f" ${TIME_REF_TMP})
-  SPEEDUP[${Ti}]=$(printf "%5.2f" ${SPEEDUP_TMP})
-
-  ${echo} "${cG}==> Test completed in:               ${TIME_RUN[${Ti}]} seconds.${cX}"
-  ${echo} "${cG}==> Speedup compared to reference run: ${SPEEDUP[${Ti}]} x${cX}"
 
 # Generate images etc.
 #  if [ ${novis} == 0 ]
@@ -410,7 +441,7 @@ do
     ${echo} "======================================================="
     ${echo} "==> Running comparison..."
 
-    PASS_FAIL[${Ti}]=$(hipft_compare_run_diags.py ${REFDIR} ${RUNDIR})
+    PASS_FAIL[${Ti}]=$(hipft_compare_run_diags.py -p ${compareprec} ${REFDIR} ${RUNDIR})
 
     if [ "${PASS_FAIL[${Ti}]}" = "0" ]
     then

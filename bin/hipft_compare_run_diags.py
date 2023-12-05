@@ -22,7 +22,7 @@ def argParsing():
     dest='p',
     required=False,
     default=6)
-    
+
   parser.add_argument('-v',
     help='Verbose mode',
     dest='v',
