@@ -440,8 +440,10 @@ do
     ${echo} "${cB}==> COMPARING RUN DATA TO REFERENCE DATA${cX}"
     ${echo} "======================================================="
     ${echo} "==> Running comparison..."
-
-    PASS_FAIL[${Ti}]=$(hipft_compare_run_diags.py -p ${compareprec} ${REFDIR} ${RUNDIR})
+    ${echo} "${cR}"
+    hipft_compare_run_diags.py -p ${compareprec} ${REFDIR} ${RUNDIR}
+    PASS_FAIL[${Ti}]=$?
+    ${echo} "${cX}"
 
     if [ "${PASS_FAIL[${Ti}]}" = "0" ]
     then

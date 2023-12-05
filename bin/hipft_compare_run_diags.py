@@ -57,7 +57,7 @@ def compare_files(file1, file2, precision, verbose):
           print('        '+num2)
           PASS=False
         else:
-          print('PASSING A FAIL in tiny number in '+first_line1.split()[i]+':')
+          print('WARNING: PASSED A FAIL (value <1e-64) in '+first_line1.split()[i]+':')
           print('        '+num1)
           print('        '+num2)
 
@@ -91,9 +91,8 @@ def run(args):
     else:
       STATUS=1
 
-# Return STATUS to the calling shell and print it.
+# Return STATUS to the calling shell.
 
-  print(STATUS)
   sys.exit(STATUS)
 
 def main():
