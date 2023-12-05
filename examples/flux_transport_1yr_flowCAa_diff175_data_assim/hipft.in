@@ -1,0 +1,74 @@
+&hipft_input_parameters
+!
+! ****** Initial map ********
+!
+  initial_map_filename = 'zenodo/br_hmi_synoptic_mr_polfil_720s_cr2252_pslt_flxbal_remeshed.h5'
+!
+! ****** Number of realizations ********
+!
+  n_realizations = 1
+!
+! ****** Output map cadence and type ********
+! ****** Time cadence is in hours    ********
+!
+  output_map_time_cadence = 24.0
+  output_history_time_cadence = 0.25
+!
+! ****** Time ********
+!
+  time_end = 8766.0
+!
+! ****** Timestep ********
+!
+  dt_max = 0.25
+!
+! ****** Pole flux calculation latitude limit (degrees).
+!
+  pole_flux_lat_limit = 30.0
+!
+!-----------------------------------------------------------------------
+!
+! ****** FLOWS ********
+!
+! ****** Activate the flow advance.
+!
+  advance_flow = .true.
+!
+! ****** Attenuate the veolcity based on the value of Br.
+! ****** This causes flow to be updated each step.
+! ****** The attenuate value is the saturation level in Gauss.
+!
+  flow_attenuate = .true.
+  flow_attenuate_value = 500.0
+!
+  flow_dr_model = 1
+  flow_mf_model = 1
+!
+! ****** Time dependent flows from file (used for conflow).
+!
+  use_flow_from_files = .true.
+  flow_list_filename = 'zenodo/conflow_1cr_340cut/flow_output_list.csv'
+  flow_root_dir = 'zenodo/conflow_1cr_340cut'
+!
+!-----------------------------------------------------------------------
+!
+! ****** DIFFUSION ********
+!
+  advance_diffusion = .true.
+  diffusion_coef_constant = 175.0
+!
+!-----------------------------------------------------------------------
+!
+! ****** DATA ASSIMILATION ********
+!
+  assimilate_data = .true.
+  assimilate_data_map_list_filename = 'zenodo/map_files_2022.csv'
+  assimilate_data_map_root_dir = 'zenodo/.'
+/
+!
+!
+!
+!
+!
+!
+!
