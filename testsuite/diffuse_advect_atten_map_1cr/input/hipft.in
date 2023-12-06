@@ -1,0 +1,75 @@
+&hipft_input_parameters
+!
+! ****** Initial map ********
+!
+  initial_map_filename = 'br_hmi_synoptic_mr_polfil_720s_cr2252_pslt_flxbal_remeshed_small.h5'
+!
+! ****** Output options           ********
+! ****** Time cadence is in hours ********
+!
+  output_map_time_cadence     = 100.0
+  output_history_time_cadence = 0.5
+  output_single_precision     = .false.
+!
+! ****** Number of realizations ********
+!
+  n_realizations = 5
+!
+!
+! ****** Time ********
+!
+  time_start = 0.0
+  time_end = 672
+!
+! ****** Timestep ********
+!
+  dt_max = 0.25
+!
+!-----------------------------------------------------------------------
+!
+! ****** FLOWS ********
+!
+! ****** Activate the flow advance.
+!
+  advance_flow = .true.
+!
+! ****** Attenuate the veolcity based on the value of Br.
+! ****** This causes flow to be updated each step.
+! ****** The attenuate value is the saturation level in Gauss.
+!
+  flow_attenuate = .true.
+  flow_attenuate_value = 300.0
+!
+! ****** Analytic differential roation and meridianal flow models.
+! ****** For each, setting "1" sets the model/params used often in the AFT model.
+!
+  flow_dr_model = 1
+  flow_mf_model = 1
+!  
+  flow_dr_coef_p0_values = 41.4,46.0,50.6,46.0,46.0
+  flow_dr_coef_p2_values = -288.2,-262.0,-235.8,-262.0,-262.0
+  flow_dr_coef_p4_values = -416.0,-379.0,-341.1,-379.0,-379.0
+!
+  flow_mf_coef_p1_values = 22.0,22.0,22.0,17.8,24.2
+  flow_mf_coef_p3_values = 11.0,11.0,11.0,9.9,12.1
+  flow_mf_coef_p5_values = -28.0,-28.0,-28.0,-30.8,-25.2
+!
+!-----------------------------------------------------------------------
+!
+! ****** DIFFUSION ********
+!
+  advance_diffusion = .true.
+!
+  diffusion_coef_constant = 25.0
+!
+!-----------------------------------------------------------------------
+!
+! ****** Debugging verbose output flag ********
+!
+  verbose = .true.
+/
+!
+! 1 CR advection and diffusion with analytic flows, velocity attenuation,
+! and realizations spread across values of flow models.
+! The starting map is from CR2252.
+!

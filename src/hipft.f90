@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.30.1'
-      character(*), parameter :: cdate='11/28/2023'
+      character(*), parameter :: cvers='0.31.0'
+      character(*), parameter :: cdate='12/05/2023'
 !
 end module
 !#######################################################################
@@ -1079,8 +1079,8 @@ subroutine initialize_mpi
 ! ****** Set the GPU device number based on the shared rank.
 ! ****** This assumes the code was launched with 1 MPI rank per GPU.
 ! ****** We have to put an OpenACC device selection directive here,
-! ****** as the NVIDIA compiler needs it for the device selection 
-! ****** for DC loops, while the omp device selection is used for 
+! ****** as the NVIDIA compiler needs it for the device selection
+! ****** for DC loops, while the omp device selection is used for
 ! ****** OpenMP target data movement directives.
 !
       call omp_set_default_device (iprocsh)
@@ -7079,13 +7079,13 @@ subroutine advection_operator_upwind (ftemp,aop)
       do concurrent (i=1:nr)
         fn = 0.
         fs = 0.
-        do concurrent (k=2:npm-1) reduce(+:fn,fs)
+        do k=2,npm-1
           fn = fn + flux_t(   2,k,i)*dp(k)
           fs = fs + flux_t(ntm1,k,i)*dp(k)
         enddo
 ! ****** Note that the south pole needs a sign change since the
 ! ****** theta flux direction is reversed.
-        do concurrent (k=2:npm-1)
+        do k=2,npm-1
           aop(  1,k,i) =  fn*bc_flow_npole_fac
           aop(ntm,k,i) = -fs*bc_flow_spole_fac
         enddo
@@ -7296,17 +7296,16 @@ subroutine advection_operator_weno3 (ftemp,aop)
 !
 ! ****** Get the advection operator at the poles.
 !
-
       do concurrent (i=1:nr)
         fn = zero
         fs = zero
-        do concurrent (k=2:npm-1) reduce(+:fn,fs)
+        do k=2,npm-1
           fn = fn + flux_t(   2,k,i)*dp(k)
           fs = fs + flux_t(ntm1,k,i)*dp(k)
         enddo
 ! ****** Note that the south pole needs a sign change since the
 ! ****** theta flux direction is reversed.
-        do concurrent (k=2:npm-1)
+        do k=2,npm-1
           aop(  1,k,i) =  fn*bc_flow_npole_fac
           aop(ntm,k,i) = -fs*bc_flow_spole_fac
         enddo
@@ -7364,10 +7363,10 @@ subroutine diffusion_operator_cd (x,y)
 !
 ! ****** Compute boundary points.
 !
-      do concurrent (i=1:nr)
+      do concurrent(i=1:nr)
         fn2_fn1 = zero
         fs2_fs1 = zero
-        do concurrent (k=2:npm-1) reduce(+:fn2_fn1,fs2_fs1)
+        do k=2,npm-1
           fn2_fn1 = fn2_fn1 + (diffusion_coef(1    ,k,i)        &
                             +  diffusion_coef(2    ,k,i))       &
                              * (x(2    ,k,i) - x(1  ,k,i))*dp(k)
@@ -7375,7 +7374,7 @@ subroutine diffusion_operator_cd (x,y)
                             +  diffusion_coef(nt   ,k,i))       &
                              * (x(ntm-1,k,i) - x(ntm,k,i))*dp(k)
         enddo
-        do concurrent (k=1:npm)
+        do k=1,npm
           y(  1,k,i) = fn2_fn1*dt_i(  1)*dt_i(  1)*pi_i
           y(ntm,k,i) = fs2_fs1*dt_i(ntm)*dt_i(ntm)*pi_i
         enddo
@@ -8270,10 +8269,20 @@ end subroutine
 !   - Cleaned up PTL routine to sync it with the version in MAS.
 !
 ! 11/28/2023, RC, Version 0.30.1:
-!   - Added back in OpenACC device selection.  The NVIDIA 
+!   - Added back in OpenACC device selection.  The NVIDIA
 !     compiler needs this for device selection for DC loops
 !     even though it uses the omp version for omp data directives.
 !     This should not effect other compilers.
+!
+! 12/05/2023, RC, Version 0.31.0:
+!   - Modified polar boundary conditon loops to use sequential
+!     inner loops.  The nested 'do concurrent' loops
+!     were giving wrong answers on Intel GPUs with the IFX compiler.
+!     Once that compiler is fixed, these loops should be profiled
+!     for performance for various sizes of realizations on GPUs/CPUs
+!     for nested DC, DC within do, and do within DC.
+!     Note:  The NVIDIA compiler parallelizes the sequential do loops
+!     without asking, so this change has no effect on NVIDIA GPU runs.
 !
 !-----------------------------------------------------------------------
 !

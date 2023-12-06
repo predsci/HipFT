@@ -2,7 +2,7 @@
 !
 ! ****** Initial map ********
 !
-  initial_map_filename = 'zenodo/br_hmi_synoptic_mr_polfil_720s_cr2252_pslt_flxbal_remeshed.h5'
+  initial_map_filename = 'zenodo_hipft/br_hmi_synoptic_mr_polfil_720s_cr2252_pslt_flxbal_remeshed.h5'
 !
 ! ****** Number of realizations ********
 !
@@ -47,8 +47,8 @@
 ! ****** Time dependent flows from file (used for conflow).
 !
   use_flow_from_files = .true.
-  flow_list_filename = 'zenodo/conflow_1cr_340cut/flow_output_list.csv'
-  flow_root_dir = 'zenodo/conflow_1cr_340cut'
+  flow_list_filename = 'zenodo_hipft/conflow_1cr_340cut/flow_output_list.csv'
+  flow_root_dir = 'zenodo_hipft/conflow_1cr_340cut'
 !
 !-----------------------------------------------------------------------
 !
@@ -62,8 +62,8 @@
 ! ****** DATA ASSIMILATION ********
 !
   assimilate_data = .true.
-  assimilate_data_map_list_filename = 'zenodo/map_files_2022.csv'
-  assimilate_data_map_root_dir = 'zenodo/.'
+  assimilate_data_map_list_filename = 'zenodo_hipft/map_files_2022.csv'
+  assimilate_data_map_root_dir = 'zenodo_hipft/.'
 /
 !
 !

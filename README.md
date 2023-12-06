@@ -59,4 +59,8 @@ or
   
 Some useful python scripts for reading, extracting, and plotting the HIPFT input/output data can be found in the  `bin` folder.  
 
+--------------------------------
 
+### Sample Input Data for Convective Flows and Data Assimilation ###  
+
+https://zenodo.org/doi/10.5281/zenodo.10271120

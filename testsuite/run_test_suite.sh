@@ -77,11 +77,10 @@ AVAIL_TEST_RUNS_LIST="
 diffuse_soccer
 diffuse_advect_soccer
 diffuse_dipole
+diffuse_advect_atten_map_1cr
 "
 #advect_t_blob
 #advect_p_blob
-#diffuse_advect_flows_map
-#"
 
 TEST_RUNS_LIST=${AVAIL_TEST_RUNS_LIST}
 
@@ -469,19 +468,19 @@ do
     fi
   fi
 done
-${echo} "${cC}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%${cX}"
+${echo} "${cC}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%${cX}"
 
 
 # Display summary and timing results.
 if [ ${nocompare} == 0 ]
 then
-  ${echo} "${cY}=================================================================${cX}"
+  ${echo} "${cY}===========================================================================${cX}"
   ${echo} "${cY}Summary of test results:${cX}"
-  ${echo} "${cY}=================================================================${cX}"
+  ${echo} "${cY}===========================================================================${cX}"
 
   Ti=0
-    ${echo} "$(printf "%-25s  %9s  %8s  %8s  %7s" "Test name" "PASS/FAIL" "Run-time" "Ref-time" "Speedup")"
-  ${echo} "${cY}=================================================================${cX}"    
+    ${echo} "$(printf "%-35s  %9s  %8s  %8s  %7s" "Test name" "PASS/FAIL" "Run-time" "Ref-time" "Speedup")"
+  ${echo} "${cY}===========================================================================${cX}"    
   for TESTNAME in ${TEST_RUNS_LIST}
   do
     Ti=$((${Ti}+1))
@@ -491,11 +490,11 @@ then
     else
       pf="${cG}PASS     ${cX}"
     fi
-    ${echo} "$(printf "%-25s  %9s  %8s  %8s  %7s" "${TESTNAME}" "${pf}" "${TIME_RUN[${Ti}]}" "${TIME_REF[${Ti}]}" "${SPEEDUP[${Ti}]}")"
+    ${echo} "$(printf "%-35s  %9s  %8s  %8s  %7s" "${TESTNAME}" "${pf}" "${TIME_RUN[${Ti}]}" "${TIME_REF[${Ti}]}" "${SPEEDUP[${Ti}]}")"
   done
 fi
 
-${echo} "${cC}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%${cX}"
+${echo} "${cC}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%${cX}"
 
 exit 0
 
