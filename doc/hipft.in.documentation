@@ -1,0 +1,334 @@
+&hipft_input_parameters
+!
+  verbose = .false.
+!
+!       -----> Set this to output a lot of info for use with debugging.
+!
+  res_nt = 0
+  res_np = 0
+!
+!       -----> Resolution in theta and phi on uniform grid.
+!       -----> These are automatically set when reading in an initial map with "initial_map_filename" 
+!       -----> They are currently only used for validation runs.
+!
+  initial_map_filename = ''
+!
+!       -----> Initial map
+!       -----> The resolution and grid of the run is determined by this input map.
+!       -----> This means all data assimilation maps must match the grid of the input map,
+!       -----> and input flows must match the correct staggered velocity meshes that correspond
+!       -----> to the input map grid.
+!
+  validation_run = 0
+!
+!       -----> Run a validation test of HipFT.  This will use the input map's 
+!       -----> grid size/resolution, or can use the res_nt and res_np parameters above.
+!       -----> The choices are:
+!       ----->   1: Soccer ball: 
+!       ----->      History files show the error compared to analytical diffusion-only solution over time.
+!       ----->      One can also can combine this with a rigid rotation in phi and set the end time 
+!       ----->      such that a full rotation is advected, and the errors in the history can be 
+!       ----->      compared at the end of the run.
+!       ----->   2: Gaussian blobs: 
+!       ----->      No errors reported in history file, but a theta-flipped hdf5 file is output 
+!       ----->      for use with symmetric advection along theta tests.
+!       ----->      One can also set the end time such that a full rotation is advected in phi and 
+!       ----->      can then be compared to the initial condition.
+!
+  n_realizations = 1
+!  
+!       -----> Set number of realizations.
+!
+  time_start = 0.0
+  time_end = 1.0
+!
+!       -----> Set the start and end times of the run (in hours).
+!
+  dt_max = 1.0e200
+!
+!       -----> Set the maximum allowed time step (in hours).  
+!       -----> In many cases, this sets the overall/default time step.
+!
+  dt_min = 1.0e-15
+!  
+!       -----> Set a "too small" time step value.
+!       -----> Warnings are issues if the time step becomes smaller.
+!
+!-----------------------------------------------------------------------
+! ******  OUTPUT ******
+!-----------------------------------------------------------------------
+!
+  output_single_precision = .true.
+!
+!       -----> Choose to output HDF5 file precision to be
+!       -----> 64-bit double (.false.) or 32-bit single (.true.).
+!
+  output_map_root_filename = 'hipft_brmap'
+!
+!       -----> Root filename of output maps.  
+!       -----> The map filenames will be: <output_map_root_filename>_idx######.h5
+!
+  output_map_directory  = 'output_maps'
+!
+!       -----> Directory where the output maps should go.
+!       -----> Note that the initial and final map will be written to the launch directory as well.
+!  
+  output_flows = .false.
+!
+!       -----> Toggle to request outputting the flows (same cadence as maps).
+!
+  output_flows_root_filename = 'hipft_flow'
+!
+!       -----> Root filename of output flows (if requesting flow output).
+!       -----> Same style as maps: <output_flows_root_filename>_v<x>_idx######.h5  
+!
+  output_flows_directory = 'output_flows'
+!
+!       -----> Directory where the output flows should go (if requesting flow output).
+!  
+  output_map_idx_cadence = 0
+!
+!       -----> Use this to set the map output cadence based on step number.
+!       -----> This will not be uniform in time!
+!
+  output_map_time_cadence = 0.0
+!
+!       -----> Use this to set the map output cadence based on a time gap.
+!       -----> The units for the time is in hours.
+! 
+  output_map_2d = .true.
+!
+!       -----> If running with only 1 realization, use this toggle
+!       -----> to select whether to output a 2D hdf5 file for the maps
+!       -----> or, output a 3D HDF5 file (as is done with multiple realizations)
+!       -----> yielding a file with dimensions (1,np,nt).
+!
+  output_history_time_cadence = 0.0
+!
+!       -----> Set a time cadence for writing out diagnostics into the history files.
+!       -----> The default (0.0) tells the code to to write them out every code step.
+!
+  pole_flux_lat_limit = 30.0
+!
+!       -----> Set the latitude limit for the polar flux diagnostics (degrees).
+!
+!-----------------------------------------------------------------------
+! ****** FLOWS ******
+!-----------------------------------------------------------------------
+!
+  advance_flow = .false.
+!
+!       -----> Activate the flow advance (advection).
+!
+  flow_vp_rigid_omega = 0.0
+!
+!       -----> Add a rigid rotation vp velocity (km/s) of flow_vp_rigid_omega*sin(theta).
+!
+  flow_rigid_omega = 0.0
+!
+!       -----> Add a rotation velocity (km/s) for a rigid
+!       -----> rotation in the theta direction (through the poles).
+!       -----> It is highly likely this is not working correctly.
+!
+  flow_vt_const = 0.0
+!
+!       -----> Add a constant vt velocity (km/s).
+!
+  flow_attenuate = .false.
+!
+!       -----> Attenuate the veolcity based on the value of Br.
+!       -----> This causes the flows to be updated each step.
+!
+  flow_attenuate_value = 500.0
+!
+!       -----> Sets the default attenuation value in Gauss.
+!
+  !flow_attenuate_values = <List of comma-separated values equal to # of realizations>
+!
+!       -----> Uncomment and modify this line to set attenuation values across 
+!       -----> the chosen number of realizations.
+!
+  flow_dr_model = 0
+!
+!       -----> Activate a differential rotation flow model.
+!       ----->   1: Analytic differential rotation model used in AFT.
+!
+  flow_dr_coef_p0_value = 46.0
+  flow_dr_coef_p2_value = -262.0
+  flow_dr_coef_p4_value = -379.0
+!
+!       -----> Use these to set the default parameters of the flow_dr_model=1 model.
+!
+  !flow_dr_coef_p0_values = <List of comma-separated values equal to # of realizations>
+  !flow_dr_coef_p2_values = <List of comma-separated values equal to # of realizations>
+  !flow_dr_coef_p4_values = <List of comma-separated values equal to # of realizations>
+!
+!       -----> Uncomment and modify these lines to set the parameters of
+!       -----> the flow_dr_model=1 model across the chosen number of realizations.
+!
+  flow_mf_model = 0
+!
+!       -----> Activate a meridianal flow model.
+!       ----->   1: Analytic meridianal flow model used in AFT.
+!
+  flow_mf_coef_p1_value = 22.0
+  flow_mf_coef_p3_value = 11.0
+  flow_mf_coef_p5_value = -28.0
+!
+!       -----> Use these to set the default parameters of the flow_mf_model=1 model.
+!
+  !flow_mf_coef_p1_values = <List of comma-separated values equal to # of realizations>
+  !flow_mf_coef_p3_values = <List of comma-separated values equal to # of realizations>
+  !flow_mf_coef_p5_values = <List of comma-separated values equal to # of realizations>
+!
+!       -----> Uncomment and modify these lines to set the parameters of
+!       -----> the flow_mf_model=1 model across the chosen number of realizations.
+!
+  use_flow_from_files = .false.
+!  
+!       -----> Activate using read-in flow files for the flows (e.g. ConFlow)
+!
+  flow_list_filename = ' '
+!  
+!       -----> File name for CSV text file listing all flow files and times in Julian Days.
+!       -----> Example file:
+!                  TIME(JD), VTFILENAME, VPFILENAME
+!                  0.00000,vt000001.h5,vp000001.h5
+!                  0.01042,vt000002.h5,vp000002.h5
+!
+  flow_root_dir = '.'
+!  
+!       -----> Path to the directory where the flow files are located.
+!
+  flow_num_method = 4
+!  
+!       -----> Set the numerical algorithm for computing flow advection.
+!       ----->      TIME                SPACE
+!       ----->   1: Forward Euler     + Upwind  O(1+1)
+!       ----->   2: RK3TVD/SSPRK(3,3) + Upwind  O(3+1)
+!       ----->   3: RK3TVD/SSPRK(3,3) + WENO3   O(3+4)
+!       ----->   4: SSPRK(4,3)        + WENO3   O(3+4) w/ less strict CFL
+!
+  upwind = 1.0
+!
+!       -----> Upwind coefficient.  If using upwind, this can be set
+!       -----> to 0 to use central differencing instead of upwinding.
+!
+!-----------------------------------------------------------------------
+! ****** DIFFUSION ******
+!-----------------------------------------------------------------------
+!
+  advance_diffusion = .false.
+!
+!       -----> Activate the diffusion advance.
+!
+  diffusion_coef_constant = 0.0
+!
+!       -----> Sets the default diffusion coefficient value (default units are in km^2/s)
+!
+  !diffusion_coef_constants = <List of comma-separated values equal to # of realizations>
+!
+!       -----> Uncomment and modify this line to set diffusion coefficient values across 
+!       -----> the chosen number of realizations.
+
+  diffusion_coef_factor = 7.43162901307967e-09 
+!
+!       -----> Sets the factor to multiply the final combined diffusion coefficient.
+!       -----> The default above is set such that diffusion_coef_constant is in km^2/s.
+!       -----> This is often set to O(1) when using HipFt to smooth magnetograms.
+!
+  diffusion_coef_grid = .false.
+!
+!       -----> Set this to add a grid-based diffusion coefficient.
+!       -----> This is set to "dt^2 + (dp*sin(t))^2" and is 
+!       -----> mostly used when smoothing magnetograms.
+!
+  diffusion_coef_filename = ' ' 
+!
+!       -----> Filename of HDF5 2D file containing diffusion coefficients over the grid.
+!       -----> This is added to the other forms of diffusion coefficients.
+!
+  diffusion_num_method = 3
+!
+!       -----> Set the numerical algorithm for computing diffusion.
+!       ----->      TIME                SPACE
+!       ----->   1: Forward Euler     + Central Differencing  O(1+2)
+!       ----->   2: RKL2              + Central Differencing  O(2+2)
+!       ----->   3: RKG2              + Central Differencing  O(2+2)
+!
+  diffusion_subcycles = 0
+!
+!       -----> Set the number of diffusion subcycles per flow step.
+!       -----> For RKX2 schemes with no advection, setting to 60 guarantees a robust solution.
+!       -----> For runs using both diffusion and advection, this can usually be set to 1.
+!       -----> Setting this to 0 (default) activates the PTL time step limit
+!       -----> which automatically subcycles the minimum needed amount.
+!
+  strang_splitting = .true.
+!
+!       -----> Set this to use second-order Strange splitting when using
+!       -----> both diffusion and advection (in an A-D-A sequence).
+!
+!-----------------------------------------------------------------------
+! ****** DATA ASSIMILATION ******
+!-----------------------------------------------------------------------
+!
+  assimilate_data = .false.
+!
+!       -----> Activate data assimilation.
+!
+  assimilate_data_map_list_filename = ' '
+!  
+!       -----> File name for CSV text file listing all data assimilation files and times.
+!       -----> See OFTpy for details on the format of the files and CSV text file.
+!       -----> Example CSV file:
+!                  target_datetime_utc,obs_datetime_utc,obs_jd,map_path
+!                  2011-01-01T00:00:00,2010-12-31T23:59:52,2455562.49991,2010/12/31/hmi_map_720s_20101231T235952.h5
+!                  2011-01-01T01:00:00,2011-01-01T00:59:52,2455562.54157,2011/01/01/hmi_map_720s_20110101T005952.h5
+!                  2011-01-01T02:00:00,2011-01-01T01:59:52,2455562.58324,2011/01/01/hmi_map_720s_20110101T015952.h5
+!  
+  assimilate_data_map_root_dir = '.'
+!
+!       -----> Path to the top directory where the data assimilation files are located.
+!
+  assimilate_data_custom_from_mu = .false.
+!
+!       -----> Set this to use the mu values in the data assimilation files (third layer)
+!       -----> to create a custom assimilation window/function of the form:
+!       -----> F = mu^p, F(mu < mu_limit)=0
+!
+  assimilate_data_lat_limit = 0.
+!
+!       -----> Set the default data assimilation latitude limit in degrees.
+!
+  !assimilate_data_lat_limits = <List of comma-separated values equal to # of realizations>
+!
+!       -----> Uncomment and modify these lines to set the data assimilation latitude limits
+!       -----> across realizations.
+!
+  assimilate_data_mu_power = 4.0
+!
+!       -----> Set the default power p of the custom assimilation window/function.
+!
+  !assimilate_data_mu_powers = <List of comma-separated values equal to # of realizations>
+!
+!       -----> Uncomment and modify these lines to set the power p of the custom
+!       -----> assimilation window/function across realizations.
+!
+  assimilate_data_mu_limit = 0.1
+!
+!       -----> Set the default value of the mu limit for the custom assimilation window/function.
+!
+  !assimilate_data_mu_limits = <List of comma-separated values equal to # of realizations>
+!
+!       -----> Uncomment and modify these lines to set the mu limit for the custom
+!       -----> assimilation window/function across realizations.
+!
+/
+!-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
+!
+! This is a good place to describe the run.
+!
+!-----------------------------------------------------------------------
+!-----------------------------------------------------------------------

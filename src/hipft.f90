@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='0.31.0'
-      character(*), parameter :: cdate='12/05/2023'
+      character(*), parameter :: cvers='1.0.0'
+      character(*), parameter :: cdate='12/07/2023'
 !
 end module
 !#######################################################################
@@ -480,12 +480,18 @@ module input_parameters
 !
       integer, private :: i
 !
+      logical :: verbose = .false.
+!
 ! ****** Resolution ********
 ! ****** These are autoset when reading in an initial_map_filename *****
 ! ****** They are currently only used for validation runs.
 !
       integer :: res_nt = 0
       integer :: res_np = 0
+!
+! ****** Validation Mode ********
+!
+      integer        :: validation_run = 0
 !
 ! ****** Initial map ********
 !
@@ -495,22 +501,18 @@ module input_parameters
 !
       character(512) :: output_map_root_filename = 'hipft_brmap'
       character(512) :: output_map_directory     = 'output_maps'
+      logical        :: output_flows = .false.
       character(512) :: output_flows_root_filename = 'hipft_flow'
       character(512) :: output_flows_directory     = 'output_flows'
       integer        :: output_map_idx_cadence = 0
       real(r_typ)    :: output_map_time_cadence = zero
       logical        :: output_map_2d = .true.
-      logical        :: output_flows = .false.
       real(r_typ)    :: output_history_time_cadence = zero
       logical        :: output_single_precision = .true.
 !
 ! ****** Number of realizations ********
 !
       integer        :: n_realizations = 1
-!
-! ****** Validation Mode ********
-!
-      integer        :: validation_run = 0
 !
 ! ****** Restarts ********
 !
@@ -524,7 +526,6 @@ module input_parameters
 !
 ! ****** Timestep ********
 !
-      real(r_typ)    :: dt_max_increase_fac = zero
       real(r_typ)    :: dt_min = 1.0e-15_r_typ
       real(r_typ)    :: dt_max = huge(one)
 !
@@ -671,8 +672,6 @@ module input_parameters
       real(r_typ) :: assimilate_data_mu_limit = 0.1_r_typ
       real(r_typ), dimension(MAX_REALIZATIONS) :: assimilate_data_mu_limits
       data (assimilate_data_mu_limits(i),i=1,MAX_REALIZATIONS) /MAX_REALIZATIONS*-1./
-!
-      logical :: verbose = .false.
 !
 end module
 !#######################################################################
@@ -1959,20 +1958,6 @@ subroutine load_initial_condition
         call write_2d_file((trim(output_map_root_filename)//'_final_analytic.h5') &
                             ,n1,n2,fout(:,:,1),s1,s2,ierr)
         deallocate (fout)
-!
-      elseif (validation_run .eq. 3) then
-!
-! ****** Make initial solution f and output.
-!
-        val2_g_width = 0.03_r_typ
-!
-        do k=1,n3
-          do j=1,n2
-            do i=1,n1
-              f_local(i,j,k) = -EXP((-(s2(j)-pi_two)**2)/val2_g_width)
-            enddo
-          enddo
-        enddo
 !
       end if
 !
@@ -3972,19 +3957,6 @@ subroutine update_timestep
           end if
         end if
 !
-! ****** Timestep increase limit.
-!
-        dt_mxup = huge(one)
-        if (dt_max_increase_fac.gt.0.and.dtime_old.gt.0.) then
-          dt_mxup = (one + dt_max_increase_fac)*dtime_old
-          if (verbose) write(*,*) '   UPDATE_TIMESTEP: dtime_dtmxup = ',dt_mxup
-        end if
-!
-        if (dt_mxup .lt. dtime_global) then
-          dtime_global = dt_mxup
-          dtime_reason = 'maxup'
-        end if
-!
 ! ****** Maximum allowed timestep.
 !
         if (dt_max .lt. dtime_global) then
@@ -4639,7 +4611,6 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
 !-----------------------------------------------------------------------
 !
 ! ****** Get the practical time step limit for diffusion.
-! ****** Version 2.
 !
 !-----------------------------------------------------------------------
 !
@@ -7730,7 +7701,7 @@ subroutine read_input_file
                output_flows_directory,                                 &
                output_history_time_cadence,                            &
                output_single_precision,                                &
-               dt_max_increase_fac,dt_min,dt_max,strang_splitting,     &
+               dt_min,dt_max,strang_splitting,                         &
                pole_flux_lat_limit,                                    &
                advance_flow,                                           &
                flow_vp_rigid_omega,                                    &
@@ -8283,6 +8254,10 @@ end subroutine
 !     for nested DC, DC within do, and do within DC.
 !     Note:  The NVIDIA compiler parallelizes the sequential do loops
 !     without asking, so this change has no effect on NVIDIA GPU runs.
+!
+! 12/07/2023, RC, Version 1.0.0:
+!   - Removed dt_max_increase_fac feature.
+!   - Updated version number to reflect first public release.
 !
 !-----------------------------------------------------------------------
 !
