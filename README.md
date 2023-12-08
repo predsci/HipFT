@@ -1,6 +1,6 @@
 <img width=500 src="hipft_logo.png" alt="HipFT" />
-# HipFT: High-performance Flux Transport 
-  
+# HipFT: High-performance Flux Transport #
+    
 [Predictive Science Inc.](https://www.predsci.com)  
  
 --------------------------------  
