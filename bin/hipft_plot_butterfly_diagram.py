@@ -357,6 +357,8 @@ def plot(args, xvec, yvec, data, oFile):
   if (len(yvec) == 0):
     yvec = np.array(range(0, len(data[:, 0])))
 
+  yvec = np.array([psimath.Math.t_rad_lat_deg(y_pt) for y_pt in yvec])
+
   # Set up data units:
   data = np.multiply(data, float(args.unit_fac))
   cbstr = args.unit_label
@@ -384,12 +386,8 @@ def plot(args, xvec, yvec, data, oFile):
     xmax = float(args.xmax)
   if args.ymin is not None:
     ymin = float(args.ymin)
-  else:
-    ymin = 0
   if args.ymax is not None:
     ymax = float(args.ymax)
-  else:
-    ymax = np.pi
 
   if (not args.smooth):
     xvec_plot2 = np.zeros(len(xvec_plot) + 1)
@@ -462,11 +460,11 @@ def plot(args, xvec, yvec, data, oFile):
   xdtmi = np.abs(xmax-xmin)/15.0
 
   if args.ymin is None:
-    plt.ylim(ymin=0)
+    plt.ylim(ymin=-90)
   if args.ymax is None:
-    plt.ylim(ymax=np.pi)
+    plt.ylim(ymax=90)
   if args.ymin is None and args.ymax is None:
-    plt.yticks((0, np.pi*0.25, np.pi*0.5, np.pi*0.75, np.pi),
+    plt.yticks((-90,-45, 0, 45, 90),
       ('-90', '-45', '0', '45', '90')
     )
     ydtmi = 5
@@ -862,10 +860,8 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
       plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
     if (args.xlabel):
       plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
-    elif (args.utstart): 
+    else: 
       plt.xlabel('Seconds since '+ datetime.utcfromtimestamp(utstartSecs).strftime('UT-%Y-%m-%dT%H:%M:%S'), {'fontsize': args.fsize, 'color': tc})
-    else:
-      plt.xlabel('Seconds', {'fontsize': args.fsize, 'color': tc})
     ax.tick_params(axis='x',labelsize=args.xlabelfsize)   
   elif args.xunits == "minutes":
     if (args.slant):
@@ -874,10 +870,8 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
       plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
     if (args.xlabel):
       plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
-    elif (args.utstart): 
+    else: 
       plt.xlabel('Minutes since '+ datetime.utcfromtimestamp(utstartSecs).strftime('UT-%Y-%m-%dT%H:%M:%S'), {'fontsize': args.fsize, 'color': tc})
-    else:
-      plt.xlabel('Minutes', {'fontsize': args.fsize, 'color': tc})
     ax.tick_params(axis='x',labelsize=args.xlabelfsize)  
   elif args.xunits == "hours":
     if (args.slant):
@@ -886,10 +880,8 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
       plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
     if (args.xlabel):
       plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
-    elif (args.utstart): 
+    else: 
       plt.xlabel('Hours since '+ datetime.utcfromtimestamp(utstartSecs).strftime('UT-%Y-%m-%dT%H:%M:%S'), {'fontsize': args.fsize, 'color': tc})
-    else:
-      plt.xlabel('Hours', {'fontsize': args.fsize, 'color': tc})
     ax.tick_params(axis='x',labelsize=args.xlabelfsize)  
   elif args.xunits == "days":
     if (args.slant):
@@ -898,10 +890,8 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
       plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
     if (args.xlabel):
       plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
-    elif (args.utstart): 
+    else: 
       plt.xlabel('Days since '+ datetime.utcfromtimestamp(utstartSecs).strftime('UT-%Y-%m-%dT%H:%M:%S'), {'fontsize': args.fsize, 'color': tc})
-    else:
-      plt.xlabel('Days', {'fontsize': args.fsize, 'color': tc})
     ax.tick_params(axis='x',labelsize=args.xlabelfsize)  
   elif args.xunits == "weeks":
     if (args.slant):
@@ -910,10 +900,8 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
       plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
     if (args.xlabel):
       plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
-    elif (args.utstart): 
+    else: 
       plt.xlabel('Weeks since '+ datetime.utcfromtimestamp(utstartSecs).strftime('UT-%Y-%m-%dT%H:%M:%S'), {'fontsize': args.fsize, 'color': tc})
-    else:
-      plt.xlabel('Weeks', {'fontsize': args.fsize, 'color': tc})
     ax.tick_params(axis='x',labelsize=args.xlabelfsize)  
   elif args.xunits == "cr":
     if (args.slant):
@@ -940,10 +928,8 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
       plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
     if (args.xlabel):
       plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
-    elif (args.utstart): 
+    else: 
       plt.xlabel('Years since '+ datetime.utcfromtimestamp(utstartSecs).strftime('UT-%Y-%m-%dT%H:%M:%S'), {'fontsize': args.fsize, 'color': tc})
-    else:
-      plt.xlabel('Years', {'fontsize': args.fsize, 'color': tc})
     ax.tick_params(axis='x',labelsize=args.xlabelfsize)  
   else:
     if (args.xlabel):
