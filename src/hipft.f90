@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.0.0'
-      character(*), parameter :: cdate='12/07/2023'
+      character(*), parameter :: cvers='1.0.1'
+      character(*), parameter :: cdate='12/20/2023'
 !
 end module
 !#######################################################################
@@ -1082,7 +1082,7 @@ subroutine initialize_mpi
 ! ****** for DC loops, while the omp device selection is used for
 ! ****** OpenMP target data movement directives.
 !
-      call omp_set_default_device (iprocsh)
+!$ call omp_set_default_device (iprocsh)
 !$acc set device_num(iprocsh)
 !
       wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
@@ -8258,6 +8258,10 @@ end subroutine
 ! 12/07/2023, RC, Version 1.0.0:
 !   - Removed dt_max_increase_fac feature.
 !   - Updated version number to reflect first public release.
+!
+! 12/20/2023, RC, Version 1.0.1:
+!   - Added a conditional compilation sentinel in front of the 
+!     OpenMP device selection call (!$) for added portability.
 !
 !-----------------------------------------------------------------------
 !
