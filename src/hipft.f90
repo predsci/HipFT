@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.0.1'
-      character(*), parameter :: cdate='12/20/2023'
+      character(*), parameter :: cvers='1.0.2'
+      character(*), parameter :: cdate='01/12/2024'
 !
 end module
 !#######################################################################
@@ -2137,7 +2137,7 @@ subroutine set_realization_parameters
 !
 ! ****** Set up AFT meridianal flow arrays.
 !
-      if (flow_dr_model.eq.1) then
+      if (flow_mf_model.eq.1) then
         allocate (flow_mf_coef_p1_rvec(nr))
         allocate (flow_mf_coef_p3_rvec(nr))
         allocate (flow_mf_coef_p5_rvec(nr))
@@ -8260,8 +8260,12 @@ end subroutine
 !   - Updated version number to reflect first public release.
 !
 ! 12/20/2023, RC, Version 1.0.1:
-!   - Added a conditional compilation sentinel in front of the 
+!   - Added a conditional compilation sentinel in front of the
 !     OpenMP device selection call (!$) for added portability.
+!
+! 01/12/2024, RC, Version 1.0.2:
+!   - Bug fix in analytic flows.  The MF flow parameter loading
+!     was under a conditional of activating DR flows, not MF.
 !
 !-----------------------------------------------------------------------
 !
