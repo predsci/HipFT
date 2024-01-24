@@ -7,13 +7,13 @@
        _    _ _       ______ _______ 
       | |  | (_)     |  ____|__   __|
       | |__| |_ _ __ | |__     | |
-      |  __  | | '_ |  __|    | |
+      |  __  | | '_ \|  __|    | |
       | |  | | | |_) | |       | |
       |_|  |_|_| .__/|_|       |_|
                | |
                |_|
  
-      Version: 0.29.0 of 11/22/2023
+      Version: 1.1.0 of 01/24/2024
  
   ****** HipFT: High Performance Flux Transport.
  
@@ -29,7 +29,7 @@
  
  
  Run started at: 
- 27 November  2023   2:45:33.263 PM      
+ 24 January   2024   1:56:20.770 PM      
  
  Setup complete.
  
@@ -120,8 +120,8 @@ Completed step:          4  Time:     4.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2535288034977740     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723271813738     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723271813738     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723271813739     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723271813739     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -196,8 +196,8 @@ Completed step:          8  Time:     8.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2532758898420834     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723260372444     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723260372444     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723260372443     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723260372443     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -215,8 +215,8 @@ Completed step:          9  Time:     9.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2532127008594836     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723256154024     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723256154024     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723256154023     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723256154023     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -329,8 +329,8 @@ Completed step:         15  Time:    15.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2528338978803382     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723251550446     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723251550446     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723251550447     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723251550447     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -386,8 +386,8 @@ Completed step:         18  Time:    18.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2526447089472958     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723249455650     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723249455650     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723249455649     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723249455649     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -462,8 +462,8 @@ Completed step:         22  Time:    22.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2523926772277636     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723241406100     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723241406100     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723241406099     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723241406099     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -538,8 +538,8 @@ Completed step:         26  Time:    26.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2521408969244986     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723233153344     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723233153344     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723233153345     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723233153345     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -652,8 +652,8 @@ Completed step:         32  Time:    32.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2517636973283767     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723218578262     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723218578262     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723218578261     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723218578261     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -690,8 +690,8 @@ Completed step:         34  Time:    34.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2516380895660970     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723216470104     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723216470104     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723216470103     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723216470103     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -728,8 +728,8 @@ Completed step:         36  Time:    36.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2515125444705021     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723209329912     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723209329912     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723209329913     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723209329913     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -747,8 +747,8 @@ Completed step:         37  Time:    37.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2514497954126499     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723207786443     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723207786443     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723207786442     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723207786442     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -899,8 +899,8 @@ Completed step:         45  Time:    45.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2509483661954707     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723188623557     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723188623557     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723188623558     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723188623558     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -994,8 +994,8 @@ Completed step:         50  Time:    50.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2506354808300031     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723173693723     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723173693723     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723173693724     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723173693724     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -1146,8 +1146,8 @@ Completed step:         58  Time:    58.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2501356754569346     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723160961938     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723160961938     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723160961937     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723160961937     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -1279,8 +1279,8 @@ Completed step:         65  Time:    65.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2496991634065452     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723149216786     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723149216786     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723149216787     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723149216787     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -1545,8 +1545,8 @@ Completed step:         79  Time:    79.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2488284232188958     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723122096840     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723122096840     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723122096839     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723122096839     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -1564,8 +1564,8 @@ Completed step:         80  Time:    80.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2487663438039068     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723124224809     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723124224809     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723124224808     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723124224808     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -1697,8 +1697,8 @@ Completed step:         87  Time:    87.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2483322213422359     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723110302850     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723110302850     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723110302849     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723110302849     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -1830,8 +1830,8 @@ Completed step:         94  Time:    94.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2478988564578192     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723098998918     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723098998918     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723098998919     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723098998919     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -1849,8 +1849,8 @@ Completed step:         95  Time:    95.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2478370089546509     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723094411866     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723094411866     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723094411867     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723094411867     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -2210,8 +2210,8 @@ Completed step:        114  Time:   114.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2466648336925178     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723061989120     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723061989120     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723061989119     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723061989119     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -2400,8 +2400,8 @@ Completed step:        124  Time:   124.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2460501277715425     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723038261574     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723038261574     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723038261573     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723038261573     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -2419,8 +2419,8 @@ Completed step:        125  Time:   125.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2459887414950755     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723037599139     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723037599139     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723037599140     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723037599140     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -2457,8 +2457,8 @@ Completed step:        127  Time:   127.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2458660148829158     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723036890244     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723036890244     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723036890243     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723036890243     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -2590,8 +2590,8 @@ Completed step:        134  Time:   134.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2454369537174776     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723028729961     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723028729961     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723028729960     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723028729960     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -2742,8 +2742,8 @@ Completed step:        142  Time:   142.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2449475148549106     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723012772886     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723012772886     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723012772885     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723012772885     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -2875,8 +2875,8 @@ Completed step:        149  Time:   149.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2445200565426207     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723010784123     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723010784123     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.723010784124     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.723010784124     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -3065,8 +3065,8 @@ Completed step:        159  Time:   159.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2439106954817819     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722980257619     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722980257619     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722980257618     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722980257618     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -3084,8 +3084,8 @@ Completed step:        160  Time:   160.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2438498429583580     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722978547840     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722978547840     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722978547839     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722978547839     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -3122,8 +3122,8 @@ Completed step:        162  Time:   162.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2437281834530353     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722971349466     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722971349466     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722971349465     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722971349465     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -3217,8 +3217,8 @@ Completed step:        167  Time:   167.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2434243001687591     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722974442437     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722974442437     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722974442436     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722974442436     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -3236,8 +3236,8 @@ Completed step:        168  Time:   168.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2433635689932078     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722969181179     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722969181179     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722969181178     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722969181178     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -3274,8 +3274,8 @@ Completed step:        170  Time:   170.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2432421520917771     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722967050333     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722967050333     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722967050332     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722967050332     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -3293,8 +3293,8 @@ Completed step:        171  Time:   171.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2431814663590040     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722962712979     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722962712979     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722962712978     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722962712978     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -3464,8 +3464,8 @@ Completed step:        180  Time:   180.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2426359756123285     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722954310977     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722954310977     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722954310976     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722954310976     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -3540,8 +3540,8 @@ Completed step:        184  Time:   184.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2423939282045054     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722939213470     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722939213470     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722939213471     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722939213471     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -3559,8 +3559,8 @@ Completed step:        185  Time:   185.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2423334540894022     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722936102852     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722936102852     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722936102851     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722936102851     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -3692,8 +3692,8 @@ Completed step:        192  Time:   192.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2419105575165324     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722926692687     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722926692687     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722926692686     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722926692686     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -3768,8 +3768,8 @@ Completed step:        196  Time:   196.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2416692337566148     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722915688794     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722915688794     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722915688793     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722915688793     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -3920,8 +3920,8 @@ Completed step:        204  Time:   204.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2411873082005767     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722904037150     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722904037150     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722904037149     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722904037149     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -3958,8 +3958,8 @@ Completed step:        206  Time:   206.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2410669770458536     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722905132443     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722905132443     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722905132444     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722905132444     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -3996,8 +3996,8 @@ Completed step:        208  Time:   208.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2409467059249946     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722901987917     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722901987917     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722901987916     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722901987916     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -4015,8 +4015,8 @@ Completed step:        209  Time:   209.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2408865928680491     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722899613870     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722899613870     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722899613869     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722899613869     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -4205,8 +4205,8 @@ Completed step:        219  Time:   219.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2402862865269743     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722890879805     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722890879805     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722890879806     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722890879806     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -4338,8 +4338,8 @@ Completed step:        226  Time:   226.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2398669624222318     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722877027153     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722877027153     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722877027154     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722877027154     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -4414,8 +4414,8 @@ Completed step:        230  Time:   230.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2396276772719009     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722871917500     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722871917500     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722871917499     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722871917499     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -4452,8 +4452,8 @@ Completed step:        232  Time:   232.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2395081242248309     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722872219742     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722872219742     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722872219741     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722872219741     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -4528,8 +4528,8 @@ Completed step:        236  Time:   236.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2392691970381151     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722864529594     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722864529594     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722864529593     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722864529593     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -4585,8 +4585,8 @@ Completed step:        239  Time:   239.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2390901580747347     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722855490204     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722855490204     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722855490205     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722855490205     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -4661,8 +4661,8 @@ Completed step:        243  Time:   243.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2388516478335268     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722855949618     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722855949618     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722855949617     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722855949617     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -4737,8 +4737,8 @@ Completed step:        247  Time:   247.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2386133755217740     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722849131844     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722849131844     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722849131845     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722849131845     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -4813,8 +4813,8 @@ Completed step:        251  Time:   251.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2383753409015590     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722836105282     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722836105282     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722836105283     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722836105283     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -5003,8 +5003,8 @@ Completed step:        261  Time:   261.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2377812926924552     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722829439820     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722829439820     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722829439821     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722829439821     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -5022,8 +5022,8 @@ Completed step:        262  Time:   262.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2377219693542277     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722827572305     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722827572305     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722827572304     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722827572304     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -5231,8 +5231,8 @@ Completed step:        273  Time:   273.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2370703886340481     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722807048560     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722807048560     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722807048559     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722807048559     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -5326,8 +5326,8 @@ Completed step:        278  Time:   278.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2367748062593064     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722800646766     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722800646766     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722800646765     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722800646765     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -5345,8 +5345,8 @@ Completed step:        279  Time:   279.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2367157340227642     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722799390134     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722799390134     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722799390133     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722799390133     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -5421,8 +5421,8 @@ Completed step:        283  Time:   283.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2364795924150724     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722793362646     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722793362646     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722793362647     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722793362647     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -5554,8 +5554,8 @@ Completed step:        290  Time:   290.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2360669112912087     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722785559758     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722785559758     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722785559757     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722785559757     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -5592,8 +5592,8 @@ Completed step:        292  Time:   292.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2359491347282668     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722781965541     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722781965541     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722781965542     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722781965542     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -5668,8 +5668,8 @@ Completed step:        296  Time:   296.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2357137578506767     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722779149452     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722779149452     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722779149453     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722779149453     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -5801,8 +5801,8 @@ Completed step:        303  Time:   303.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2353024131686870     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722768958801     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722768958801     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722768958802     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722768958802     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -5934,8 +5934,8 @@ Completed step:        310  Time:   310.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2348917863156114     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722761445973     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722761445973     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722761445972     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722761445972     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -6067,8 +6067,8 @@ Completed step:        317  Time:   317.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2344818760396888     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722754974947     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722754974947     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722754974948     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722754974948     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -6105,8 +6105,8 @@ Completed step:        319  Time:   319.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2343648902590498     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722751329717     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722751329717     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722751329718     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722751329718     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -6181,8 +6181,8 @@ Completed step:        323  Time:   323.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2341310937629583     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722746688299     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722746688299     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722746688300     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722746688300     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -6257,8 +6257,8 @@ Completed step:        327  Time:   327.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2338975304938566     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722733190275     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722733190275     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722733190274     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722733190274     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -6409,8 +6409,8 @@ Completed step:        335  Time:   335.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2334311027027958     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722722790845     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722722790845     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722722790844     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722722790844     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -6542,8 +6542,8 @@ Completed step:        342  Time:   342.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2330237414355920     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722720021746     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722720021746     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722720021747     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722720021747     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -6789,8 +6789,8 @@ Completed step:        355  Time:   355.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2322690984306360     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722710559748     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722710559748     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722710559747     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722710559747     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -6846,8 +6846,8 @@ Completed step:        358  Time:   358.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2320952973917071     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722705408507     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722705408507     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722705408506     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722705408506     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -6903,8 +6903,8 @@ Completed step:        361  Time:   361.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2319216264016521     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722702718224     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722702718224     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722702718225     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722702718225     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -7017,8 +7017,8 @@ Completed step:        367  Time:   367.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2315746741797528     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722693182908     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722693182908     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722693182907     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722693182907     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -7150,8 +7150,8 @@ Completed step:        374  Time:   374.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2311705525302207     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722683963863     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722683963863     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722683963864     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722683963864     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -7169,8 +7169,8 @@ Completed step:        375  Time:   375.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2311128784640080     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722682557320     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722682557320     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722682557319     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722682557319     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -7207,8 +7207,8 @@ Completed step:        377  Time:   377.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2309975734941293     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722681335893     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722681335893     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722681335892     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722681335892     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -7226,8 +7226,8 @@ Completed step:        378  Time:   378.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2309399425833942     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722679621216     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722679621216     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722679621215     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722679621215     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -7264,8 +7264,8 @@ Completed step:        380  Time:   380.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2308247238921008     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722679157618     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722679157618     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722679157617     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722679157617     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -7416,8 +7416,8 @@ Completed step:        388  Time:   388.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2303644236729649     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722673984892     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722673984892     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722673984893     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722673984893     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -7568,8 +7568,8 @@ Completed step:        396  Time:   396.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2299050413518340     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722670779149     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722670779149     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722670779148     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722670779148     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -7644,8 +7644,8 @@ Completed step:        400  Time:   400.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2296756938307375     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722668773601     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722668773601     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722668773600     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722668773600     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -7720,8 +7720,8 @@ Completed step:        404  Time:   404.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2294465750991428     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722658534086     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722658534086     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722658534087     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722658534087     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -7834,8 +7834,8 @@ Completed step:        410  Time:   410.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2291033254805751     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722640106615     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722640106615     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722640106616     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722640106616     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -7948,8 +7948,8 @@ Completed step:        416  Time:   416.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2287605893521483     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722642230596     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722642230596     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722642230595     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722642230595     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -8043,8 +8043,8 @@ Completed step:        421  Time:   421.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2284753676073490     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722643685015     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722643685015     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722643685016     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722643685016     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -8100,8 +8100,8 @@ Completed step:        424  Time:   424.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2283044052841575     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722635935913     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722635935913     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722635935914     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722635935914     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -8138,8 +8138,8 @@ Completed step:        426  Time:   426.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2281905014766550     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722638224525     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722638224525     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722638224524     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722638224524     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -8195,8 +8195,8 @@ Completed step:        429  Time:   429.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2280197523089535     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722633526415     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722633526415     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722633526414     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722633526414     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -8366,8 +8366,8 @@ Completed step:        438  Time:   438.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2275082710166859     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722619514855     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722619514855     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722619514854     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722619514854     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -8461,8 +8461,8 @@ Completed step:        443  Time:   443.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2272246106598032     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722616859923     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722616859923     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722616859922     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722616859922     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -8499,8 +8499,8 @@ Completed step:        445  Time:   445.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2271112455683584     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722617947303     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722617947303     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722617947304     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722617947304     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -8860,8 +8860,8 @@ Completed step:        464  Time:   464.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2260370940728740     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722603416042     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722603416042     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722603416043     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722603416043     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -8936,8 +8936,8 @@ Completed step:        468  Time:   468.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2258116050712801     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722596515432     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722596515432     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722596515431     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722596515431     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -8955,8 +8955,8 @@ Completed step:        469  Time:   469.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2257552679762182     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722596108780     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722596108780     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722596108779     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722596108779     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -9069,8 +9069,8 @@ Completed step:        475  Time:   475.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2254175404439231     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722590106360     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722590106360     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722590106361     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722590106361     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -9164,8 +9164,8 @@ Completed step:        480  Time:   480.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2251364868050314     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722591020367     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722591020367     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722591020368     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722591020368     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -9202,8 +9202,8 @@ Completed step:        482  Time:   482.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2250241634912465     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722585236292     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722585236292     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722585236293     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722585236293     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -9335,8 +9335,8 @@ Completed step:        489  Time:   489.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2246314730127029     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722588780887     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722588780887     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722588780886     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722588780886     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -9392,8 +9392,8 @@ Completed step:        492  Time:   492.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2244633869421646     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722589699911     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722589699911     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722589699910     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722589699910     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -9715,8 +9715,8 @@ Completed step:        509  Time:   509.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2235132721589262     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722571224361     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722571224361     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722571224362     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722571224362     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -9848,8 +9848,8 @@ Completed step:        516  Time:   516.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2231232183113021     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722559763245     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722559763245     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722559763246     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722559763246     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -9905,8 +9905,8 @@ Completed step:        519  Time:   519.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2229562608156418     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722559773816     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722559773816     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722559773817     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722559773817     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -9943,8 +9943,8 @@ Completed step:        521  Time:   521.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2228450252296181     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722549891033     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722549891033     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722549891034     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722549891034     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -10114,8 +10114,8 @@ Completed step:        530  Time:   530.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2223451514535419     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722561954557     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722561954557     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722561954558     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722561954558     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -10133,8 +10133,8 @@ Completed step:        531  Time:   531.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2222896791839925     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722557039761     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722557039761     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722557039762     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722557039762     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -10171,8 +10171,8 @@ Completed step:        533  Time:   533.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2221787761597560     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722551039846     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722551039846     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722551039845     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722551039845     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -10456,8 +10456,8 @@ Completed step:        548  Time:   548.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2213487652176181     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722549588462     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722549588462     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722549588461     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722549588461     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -10475,8 +10475,8 @@ Completed step:        549  Time:   549.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2212935415303251     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722551080976     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722551080976     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722551080975     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722551080975     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -10494,8 +10494,8 @@ Completed step:        550  Time:   550.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2212383316206329     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722548776230     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722548776230     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722548776231     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722548776231     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -10874,8 +10874,8 @@ Completed step:        570  Time:   570.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2201370213983350     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722529619426     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722529619426     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722529619425     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722529619425     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -10912,8 +10912,8 @@ Completed step:        572  Time:   572.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2200271923476254     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722528549379     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722528549379     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722528549378     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722528549378     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -11102,8 +11102,8 @@ Completed step:        582  Time:   582.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2194788684637757     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722523345294     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722523345294     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722523345293     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722523345293     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -11292,8 +11292,8 @@ Completed step:        592  Time:   592.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2189319110258783     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722523723354     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722523723354     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722523723353     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722523723353     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -11311,8 +11311,8 @@ Completed step:        593  Time:   593.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2188772903054629     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722524974103     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722524974103     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722524974104     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722524974104     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -11330,8 +11330,8 @@ Completed step:        594  Time:   594.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2188226832123001     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722521766603     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722521766603     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722521766602     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722521766602     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -11349,8 +11349,8 @@ Completed step:        595  Time:   595.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2187680897433385     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722515866614     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722515866614     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722515866613     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722515866613     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -11444,8 +11444,8 @@ Completed step:        600  Time:   600.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2184953266298224     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722512849153     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722512849153     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722512849152     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722512849152     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -11520,8 +11520,8 @@ Completed step:        604  Time:   604.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2182773610172416     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722518975898     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722518975898     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722518975897     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722518975897     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -11634,8 +11634,8 @@ Completed step:        610  Time:   610.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2179508202213595     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722513939209     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722513939209     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722513939208     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722513939208     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -11691,8 +11691,8 @@ Completed step:        613  Time:   613.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2177877330557113     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722505450966     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722505450966     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722505450965     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722505450965     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -11900,8 +11900,8 @@ Completed step:        624  Time:   624.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2171907901419405     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722496447250     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722496447250     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722496447251     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722496447251     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -12014,8 +12014,8 @@ Completed step:        630  Time:   630.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2168658748260715     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722490965490     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722490965490     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722490965489     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722490965489     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -12128,8 +12128,8 @@ Completed step:        636  Time:   636.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2165414455747077     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722488929331     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722488929331     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722488929330     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722488929330     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -12185,8 +12185,8 @@ Completed step:        639  Time:   639.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2163794129954584     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722492446008     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722492446008     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722492446007     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722492446007     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -12204,8 +12204,8 @@ Completed step:        640  Time:   640.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2163254290830482     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722495577687     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722495577687     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722495577686     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722495577686     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -12261,8 +12261,8 @@ Completed step:        643  Time:   643.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2161635581418762     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722495780911     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722495780911     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722495780912     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722495780912     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -12432,8 +12432,8 @@ Completed step:        652  Time:   652.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2156786716927334     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722481720933     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722481720933     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722481720932     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722481720932     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -12489,8 +12489,8 @@ Completed step:        655  Time:   655.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2155172846980745     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722484751222     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722484751222     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722484751223     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722484751223     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -12527,8 +12527,8 @@ Completed step:        657  Time:   657.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2154097604632930     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722484220899     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722484220899     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722484220898     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722484220898     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -12546,8 +12546,8 @@ Completed step:        658  Time:   658.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2153560184640195     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722484818910     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722484818910     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722484818909     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722484818909     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -12603,8 +12603,8 @@ Completed step:        661  Time:   661.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2151948729004295     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722488683882     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722488683882     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722488683881     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722488683881     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -12622,8 +12622,8 @@ Completed step:        662  Time:   662.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2151411845126446     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722488566930     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722488566930     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722488566929     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722488566929     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -12660,8 +12660,8 @@ Completed step:        664  Time:   664.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2150338479167019     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722486927820     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722486927820     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722486927819     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722486927819     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -12717,8 +12717,8 @@ Completed step:        667  Time:   667.000000 /   672.000000  dt:     1.000000 
   
     GET_DTIME_DIFFUSION_PTL: dtime_in          =     0.000000000000000     
     GET_DTIME_DIFFUSION_PTL: MAX(|F|)          =    0.2148729434224932     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722486018994     
-    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722486018994     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep      =     3806.722486018995     
+    GET_DTIME_DIFFUSION_PTL: PTL timestep used =     3806.722486018995     
   
     LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***
     LOAD_STS:  Super-time-step used              =     1.000000000000000     
@@ -12813,7 +12813,7 @@ Completed step:        672  Time:   672.000000 /   672.000000  dt:     1.000000 
  Final 2D data written out to hipft_brmap_final.h5
  
  Run completed at:
- 27 November  2023   2:45:35.568 PM      
+ 24 January   2024   1:56:23.077 PM      
  
 ----------------------------------------
  
@@ -12822,16 +12822,16 @@ Completed step:        672  Time:   672.000000 /   672.000000  dt:     1.000000 
  
                                   Avg         Min         Max      S. Dev
                                   ---         ---         ---      ------
- Wall clock time:               2.373       2.373       2.373       0.000
- --> Setup:                     0.067       0.067       0.067       0.000
+ Wall clock time:               2.390       2.390       2.390       0.000
+ --> Setup:                     0.032       0.032       0.032       0.000
  --> Update:                    0.001       0.001       0.001       0.000
- --> Flux transport:            1.856       1.856       1.856       0.000
+ --> Flux transport:            1.858       1.858       1.858       0.000
      --> Advecton:              0.000       0.000       0.000       0.000
-     --> Diffusion              1.856       1.856       1.856       0.000
+     --> Diffusion              1.858       1.858       1.858       0.000
      --> Source:                0.000       0.000       0.000       0.000
- --> Analysis:                  0.833       0.833       0.833       0.000
- --> I/O:                       0.029       0.029       0.029       0.000
- --> MPI overhead:              0.005       0.005       0.005       0.000
+ --> Analysis:                  0.834       0.834       0.834       0.000
+ --> I/O:                       0.027       0.027       0.027       0.000
+ --> MPI overhead:              0.056       0.056       0.056       0.000
  
 ----------------------------------------
  

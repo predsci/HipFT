@@ -13,7 +13,7 @@
                | |
                |_|
  
-      Version: 0.30.0 of 11/28/2023
+      Version: 1.1.0 of 01/24/2024
  
   ****** HipFT: High Performance Flux Transport.
  
@@ -29,7 +29,7 @@
  
  
  Run started at: 
- 28 November  2023   1:56:24.693 PM      
+ 24 January   2024   1:56:27.623 PM      
  
  Setup complete.
  
@@ -153,7 +153,7 @@ Completed step:          1  Time:  8760.000000 /  8760.000000  dt:  8760.000000 
  Final 2D data written out to br_smoothed_final.h5
  
  Run completed at:
- 28 November  2023   1:56:28.917 PM      
+ 24 January   2024   1:56:31.832 PM      
  
 ----------------------------------------
  
@@ -162,16 +162,16 @@ Completed step:          1  Time:  8760.000000 /  8760.000000  dt:  8760.000000 
  
                                   Avg         Min         Max      S. Dev
                                   ---         ---         ---      ------
- Wall clock time:               4.297       4.297       4.297       0.000
- --> Setup:                     0.073       0.073       0.073       0.000
+ Wall clock time:               4.288       4.288       4.288       0.000
+ --> Setup:                     0.028       0.028       0.028       0.000
  --> Update:                    0.000       0.000       0.000       0.000
- --> Flux transport:            4.217       4.217       4.217       0.000
+ --> Flux transport:            4.201       4.201       4.201       0.000
      --> Advecton:              0.000       0.000       0.000       0.000
-     --> Diffusion              4.217       4.217       4.217       0.000
+     --> Diffusion              4.201       4.201       4.201       0.000
      --> Source:                0.000       0.000       0.000       0.000
  --> Analysis:                  0.003       0.003       0.003       0.000
- --> I/O:                       0.008       0.008       0.008       0.000
- --> MPI overhead:              0.000       0.000       0.000       0.000
+ --> I/O:                       0.011       0.011       0.011       0.000
+ --> MPI overhead:              0.051       0.051       0.051       0.000
  
 ----------------------------------------
  

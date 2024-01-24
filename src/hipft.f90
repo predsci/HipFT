@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.0.2'
-      character(*), parameter :: cdate='01/12/2024'
+      character(*), parameter :: cvers='1.1.0'
+      character(*), parameter :: cdate='01/24/2024'
 !
 end module
 !#######################################################################
@@ -7147,10 +7147,10 @@ subroutine advection_operator_weno3 (ftemp,aop)
         B0p = four*(D_C_CPt(j  )*(LP(j+1,k,i) - LP(j  ,k,i)))**2
         B1p = four*(D_C_MCt(j  )*(LP(j  ,k,i) - LP(j-1,k,i)))**2
 !
-        w0m = D_P_Tt(j-1) /(weno_eps + B0m)**2
-        w1m = D_MC_Tt(j-1)/(weno_eps + B1m)**2
-        w0p = D_M_Tt(j)   /(weno_eps + B0p)**2
-        w1p = D_CP_Tt(j)  /(weno_eps + B1p)**2
+        w0m = D_P_Tt(j-1) /(dt(j-1) + B0m)**2
+        w1m = D_MC_Tt(j-1)/(dt(j-1) + B1m)**2
+        w0p = D_M_Tt(j)   /(dt(j  ) + B0p)**2
+        w1p = D_CP_Tt(j)  /(dt(j  ) + B1p)**2
 !
         wm_sum = w0m + w1m
         wp_sum = w0p + w1p
@@ -7227,10 +7227,10 @@ subroutine advection_operator_weno3 (ftemp,aop)
         B0p = four*(D_C_CPp(k  )*(LP(j,k+1,i) - LP(j,k  ,i)))**2
         B1p = four*(D_C_MCp(k  )*(LP(j,k  ,i) - LP(j,k-1,i)))**2
 !
-        w0m = D_P_Tp (k-1)/(weno_eps + B0m)**2
-        w1m = D_MC_Tp(k-1)/(weno_eps + B1m)**2
-        w0p = D_M_Tp (k)  /(weno_eps + B0p)**2
-        w1p = D_CP_Tp(k)  /(weno_eps + B1p)**2
+        w0m = D_P_Tp (k-1)/(dp(k-1) + B0m)**2
+        w1m = D_MC_Tp(k-1)/(dp(k-1) + B1m)**2
+        w0p = D_M_Tp (k)  /(dp(k  ) + B0p)**2
+        w1p = D_CP_Tp(k)  /(dp(k  ) + B1p)**2
 !
         wm_sum = w0m + w1m
         wp_sum = w0p + w1p
@@ -8266,6 +8266,13 @@ end subroutine
 ! 01/12/2024, RC, Version 1.0.2:
 !   - Bug fix in analytic flows.  The MF flow parameter loading
 !     was under a conditional of activating DR flows, not MF.
+!
+! 01/24/2024, RC+MS, Version 1.1.0:
+!   - Updated WENO3 scheme to use cell spacing for the smoother eps.
+!     This increases the order of accuracy from 2nd to 3rd in 
+!     smooth regions near extrema 
+!     [ See Cravero & Semplice J Sci Comput (2016) 67:1219-1246 ]
+!     [ DOI: 10.1007/s10915-015-0123-3                          ]
 !
 !-----------------------------------------------------------------------
 !

@@ -17,7 +17,6 @@
  OUTPUT_FLOWS_DIRECTORY = output_flows                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    ,
  OUTPUT_HISTORY_TIME_CADENCE =    0.000000000000000     ,
  OUTPUT_SINGLE_PRECISION =  F,
- DT_MAX_INCREASE_FAC =    0.000000000000000     ,
  DT_MIN =   1.0000000000000001E-015,
  DT_MAX =    1.000000000000000     ,
  STRANG_SPLITTING =  T,
