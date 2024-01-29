@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.1.0'
-      character(*), parameter :: cdate='01/24/2024'
+      character(*), parameter :: cvers='1.2.0'
+      character(*), parameter :: cdate='01/29/2024'
 !
 end module
 !#######################################################################
@@ -1932,6 +1932,26 @@ subroutine load_initial_condition
 !$omp target enter data map(to:fval_u0)
 !
       elseif (validation_run .eq. 2) then
+!
+! ****** Make initial solution f and output.
+!
+        val2_g_width = 0.03_r_typ
+!
+        do k=1,n3
+          do j=1,n2
+            do i=1,n1
+              f_local(i,j,k) = -EXP(-(s2(j) - pi_four     )**2/val2_g_width - &
+                                     (s1(i) - pi_two      )**2/val2_g_width)  &
+                               +EXP(-(s2(j) - pi_four     )**2/val2_g_width - &
+                                     (s1(i) - threepi_two )**2/val2_g_width)
+            enddo
+          enddo
+        enddo
+!
+        call write_2d_file((trim(output_map_root_filename)//'_final_analytic.h5') &
+                            ,n1,n2,f_local(:,:,1),s1,s2,ierr)
+!
+      elseif (validation_run .eq. 3) then
 !
 ! ****** Make initial solution f and output.
 !
@@ -6685,6 +6705,7 @@ subroutine get_flow_dtmax (dtmaxflow)
       do concurrent (i=1:nr,k=2:npm-1,j=2:ntm-1) reduce(min:dtmax)
         kdotv = MAX(ABS(vt(j,k,i)),ABS(vt(j+1,k,i)))*dt_i(j) &
               + MAX(ABS(vp(j,k,i)),ABS(vp(j,k+1,i)))*st_i(j)*dp_i(k)
+!        deltat = (one/sqrt(two))/MAX(kdotv,small_value)
         deltat = half/MAX(kdotv,small_value)
         dtmax = MIN(dtmax,deltat)
       enddo
@@ -8273,6 +8294,12 @@ end subroutine
 !     smooth regions near extrema 
 !     [ See Cravero & Semplice J Sci Comput (2016) 67:1219-1246 ]
 !     [ DOI: 10.1007/s10915-015-0123-3                          ]
+!
+! 01/24/2024, RC+MS, Version 1.2.0:
+!   - Made validation run 2 be 3, and set 2 to be blob condition
+!     for initial and final output (for phi rigid rotation tests).
+!     Validation 3 flips the initial solution for use with 
+!     symmetric theta blob tests.
 !
 !-----------------------------------------------------------------------
 !
