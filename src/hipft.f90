@@ -1815,8 +1815,8 @@ subroutine load_initial_condition
 !$omp target update from(f_local,fval_u0)
 !$omp target exit data map(delete:f_local,fval_u0,f_tmp2d,s1,s2)
 !
-        fval_u0(:,:,:) = 1000.0_r_typ*(f_local(:,:,:) +               &
-                              sqrt(14.0_r_typ/11.0_r_typ)*fval_u0(:,:,:))
+        fval_u0(:,:,:) = f_local(:,:,:) +                             &
+                         sqrt(14.0_r_typ/11.0_r_typ)*fval_u0(:,:,:)
 !
         if (output_map_2d.and.n_realizations.eq.1) then
           call write_2d_file(                                         &
