@@ -13,7 +13,7 @@
                | |
                |_|
  
-      Version: 1.1.0 of 01/24/2024
+      Version: 1.2.0 of 01/29/2024
  
   ****** HipFT: High Performance Flux Transport.
  
@@ -29,7 +29,7 @@
  
  
  Run started at: 
- 24 January   2024   1:56:27.623 PM      
+ 29 January   2024   4:30:16.945 PM      
  
  Setup complete.
  
@@ -153,7 +153,7 @@ Completed step:          1  Time:  8760.000000 /  8760.000000  dt:  8760.000000 
  Final 2D data written out to br_smoothed_final.h5
  
  Run completed at:
- 24 January   2024   1:56:31.832 PM      
+ 29 January   2024   4:30:21.158 PM      
  
 ----------------------------------------
  
@@ -162,16 +162,16 @@ Completed step:          1  Time:  8760.000000 /  8760.000000  dt:  8760.000000 
  
                                   Avg         Min         Max      S. Dev
                                   ---         ---         ---      ------
- Wall clock time:               4.288       4.288       4.288       0.000
- --> Setup:                     0.028       0.028       0.028       0.000
+ Wall clock time:               4.282       4.282       4.282       0.000
+ --> Setup:                     0.029       0.029       0.029       0.000
  --> Update:                    0.000       0.000       0.000       0.000
- --> Flux transport:            4.201       4.201       4.201       0.000
+ --> Flux transport:            4.204       4.204       4.204       0.000
      --> Advecton:              0.000       0.000       0.000       0.000
-     --> Diffusion              4.201       4.201       4.201       0.000
+     --> Diffusion              4.204       4.204       4.204       0.000
      --> Source:                0.000       0.000       0.000       0.000
  --> Analysis:                  0.003       0.003       0.003       0.000
- --> I/O:                       0.011       0.011       0.011       0.000
- --> MPI overhead:              0.051       0.051       0.051       0.000
+ --> I/O:                       0.010       0.010       0.010       0.000
+ --> MPI overhead:              0.041       0.041       0.041       0.000
  
 ----------------------------------------
  

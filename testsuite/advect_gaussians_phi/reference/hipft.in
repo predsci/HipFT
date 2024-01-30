@@ -1,0 +1,48 @@
+&hipft_input_parameters
+!
+  verbose = .true.
+  output_single_precision = .false.
+!
+  res_nt = 180
+  res_np = 360
+!
+  validation_run = 2
+!
+  time_end = 672.0
+  dt_max = 1.0
+!
+! ****** Activate the flow advance.
+!
+  advance_flow = .true.
+!
+! ****** Add a rigid rotation vp velocity (km/s) of omega*sin(theta).
+!
+  flow_vp_rigid_omega = 1.8076624395655556
+!
+/
+!
+! Gaussians Advection
+! -------------------------------
+!
+! This run uses the built-in analytic validation mode of HipFT
+! to run two Guassians.
+!
+! A ridged rotation velocity in the phi direction is set to 
+! rotate the solution exactly one revolution.
+!
+! Therefore, the final output should match the initial condition.
+!
+! When the run is completed, you can plot the code's final
+! output and the outputted analytic solution with:
+!
+!    ${HIPFT_HOME}/bin/plot2d -tp -ll -finegrid -cmin -1000 -cmax 1000 hipft_brmap_final.h5
+!    ${HIPFT_HOME}/bin/plot2d -tp -ll -finegrid -cmin -1000 -cmax 1000 hipft_brmap_final_analytic.h5 
+!
+! To see the validation, run the history plotter as:
+!
+!    ${HIPFT_HOME}/bin/hipft_plot_histories.py -valrun
+!
+! The resulting history_val.png will show the error increasing and then decreasing 
+! (since the solution only matches the initial condition after a full rotation.)
+!
+

@@ -74,13 +74,12 @@ hipftexe="hipft"
 mpicall="mpirun -np"
 
 AVAIL_TEST_RUNS_LIST="
+advect_gaussians_phi
 diffuse_soccer
 diffuse_advect_soccer
 diffuse_dipole
 diffuse_advect_atten_map_1cr
 "
-#advect_t_blob
-#advect_p_blob
 
 TEST_RUNS_LIST=${AVAIL_TEST_RUNS_LIST}
 

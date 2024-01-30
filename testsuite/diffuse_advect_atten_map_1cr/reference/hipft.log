@@ -13,7 +13,7 @@
                | |
                |_|
  
-      Version: 1.1.0 of 01/24/2024
+      Version: 1.2.0 of 01/29/2024
  
   ****** HipFT: High Performance Flux Transport.
  
@@ -29,7 +29,7 @@
  
  
  Run started at: 
- 24 January   2024   1:56:32.149 PM      
+ 29 January   2024   4:30:21.472 PM      
  
  Setup complete.
  
@@ -64558,7 +64558,7 @@ Completed step:       2688  Time:   672.000000 /   672.000000  dt:     0.250000 
  Final 2D data written out to hipft_brmap_final.h5
  
  Run completed at:
- 24 January   2024   1:56:42.217 PM      
+ 29 January   2024   4:30:31.493 PM      
  
 ----------------------------------------
  
@@ -64567,16 +64567,16 @@ Completed step:       2688  Time:   672.000000 /   672.000000  dt:     0.250000 
  
                                   Avg         Min         Max      S. Dev
                                   ---         ---         ---      ------
- Wall clock time:              10.139      10.139      10.139       0.000
- --> Setup:                     0.035       0.035       0.035       0.000
- --> Update:                    0.593       0.593       0.593       0.000
- --> Flux transport:            9.422       9.422       9.422       0.000
-     --> Advecton:              7.209       7.209       7.209       0.000
-     --> Diffusion              2.213       2.213       2.213       0.000
+ Wall clock time:              10.108      10.108      10.108       0.000
+ --> Setup:                     0.037       0.037       0.037       0.000
+ --> Update:                    0.589       0.589       0.589       0.000
+ --> Flux transport:            9.378       9.378       9.378       0.000
+     --> Advecton:              7.189       7.189       7.189       0.000
+     --> Diffusion              2.189       2.189       2.189       0.000
      --> Source:                0.000       0.000       0.000       0.000
- --> Analysis:                  1.007       1.007       1.007       0.000
- --> I/O:                       0.040       0.040       0.040       0.000
- --> MPI overhead:              0.052       0.052       0.052       0.000
+ --> Analysis:                  0.997       0.997       0.997       0.000
+ --> I/O:                       0.044       0.044       0.044       0.000
+ --> MPI overhead:              0.066       0.066       0.066       0.000
  
 ----------------------------------------
  
