@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.2.0'
-      character(*), parameter :: cdate='01/29/2024'
+      character(*), parameter :: cvers='1.2.1'
+      character(*), parameter :: cdate='02/02/2024'
 !
 end module
 !#######################################################################
@@ -531,7 +531,7 @@ module input_parameters
 !
 ! ****** General algorithm options.
 !
-      logical :: strang_splitting = .true.
+      logical :: strang_splitting = .false.
 !
 ! ****** Analysis options.
 !
@@ -8300,6 +8300,13 @@ end subroutine
 !     for initial and final output (for phi rigid rotation tests).
 !     Validation 3 flips the initial solution for use with 
 !     symmetric theta blob tests.
+!
+! 02/02/2024, RC, Version 1.2.1:
+!   - Changed defaults to disable Strang splitting.  In our tests,
+!     the temporal error is so much smaller than the spatial errors,
+!     that the reduced splitting error with Strang is not noticable,
+!     and so not worth the extra computation.  It can be turned on
+!     in the input file if desired.
 !
 !-----------------------------------------------------------------------
 !

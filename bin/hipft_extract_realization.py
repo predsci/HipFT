@@ -45,7 +45,7 @@ def main():
         rlist = np.array(arg_dict['rlist'].split(','))
         rlist = rlist.astype(float)
     else:
-        rlist = np.array(rvec)
+        rlist = np.array(rvec)+1
 
     for i in rlist:
         j = int(i)
