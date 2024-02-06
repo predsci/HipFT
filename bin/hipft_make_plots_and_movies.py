@@ -108,7 +108,7 @@ def run(args):
           twoD=False
       if twoD:
         fileOut = os.path.basename(file).replace('.h5','.png')
-        plot2d(TITLE,args,file,fileOut):
+        plot2d(TITLE,args,file,fileOut)
       elif (args.s == "all"):  
         for i in range(1,dim3):
           extractANDplot(TITLE,args,file, i)
