@@ -109,9 +109,6 @@ def run(args):
       if twoD:
         fileOut = os.path.basename(file).replace('.h5','.png')
         plot2d(TITLE,args,file,fileOut)
-      elif (args.s == "all"):  
-        for i in range(1,dim3):
-          extractANDplot(TITLE,args,file, i)
       elif (args.s):
         if (args.s > dim3):
           print("Slice requested is outside range defaulting to last slice : "+ str(dim3))
@@ -119,7 +116,8 @@ def run(args):
         else:
           extractANDplot(TITLE,args,file, args.s)
       else:
-        extractANDplot(TITLE,args,file, 1)
+        for i in range(1,dim3):
+          extractANDplot(TITLE,args,file, i)
   if os.path.exists("tmp_file.h5"):
     os.remove("tmp_file.h5")
 
@@ -135,16 +133,14 @@ def run(args):
       if filetmp.endswith('.png'):
         linkFile(file,filetmp)
     ffmpefMovie(args,odir,args.outfile)
-  elif (args.s == "all"):
-    for i in range(1,dim3):
-      makeMovie(args,odir,file,i)
   elif (args.s):
     if (args.s > dim3):
       makeMovie(args,odir,file,dim3)
     else:
       makeMovie(args,odir,file,args.s)
   else:
-    makeMovie(args,odir,file,1)
+    for i in range(1,dim3):
+      makeMovie(args,odir,file,i)
   for filetmp in os.listdir(args.datadir+'/plots/tmp'):
     os.remove(filetmp)
   os.chdir(args.datadir+'/plots')
