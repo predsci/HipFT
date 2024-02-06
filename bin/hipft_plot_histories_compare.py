@@ -18,11 +18,6 @@ def argParsing():
     default='',
     required=False)
 
-  parser.add_argument('-name',
-    help='Name of the set of plots',
-    type=str,
-    default='')
-
   parser.add_argument('-samples',
     help='Number of points to plot, this helps with larger files (default:all)',
     default=-1)
@@ -30,7 +25,8 @@ def argParsing():
   parser.add_argument('-histfiles',
     help='A comma separated list of history files',
     type=str,
-    required=True)
+    required=False,
+    default=' ')
 
   parser.add_argument('-labels',
     help='A comma separated list of labels to display in the plots for each run (default:"r1","r2",...)',
@@ -186,6 +182,14 @@ def run(args):
       def_label = 'r'
       for i,dire in enumerate(hist_list):
           label_list.append(def_label+str(i+1))
+
+  if arg_dict['histfiles'] == ' ':
+    hist_list=[]
+    wDir=os.getcwd()
+    for file in os.listdir(wDir):
+      if "hipft_history_sol_r" in file and file.endswith(".out"):
+        hist_list.append(wDir+'/'+file)
+
 
   LABEL_LEN = len(label_list)
   # Validate the list arguments:

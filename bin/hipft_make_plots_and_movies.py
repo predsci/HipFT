@@ -3,6 +3,8 @@ import argparse
 import os
 import h5py
 
+# Version 2.0.0
+
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt Movie Maker.')
 
@@ -104,32 +106,20 @@ def run(args):
         if 'dim3' in list(f1.keys()):
           dim3 = f1['dim3'].shape[0]
           twoD=False
-
       if twoD:
-        os.system('plot2d -title "'+ TITLE +'" -cmin '+ str(args.cmin) +' -cmax '+ str(args.cmax) +' -dpi ' + str(args.dpi) \
-          +' -tp -ll -finegrid -unit_label '+ args.label + " "+ file +' -o "'+ os.path.basename(file).replace('.h5','.png'+'"'))
+        fileOut = os.path.basename(file).replace('.h5','.png')
+        plot2d(TITLE,args,file,fileOut):
       elif (args.s == "all"):  
         for i in range(1,dim3):
-          os.system('hipft_extract_realization.py '+ file +' -r '+ i +' -o tmp_file.h5')
-          fslice="%06d" % (i)
-          os.system('plot2d -title "'+ TITLE +'" -cmin '+ str(args.cmin) +' -cmax '+ str(args.cmax) +' -dpi ' + str(args.dpi) \
-            +' -tp -ll -finegrid -unit_label '+ args.label +' tmp_file.h5 -o "'+ os.path.basename(file).replace('.h5','') +'_r' + str(fslice) +'.png"')
+          extractANDplot(TITLE,args,file, i)
       elif (args.s):
         if (args.s > dim3):
           print("Slice requested is outside range defaulting to last slice : "+ str(dim3))
-          os.system('hipft_extract_realization.py '+ file +' -r '+ str(dim3) +' -o tmp_file.h5')
-          fslice="%06d" % (dim3)
-          os.system('plot2d -title "'+ TITLE +'" -cmin '+ str(args.cmin) +' -cmax '+ str(args.cmax) +' -dpi ' + str(args.dpi) \
-            +' -tp -ll -finegrid -unit_label '+ args.label +' tmp_file.h5 -o "'+ os.path.basename(file).replace('.h5','') +'_r' + str(fslice) +'.png"')
+          extractANDplot(TITLE,args,file, dim3)
         else:
-          os.system('hipft_extract_realization.py '+ file +' -r '+ str(args.s) +' -o tmp_file.h5')
-          fslice="%06d" % (args.s)
-          os.system('plot2d -title "'+ TITLE +'" -cmin '+ str(args.cmin) +' -cmax '+ str(args.cmax) +' -dpi ' + str(args.dpi) \
-            +' -tp -ll -finegrid -unit_label '+ args.label +' tmp_file.h5 -o "'+ os.path.basename(file).replace('.h5','') +'_r' + str(fslice) +'.png"')
+          extractANDplot(TITLE,args,file, args.s)
       else:
-        os.system('hipft_extract_realization.py '+ file +' -r 1 -o tmp_file.h5')
-        os.system('plot2d -title "'+ TITLE +'" -cmin '+ str(args.cmin) +' -cmax '+ str(args.cmax) +' -dpi ' + str(args.dpi) \
-            +' -tp -ll -finegrid -unit_label '+ args.label +' tmp_file.h5 -o "'+ os.path.basename(file).replace('.h5','') +'_r000001.png"')
+        extractANDplot(TITLE,args,file, 1)
   if os.path.exists("tmp_file.h5"):
     os.remove("tmp_file.h5")
 
@@ -143,56 +133,53 @@ def run(args):
     for filetmp in os.listdir(args.datadir+'/plots'):
       file=args.datadir+'/plots/'+filetmp
       if filetmp.endswith('.png'):
-        idxx=int(filetmp[-10:-4])
-        os.system('ln -s '+file+' movie'+ str(idxx) +'.png')
-    os.system('ffmpeg -y -framerate 15 -i "movie%d.png" -pix_fmt yuv420p -c:a copy -crf 20 -r 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -codec:v libx264 "movie.mov"')
-    os.system('cp '+args.datadir+'/plots/tmp/movie.mov '+odir+'/'+args.outfile+'.mov')
+        linkFile(file,filetmp)
+    ffmpefMovie(args,odir,args.outfile)
   elif (args.s == "all"):
-    for j in range(1,dim3):
-      fslice="%06d" % (i)
-      for filetmp in os.listdir(args.datadir+'/plots'):
-        file=args.datadir+'/plots/'+filetmp
-        if filetmp.endswith('_r'+ fslice +'.png'):
-          idxx=int(filetmp[-10:-4])
-          os.system('ln -s '+file+' movie'+ str(idxx) +'.png')
-      os.system('ffmpeg -y -framerate 15 -i "movie%d.png" -pix_fmt yuv420p -c:a copy -crf 20 -r 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -codec:v libx264 "movie.mov"')
-      os.system('cp '+args.datadir+'/plots/tmp/movie.mov '+odir+'/'+args.outfile+'_r'+fslice+'.mov')
-      if os.path.exists("movie.mov"):
-        os.remove('movie.mov')
+    for i in range(1,dim3):
+      makeMovie(args,odir,file,i)
   elif (args.s):
     if (args.s > dim3):
-      fslice="%06d" % (dim3)
-      for filetmp in os.listdir(args.datadir+'/plots'):
-        file=args.datadir+'/plots/'+filetmp
-        if filetmp.endswith('_r'+ fslice +'.png'):
-          idxx=int(filetmp[-10:-4])
-          os.system('ln -s '+file+' movie'+ str(idxx) +'.png')
-      os.system('ffmpeg -y -framerate 15 -i "movie%d.png" -pix_fmt yuv420p -c:a copy -crf 20 -r 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -codec:v libx264 "movie.mov"')
-      os.system('cp '+args.datadir+'/plots/tmp/movie.mov '+odir+'/'+args.outfile+'_r'+fslice+'.mov')
+      makeMovie(args,odir,file,dim3)
     else:
-      fslice="%06d" % (args.s)
-      for filetmp in os.listdir(args.datadir+'/plots'):
-        file=args.datadir+'/plots/'+filetmp
-        if filetmp.endswith('_r'+ fslice +'.png'):
-          idxx=int(filetmp[-10:-4])
-          os.system('ln -s '+file+' movie'+ str(idxx) +'.png')
-      os.system('ffmpeg -y -framerate 15 -i "movie%d.png" -pix_fmt yuv420p -c:a copy -crf 20 -r 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -codec:v libx264 "movie.mov"')
-      os.system('cp '+args.datadir+'/plots/tmp/movie.mov '+odir+'/'+args.outfile+'_r'+fslice+'.mov')
+      makeMovie(args,odir,file,args.s)
   else:
-    for filetmp in os.listdir(args.datadir+'/plots'):
-      file=args.datadir+'/plots/'+filetmp
-      if filetmp.endswith('.png') and 'idx' in file:
-#      if filetmp.endswith('.png') and file.contains('_r'):
-        idxx=int(filetmp[-10:-4])
-        os.system('ln -s '+file+' movie'+ str(idxx) +'.png')
-    os.system('ffmpeg -y -framerate 15 -i "movie%d.png" -pix_fmt yuv420p -c:a copy -crf 20 -r 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -codec:v libx264 "movie.mov"')
-    os.system('cp '+args.datadir+'/plots/tmp/movie.mov '+odir+'/'+args.outfile+'_r000001.mov')
-
+    makeMovie(args,odir,file,1)
   for filetmp in os.listdir(args.datadir+'/plots/tmp'):
     os.remove(filetmp)
   os.chdir(args.datadir+'/plots')
   os.rmdir(args.datadir+'/plots/tmp')
 
+
+def makeMovie(args,odir,file,r):
+  fslice="%06d" % r
+  for filetmp in os.listdir(args.datadir+'/plots'):
+    file=args.datadir+'/plots/'+filetmp
+    if filetmp.endswith('_r'+ fslice +'.png'):
+      linkFile(file,filetmp)
+  name=args.outfile+'_r'+fslice
+  ffmpefMovie(args,odir,name)
+
+
+def linkFile(file,filetmp):
+  idxx=int(filetmp[-10:-4])
+  os.system('ln -sf '+file+' movie'+ str(idxx) +'.png')
+
+
+def ffmpefMovie(args,odir,name):
+  os.system('ffmpeg -y -framerate 15 -i "movie%d.png" -pix_fmt yuv420p -c:a copy -crf 20 -r 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -codec:v libx264 "'+name+'.mov"')
+  os.system('cp '+args.datadir+'/plots/tmp/'+name+'.mov '+odir+'/'+name+'.mov')
+
+
+def extractANDplot(TITLE,args,file, r):
+  os.system('hipft_extract_realization.py '+ file +' -r '+ str(r) +' -o tmp_file.h5')
+  fileOut = os.path.basename(file).replace('.h5','') +'_r' + "%06d" % r +'.png'
+  plot2d(TITLE,args,"tmp_file.h5",fileOut)
+
+
+def plot2d(TITLE,args,file,fileOut):
+  os.system('plot2d -title "'+ TITLE +'" -cmin '+ str(args.cmin) +' -cmax '+ str(args.cmax) +' -dpi ' + str(args.dpi) \
+    +' -tp -ll -finegrid -unit_label '+ args.label + " "+ file +' -o "'+ str(fileOut) +'"')
 
 
 def main():
