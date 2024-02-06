@@ -181,6 +181,7 @@ def run(args):
     for file in os.listdir(wDir):
       if "hipft_history_sol_r" in file and file.endswith(".out"):
         hist_list.append(wDir+'/'+file)
+    hist_list = sorted(hist_list)
 
   # Build the default list of labels based on the number runs the user entered
   # if no label list is entered
