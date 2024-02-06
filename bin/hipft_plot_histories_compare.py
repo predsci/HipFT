@@ -175,14 +175,6 @@ def run(args):
   hist_list = arg_dict['histfiles'].split(',')
   label_list = arg_dict['labels'].split(',')
 
-  # Build the default list of labels based on the number runs the user entered
-  # if no label list is entered
-  if arg_dict['labels'] == ' ':
-      label_list = []
-      def_label = 'r'
-      for i,dire in enumerate(hist_list):
-          label_list.append(def_label+str(i+1))
-
   if arg_dict['histfiles'] == ' ':
     hist_list=[]
     wDir=os.getcwd()
@@ -190,6 +182,13 @@ def run(args):
       if "hipft_history_sol_r" in file and file.endswith(".out"):
         hist_list.append(wDir+'/'+file)
 
+  # Build the default list of labels based on the number runs the user entered
+  # if no label list is entered
+  if arg_dict['labels'] == ' ':
+      label_list = []
+      def_label = 'r'
+      for i,dire in enumerate(hist_list):
+          label_list.append(def_label+str(i+1))
 
   LABEL_LEN = len(label_list)
   # Validate the list arguments:
