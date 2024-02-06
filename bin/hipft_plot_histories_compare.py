@@ -346,15 +346,15 @@ def run(args):
       LWu=args.lw
     if firstRun:
       h=plt.plot(time_list[run]*tfac, flux_fac*np.abs(fluxm_list[run]),color='Blue',linewidth=LWu,marker=MARKERS[run],
-          markersize=MS,markeredgewidth=0.3,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue')
+          markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue')
       h2=plt.plot(time_list[run]*tfac, flux_fac*fluxp_list[run],color='Red',linewidth=LWu,marker=MARKERS[run],
-          markersize=MS,markeredgewidth=0.3,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Red',label='_nolegend_')
+          markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Red',label='_nolegend_')
       firstRun=False
     else:
       plt.plot(time_list[run]*tfac, flux_fac*np.abs(fluxm_list[run]),color='Blue',linewidth=LWu,marker=MARKERS[run],
-          markersize=MS,markeredgewidth=0.3,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue')
+          markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue')
       plt.plot(time_list[run]*tfac, flux_fac*fluxp_list[run],color='Red',linewidth=LWu,marker=MARKERS[run],
-          markersize=MS,markeredgewidth=0.3,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Red',label='_nolegend_')
+          markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Red',label='_nolegend_')
 
   xmn = np.min(time_list[0]*tfac)
   xmx = np.max(time_list[0]*tfac)
@@ -474,23 +474,23 @@ def run(args):
       LWu=args.lw
     if firstRun:
       h=plt.plot(time_list[run]*tfac, flux_fac*fluxp_pn_list[run],color='Red',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.3,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Red')
+        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Red')
       h2=plt.plot(time_list[run]*tfac, flux_fac*fluxm_pn_list[run],color='Blue',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.3,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue',label='_nolegend_')
+        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue',label='_nolegend_')
       h3=plt.plot(time_list[run]*tfac, flux_fac*fluxp_ps_list[run],color='firebrick',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.3,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='firebrick',label='_nolegend_')
+        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='firebrick',label='_nolegend_')
       h4=plt.plot(time_list[run]*tfac, flux_fac*fluxm_ps_list[run],color='navy',linewidth=LWu,marker=MARKERS[run],
         markersize=MS,markeredgewidth=0.3,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='navy',label='_nolegend_')
       firstRun=False
     else:
       plt.plot(time_list[run]*tfac, flux_fac*fluxp_pn_list[run],color='Red',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.3,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Red')
+        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Red')
       plt.plot(time_list[run]*tfac, flux_fac*fluxm_pn_list[run],color='Blue',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.3,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue',label='_nolegend_')
+        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue',label='_nolegend_')
       plt.plot(time_list[run]*tfac, flux_fac*fluxp_ps_list[run],color='firebrick',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.3,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='firebrick',label='_nolegend_')
+        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='firebrick',label='_nolegend_')
       plt.plot(time_list[run]*tfac, flux_fac*fluxm_ps_list[run],color='navy',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.3,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='navy',label='_nolegend_')
+        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='navy',label='_nolegend_')
 
   plt.xlim(xmin=xmn,xmax=xmx)
   plt.ylim(ymin=ymin,ymax=ymax)
@@ -535,15 +535,15 @@ def run(args):
       LWu=args.lw
     if firstRun:
       h=plt.plot(time_list[run]*tfac, pole_n_avg_field_list[run],color='Black',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.3,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Black')
+        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Black')
       h2=plt.plot(time_list[run]*tfac, pole_s_avg_field_list[run],color='Blue',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.3,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue',label='_nolegend_')
+        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue',label='_nolegend_')
       firstRun=False
     else:
       plt.plot(time_list[run]*tfac, pole_n_avg_field_list[run],color='Black',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.3,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Black')
+        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Black')
       plt.plot(time_list[run]*tfac, pole_s_avg_field_list[run],color='Blue',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.3,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue',label='_nolegend_')
+        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue',label='_nolegend_')
 
   plt.xlim(xmin=xmn,xmax=xmx)
   plt.ylim(ymin=ymin,ymax=ymax)
@@ -583,11 +583,11 @@ def run(args):
       LWu=args.lw
     if firstRun:
       h=plt.plot(time_list[run]*tfac, brmax_list[run],color='blue',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.3,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='blue')
+        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='blue')
       firstRun=False
     else:
       plt.plot(time_list[run]*tfac, brmax_list[run],color='blue',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.3,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='blue')
+        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='blue')
 
   xmn = np.min(time_list[0]*tfac)
   xmx = np.max(time_list[0]*tfac)
@@ -604,11 +604,11 @@ def run(args):
       LWu=args.lw
     if firstRun:
       h1=plt.plot(time_list[run]*tfac, np.abs(brmin_list[run]),color='red',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.3,fillstyle='full', markerfacecolor=COLORS[run],markeredgecolor='red',label='_nolegend_')
+        markersize=MS,markeredgewidth=0.0,fillstyle='full', markerfacecolor=COLORS[run],markeredgecolor='red',label='_nolegend_')
       firstRun=False
     else:
       plt.plot(time_list[run]*tfac, np.abs(brmin_list[run]),color='red',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.3,fillstyle='full', markerfacecolor=COLORS[run],markeredgecolor='red',label='_nolegend_')
+        markersize=MS,markeredgewidth=0.0,fillstyle='full', markerfacecolor=COLORS[run],markeredgecolor='red',label='_nolegend_')
   
   ax.grid(zorder=0)
   

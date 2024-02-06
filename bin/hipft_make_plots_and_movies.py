@@ -145,8 +145,8 @@ def run(args):
       if filetmp.endswith('.png'):
         idxx=int(filetmp[-10:-4])
         os.system('ln -s '+file+' movie'+ str(idxx) +'.png')
-    os.system('ffmpeg -framerate 15 -i "movie%d.png" -pix_fmt yuv420p -c:a copy -crf 20 -r 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -codec:v libx264 "movie.mov"')
-    os.rename(args.datadir+'/plots/tmp/movie.mov',odir+'/'+args.outfile+'.mov')
+    os.system('ffmpeg -y -framerate 15 -i "movie%d.png" -pix_fmt yuv420p -c:a copy -crf 20 -r 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -codec:v libx264 "movie.mov"')
+    os.system('cp '+args.datadir+'/plots/tmp/movie.mov '+odir+'/'+args.outfile+'.mov')
   elif (args.s == "all"):
     for j in range(1,dim3):
       fslice="%06d" % (i)
@@ -155,8 +155,8 @@ def run(args):
         if filetmp.endswith('_r'+ fslice +'.png'):
           idxx=int(filetmp[-10:-4])
           os.system('ln -s '+file+' movie'+ str(idxx) +'.png')
-      os.system('ffmpeg -framerate 15 -i "movie%d.png" -pix_fmt yuv420p -c:a copy -crf 20 -r 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -codec:v libx264 "movie.mov"')
-      os.rename(args.datadir+'/plots/tmp/movie.mov',odir+'/'+args.outfile+'_r'+fslice+'.mov')
+      os.system('ffmpeg -y -framerate 15 -i "movie%d.png" -pix_fmt yuv420p -c:a copy -crf 20 -r 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -codec:v libx264 "movie.mov"')
+      os.system('cp '+args.datadir+'/plots/tmp/movie.mov '+odir+'/'+args.outfile+'_r'+fslice+'.mov')
       if os.path.exists("movie.mov"):
         os.remove('movie.mov')
   elif (args.s):
@@ -167,8 +167,8 @@ def run(args):
         if filetmp.endswith('_r'+ fslice +'.png'):
           idxx=int(filetmp[-10:-4])
           os.system('ln -s '+file+' movie'+ str(idxx) +'.png')
-      os.system('ffmpeg -framerate 15 -i "movie%d.png" -pix_fmt yuv420p -c:a copy -crf 20 -r 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -codec:v libx264 "movie.mov"')
-      os.rename(args.datadir+'/plots/tmp/movie.mov',odir+'/'+args.outfile+'_r'+fslice+'.mov')
+      os.system('ffmpeg -y -framerate 15 -i "movie%d.png" -pix_fmt yuv420p -c:a copy -crf 20 -r 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -codec:v libx264 "movie.mov"')
+      os.system('cp '+args.datadir+'/plots/tmp/movie.mov '+odir+'/'+args.outfile+'_r'+fslice+'.mov')
     else:
       fslice="%06d" % (args.s)
       for filetmp in os.listdir(args.datadir+'/plots'):
@@ -176,16 +176,17 @@ def run(args):
         if filetmp.endswith('_r'+ fslice +'.png'):
           idxx=int(filetmp[-10:-4])
           os.system('ln -s '+file+' movie'+ str(idxx) +'.png')
-      os.system('ffmpeg -framerate 15 -i "movie%d.png" -pix_fmt yuv420p -c:a copy -crf 20 -r 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -codec:v libx264 "movie.mov"')
-      os.rename(args.datadir+'/plots/tmp/movie.mov',odir+'/'+args.outfile+'_r'+fslice+'.mov')
+      os.system('ffmpeg -y -framerate 15 -i "movie%d.png" -pix_fmt yuv420p -c:a copy -crf 20 -r 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -codec:v libx264 "movie.mov"')
+      os.system('cp '+args.datadir+'/plots/tmp/movie.mov '+odir+'/'+args.outfile+'_r'+fslice+'.mov')
   else:
     for filetmp in os.listdir(args.datadir+'/plots'):
       file=args.datadir+'/plots/'+filetmp
-      if filetmp.endswith('.png') and file.contains('idx'):
+      if filetmp.endswith('.png') and 'idx' in file:
+#      if filetmp.endswith('.png') and file.contains('_r'):
         idxx=int(filetmp[-10:-4])
         os.system('ln -s '+file+' movie'+ str(idxx) +'.png')
-    os.system('ffmpeg -framerate 15 -i "movie%d.png" -pix_fmt yuv420p -c:a copy -crf 20 -r 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -codec:v libx264 "movie.mov"')
-    os.rename(args.datadir+'/plots/tmp/movie.mov',odir+'/'+args.outfile+'_r000001.mov')
+    os.system('ffmpeg -y -framerate 15 -i "movie%d.png" -pix_fmt yuv420p -c:a copy -crf 20 -r 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -codec:v libx264 "movie.mov"')
+    os.system('cp '+args.datadir+'/plots/tmp/movie.mov '+odir+'/'+args.outfile+'_r000001.mov')
 
   for filetmp in os.listdir(args.datadir+'/plots/tmp'):
     os.remove(filetmp)
