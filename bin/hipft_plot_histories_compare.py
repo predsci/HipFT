@@ -9,7 +9,7 @@ from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_
 import os
 import itertools
 
-# Version 1.6
+# Version 1.6.1
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -36,11 +36,11 @@ def argParsing():
     default=' ')
 
   parser.add_argument('-val',
-    help='Plot validation run errors',
+    help='Plot validation run errors.',
     dest='valrun',
     action='store_true',
     default=False,
-    required=False)  
+    required=False)
 
   parser.add_argument('-dpi',
     help='DPI for plots.',
@@ -161,12 +161,25 @@ def argParsing():
     required=False)
 
   parser.add_argument('-ms',
-    help='Marker size (default:6)',
+    help='Marker size',
     dest='ms',
     type=float,
+    default=6.0,
     required=False)
 
   return parser.parse_args()
+
+
+def stats(data):
+
+  data_stats = np.zeros(4)
+
+  data_stats[0] = np.min(data)
+  data_stats[1] = np.max(data)
+  data_stats[2] = np.mean(data)
+  data_stats[3] = np.std(data)
+
+  return data_stats
 
 
 def run(args):  
@@ -226,15 +239,11 @@ def run(args):
   width = 0.3
   fsize = args.fsize
   lgfsize = args.lgfsize
-  MS = 6
+  MS = args.ms
   LW = 1.0
   LWM = LW/LABEL_LEN
   fc = 'w'
   tc = 'k'
-
-  if (args.ms):
-    MS=args.ms
-
 
   ###### TIME ######
 

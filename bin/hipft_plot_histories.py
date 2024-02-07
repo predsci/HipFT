@@ -3,9 +3,13 @@ import argparse
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 from datetime import datetime, timezone
 from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_number
 import os
+import itertools
+
+# Version 1.6.1
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -18,6 +22,10 @@ def argParsing():
     dest='runtag',
     default='',
     required=False)
+
+  parser.add_argument('-samples',
+    help='Number of points to plot, this helps with larger files (default:all)',
+    default=-1)
 
   parser.add_argument('-info',
     help='Write out some diagnostics of the history quantites.',
@@ -58,9 +66,9 @@ def argParsing():
     required=False)
     
   parser.add_argument('-tfac',
-    help='Time factor to get time into units of hours (Default is days so tfac=1/24.0).',
+    help='Time factor to get time into units of hours (Default is 1.0).',
     dest='tfac',
-    default='1/24.0',
+    default='1.0',
     required=False)
 
   parser.add_argument('-xunits',
@@ -131,6 +139,25 @@ def argParsing():
     dest='xlabel',
     required=False)
 
+  parser.add_argument('-lw',
+    help='Line width',
+    dest='lw',
+    type=float,
+    default=1.0,
+    required=False)
+
+  parser.add_argument('-ms',
+    help='Marker size',
+    dest='ms',
+    type=float,
+    default=6.0,
+    required=False)
+
+  parser.add_argument('-xlabel',
+    help='Label for x axis',
+    dest='xlabel',
+    required=False)
+
   return parser.parse_args()
 
 
@@ -152,8 +179,8 @@ def run(args):
 
   width = 0.3
   fsize = args.fsize
-  MS = 6
-  LW = 1.0
+  MS = args.ms
+  LW = args.lw
   fc = 'w'
   tc = 'k'
 
@@ -237,9 +264,8 @@ def run(args):
   ax.tick_params(axis='y',labelsize=fsize)
   ax.grid(zorder=0)
   fig.tight_layout()
-  fig.savefig('hipft_'+args.runtag+'_history_flux_imb_pm.png', bbox_inches="tight", pad_inches=0, dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
+  fig.savefig('history_'+args.runtag+'_flux_imb_pm.png', bbox_inches='tight', pad_inches=0, dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
-
 #
 # ****** Total (+) and (-) flux.
 #
@@ -408,7 +434,7 @@ def run(args):
     ax.tick_params(axis='y',labelsize=fsize)
     ax.grid(zorder=0)
     fig.tight_layout()  
-    fig.savefig('hipft_'+args.runtag+'_history_val.png', bbox_inches="tight", pad_inches=0, dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
+    fig.savefig('history_'+args.runtag+'_val.png', bbox_inches="tight", pad_inches=0, dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   
 
 #
