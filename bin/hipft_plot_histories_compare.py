@@ -9,6 +9,8 @@ from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_
 import os
 import itertools
 
+# Version 1.6
+
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
 
@@ -58,9 +60,9 @@ def argParsing():
     required=False)
     
   parser.add_argument('-tfac',
-    help='Time factor to get time into units of hours (Default is days so tfac=1/24.0).',
+    help='Time factor to get time into units of hours (Default is 1.0).',
     dest='tfac',
-    default='1/24.0',
+    default='1.0',
     required=False)
 
   parser.add_argument('-xunits',

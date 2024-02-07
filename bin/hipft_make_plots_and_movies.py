@@ -4,7 +4,7 @@ import os
 import h5py
 import re
 
-# Version 2.0.0
+# Version 2.0.1
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt Movie Maker.')
@@ -82,7 +82,7 @@ def run(args):
     with open(args.mlut, "r") as ftmp:
       next(ftmp)
       for line in ftmp:
-        ut_dates.append(line.split()[4])
+        ut_dates.append(str(line.split()[4]))
   elif os.path.exists('hipft_output_map_list.out'):
     with open('hipft_output_map_list.out', "r") as ftmp:
       next(ftmp)
