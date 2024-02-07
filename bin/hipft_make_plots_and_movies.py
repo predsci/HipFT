@@ -2,6 +2,7 @@
 import argparse
 import os
 import h5py
+import re
 
 # Version 2.0.0
 
@@ -97,8 +98,7 @@ def run(args):
   for filetmp in os.listdir(args.datadir):
     file=args.datadir+'/'+filetmp
     if filetmp.endswith('.h5'):
-      idxx=int(filetmp[-9:-3])
-
+      idxx=int(re.search("[0-9]+",re.search("idx[0-9]+",filetmp).group()).group())
       TITLE=ut_dates[idxx-1]
       idx+=1
       with h5py.File(file,'r') as f1:
@@ -158,7 +158,7 @@ def makeMovie(args,odir,file,r):
 
 
 def linkFile(file,filetmp):
-  idxx=int(filetmp[-10:-4])
+  idxx=int(re.search("[0-9]+",re.search("idx[0-9]+",filetmp).group()).group())
   os.system('ln -sf '+file+' movie'+ str(idxx) +'.png')
 
 
