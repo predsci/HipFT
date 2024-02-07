@@ -295,7 +295,7 @@ def run(args):
   cmap = plt.get_cmap('turbo',LABEL_LEN)
   COLORS = [mpl.colors.rgb2hex(cmap(i)) for i in range(cmap.N)]
   MARKERS = ['o','v','^','<','>','8','s','p','*','h','H','D','d','P','X']
-  MARKERS=MARKERS*int(np.ceil(len(MARKERS)/LABEL_LEN))
+  MARKERS=MARKERS*int(np.ceil(LABEL_LEN/len(MARKERS)))
 
 #
 # ****** Total flux imbalance.
