@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.2.1'
-      character(*), parameter :: cdate='02/02/2024'
+      character(*), parameter :: cvers='1.3.0'
+      character(*), parameter :: cdate='02/08/2024'
 !
 end module
 !#######################################################################
@@ -129,6 +129,7 @@ module constants
       real(r_typ), parameter :: &
                        km_s_to_rs_s = 1.4367816091954023e-06_r_typ
       real(r_typ), parameter :: output_flux_fac = 1.0e-21_r_typ
+      real(r_typ), parameter :: input_flux_fac = 1.0e21_r_typ
 !
       real(r_typ), parameter :: small_value = tiny(one)
       real(r_typ), parameter :: large_value = huge(one)
@@ -153,6 +154,10 @@ module output
       logical :: output_current_map = .false.
       logical :: output_current_history = .false.
 !
+! ****** Current output file sequence number.
+!
+      integer(8) :: output_seq = 0
+!
 ! ****** File sequence number.
 !
       integer(8) :: idx_out = 0
@@ -163,20 +168,33 @@ module output
       integer, parameter :: IO_MAP_OUT_LIST = 22
       integer, parameter :: IO_TMP = 23
 !
+      integer, parameter :: IO_DATA_IN = 8
+!
       character(29) :: io_hist_num_filename = 'hipft_history_num.out'
       character(29) :: io_hist_sol_filename = 'hipft_history_sol.out'
       character(25) :: io_output_map_list_filename = 'hipft_output_map_list.out'
       character(26) :: io_output_flows_list_filename = 'hipft_output_flow_list.out'
 !
+! ****** Temporary arrays used for output.
+!
       real(r_typ), dimension(:,:,:), allocatable :: fout
       real(r_typ), dimension(:), allocatable :: pout
 !
+! ****** History analysis variables.
+!
+      real(r_typ), dimension(:), allocatable :: h_minbr,     h_maxbr,    &
+                                                h_minabsbr,  h_fluxp,    &
+                                                h_fluxm,     h_valerr,   &
+                                                h_fluxp_pn,  h_fluxm_pn, &
+                                                h_fluxp_ps,  h_fluxm_ps, &
+                                                h_area_pn,   h_area_ps,  &
+                                                h_eq_dipole, h_ax_dipole
 end module
 !#######################################################################
 module globals
 !
 !-----------------------------------------------------------------------
-! ****** Internal global variables.
+! ****** Internal general global variables.
 !-----------------------------------------------------------------------
 !
       use number_types
@@ -186,6 +204,10 @@ module globals
       implicit none
 !
 !-----------------------------------------------------------------------
+!
+! ****** Main Br field arrays
+!
+      real(r_typ), dimension(:,:,:), allocatable :: f,fold,fval_u0
 !
 ! ****** Main terminal output format string.
 !
@@ -205,88 +227,15 @@ module globals
       real(r_typ) :: dtime_global = 0.
       character(50) :: dtime_reason = ''
 !
-! ****** Explicit Euler diffusion stable time-step and number of cycles.
-!
-      real(r_typ) :: dtime_diffusion_euler = 0.
-      integer(8) :: n_stable_diffusion_cycles = 1
-      logical :: auto_sc=.false.
-!
-! ****** Explicit Euler advection stable time-step.
-!
-      real(r_typ) :: dtmax_flow = 0.
-      real(r_typ) :: dtime_advection_used = 0.
-!
-! ****** Current output file sequence number.
-!
-      integer(8) :: output_seq = 0
-!
-! ****** Flag to indicate the flow needs updating.
-!
-      logical :: flow_needs_updating = .true.
-!
-! ****** Flow attenuation.
-!
-      real(r_typ), dimension(:), allocatable :: flow_attenuate_value_i_rvec
-!
-! ****** Flow differential rotational.
-!
-      real(r_typ), dimension(:), allocatable :: flow_dr_coef_p0_rvec
-      real(r_typ), dimension(:), allocatable :: flow_dr_coef_p2_rvec
-      real(r_typ), dimension(:), allocatable :: flow_dr_coef_p4_rvec
-!
-! ****** Flow meridianal.
-!
-      real(r_typ), dimension(:), allocatable :: flow_mf_coef_p1_rvec
-      real(r_typ), dimension(:), allocatable :: flow_mf_coef_p3_rvec
-      real(r_typ), dimension(:), allocatable :: flow_mf_coef_p5_rvec
-!
-! ****** Flow polar boundary condition factors.
-!
-      real(r_typ) :: bc_flow_npole_fac, bc_flow_spole_fac
-!
 ! ****** Flag to indicate the time step needs updating.
 !
       logical :: timestep_needs_updating = .true.
 !
-! ****** Flag to indicate the stable flow time step needs updating.
-!
-      logical :: timestep_flow_needs_updating = .true.
-!
-! ****** Flag to indicate the diffusion time step needs updating.
-!
-      logical :: timestep_diff_needs_updating = .true.
-!
-! ****** Diffusion constant coef array.
-!
-      real(r_typ), dimension(:), allocatable :: diffusion_coef_constant_rvec
-!
-! ****** History analysis variables.
-!
-      real(r_typ), dimension(:), allocatable :: h_minbr,     h_maxbr,    &
-                                                h_minabsbr,  h_fluxp,    &
-                                                h_fluxm,     h_valerr,   &
-                                                h_fluxp_pn,  h_fluxm_pn, &
-                                                h_fluxp_ps,  h_fluxm_ps, &
-                                                h_area_pn,   h_area_ps,  &
-                                                h_eq_dipole, h_ax_dipole
-!
-      real(r_typ) :: u0max,u0min
+! ****** Internal realization variables.
 !
       integer, parameter :: MAX_REALIZATIONS = 2000
 !
       integer, dimension(:), allocatable :: local_realization_indices
-!
-      integer :: advection_num_method_space
-      integer :: advection_num_method_time
-!
-      integer, parameter :: FE      = 1
-      integer, parameter :: RK3TVD  = 2
-      integer, parameter :: SSPRK43 = 3
-!
-      integer, parameter :: UW      = 1
-      integer, parameter :: WENO3   = 2
-!
-      integer, parameter :: IO_DATA_IN = 8
 !
 end module
 !#######################################################################
@@ -309,19 +258,39 @@ module mesh
 !
 end module
 !#######################################################################
-module fields
+module diffusion
 !
       use number_types
 !
       implicit none
 !
-      real(r_typ), dimension(:,:,:), allocatable :: f
-      real(r_typ), dimension(:,:,:), allocatable :: fold
-      real(r_typ), dimension(:,:,:), allocatable :: fval_u0
       real(r_typ), dimension(:,:,:), allocatable :: diffusion_coef
+!
+! ****** Diffusion constant coef array.
+!
+      real(r_typ), dimension(:), allocatable :: diffusion_coef_constant_rvec
+!
+! ****** Explicit Euler diffusion stable time-step and number of cycles.
+!
+      real(r_typ) :: dtime_diffusion_euler = 0.
+      integer(8) :: n_stable_diffusion_cycles = 1
+      logical :: auto_sc=.false.
+!
+! ****** Flag to indicate the diffusion time step needs updating.
+!
+      logical :: timestep_diff_needs_updating = .true.
+!
+end module
+!#######################################################################
+module sources
+!
+      use number_types
+!
+      implicit none
+!
       real(r_typ), dimension(:,:,:), allocatable :: source
-      real(r_typ), dimension(:,:,:), allocatable :: vt
-      real(r_typ), dimension(:,:,:), allocatable :: vp
+      real(r_typ), dimension(:,:,:), allocatable :: source_from_file_data
+      real(r_typ), dimension(:,:,:), allocatable :: source_rfe
 !
 end module
 !#######################################################################
@@ -354,11 +323,47 @@ module data_assimilation
 !
 end module
 !#######################################################################
-module flow_from_files
+module flows
 !
       use number_types
 !
       implicit none
+!
+! ****** Velocity fields.
+!
+      real(r_typ), dimension(:,:,:), allocatable :: vt
+      real(r_typ), dimension(:,:,:), allocatable :: vp
+!
+! ****** Explicit Euler advection stable time-step.
+!
+      real(r_typ) :: dtmax_flow = 0.
+      real(r_typ) :: dtime_advection_used = 0.
+!
+! ****** Flag to indicate the flow needs updating.
+!
+      logical :: flow_needs_updating = .true.
+!
+! ****** Flow attenuation.
+!
+      real(r_typ), dimension(:), allocatable :: flow_attenuate_value_i_rvec
+!
+! ****** Flow differential rotational.
+!
+      real(r_typ), dimension(:), allocatable :: flow_dr_coef_p0_rvec
+      real(r_typ), dimension(:), allocatable :: flow_dr_coef_p2_rvec
+      real(r_typ), dimension(:), allocatable :: flow_dr_coef_p4_rvec
+!
+! ****** Flow meridianal.
+!
+      real(r_typ), dimension(:), allocatable :: flow_mf_coef_p1_rvec
+      real(r_typ), dimension(:), allocatable :: flow_mf_coef_p3_rvec
+      real(r_typ), dimension(:), allocatable :: flow_mf_coef_p5_rvec
+!
+! ****** Flow polar boundary condition factors.
+!
+      real(r_typ) :: bc_flow_npole_fac, bc_flow_spole_fac
+!
+! ****** Flow from files.
 !
       integer :: num_flows_in_list = 0
       integer :: current_flow_input_idx = 1
@@ -374,6 +379,22 @@ module flow_from_files
 !
       real(r_typ), dimension(:,:,:),allocatable :: flow_from_file_vt_old
       real(r_typ), dimension(:,:,:),allocatable :: flow_from_file_vp_old
+!
+! ****** Numerical methods for flow advance.
+!
+      integer :: advection_num_method_space
+      integer :: advection_num_method_time
+!
+      integer, parameter :: FE      = 1
+      integer, parameter :: RK3TVD  = 2
+      integer, parameter :: SSPRK43 = 3
+!
+      integer, parameter :: UW      = 1
+      integer, parameter :: WENO3   = 2
+!
+! ****** Flag to indicate the stable flow time step needs updating.
+!
+      logical :: timestep_flow_needs_updating = .true.
 !
 end module
 !#######################################################################
@@ -514,11 +535,6 @@ module input_parameters
 !
       integer        :: n_realizations = 1
 !
-! ****** Restarts ********
-!
-      logical        :: restart_run = .false.
-      character(512) :: restart_file = ' '
-!
 ! ****** Time ********
 !
       real(r_typ)    :: time_start = zero
@@ -644,6 +660,12 @@ module input_parameters
 ! ****** SOURCES ********
 !
       logical :: advance_source = .false.
+!
+      logical :: source_rfe_model = 0
+      real(r_typ) :: source_rfe_total_unsigned_flux_per_hour = 0.
+      real(r_typ) :: source_rfe_sigma = one
+!
+      logical :: source_from_file = .false.
       character(512) :: source_filename = ' '
 !
 !-----------------------------------------------------------------------
@@ -752,7 +774,6 @@ module assimilate_new_data_interface
         use input_parameters
         use globals
         use constants
-        use fields
         use mesh
         use data_assimilation
         implicit none
@@ -1101,10 +1122,9 @@ subroutine setup
       use mpidefs
       use input_parameters
       use timing
-      use fields
       use mesh
       use output
-      use globals, ONLY : time
+      use globals
 !
 !-----------------------------------------------------------------------
 !
@@ -1132,7 +1152,8 @@ subroutine setup
 ! ****** Set up output directory.
 !
       if (output_map_idx_cadence.gt.0 .or.     &
-          output_map_time_cadence.gt.0.0) then
+          output_map_time_cadence.gt.0.) then
+!
         if (iamp0) then
           cmd = 'mkdir -p '//trim(output_map_directory)
           call EXECUTE_COMMAND_LINE (cmd,exitstat=ierr)
@@ -1149,41 +1170,28 @@ subroutine setup
             end if
           end if
         end if
+!
+! ****** Make sure initial conditon is output.
+!
+        output_current_map = .true.
+!
       end if
 !
-      if (restart_run) then
-!        call load_restart
-         print*,'RESTARTS ARE NOT IMPLEMENTED YET.'
-         stop
-      else
-        call load_initial_condition
-        time = time_start
-      end if
+      call load_initial_condition
 !
-! ****** Allocate flow arrays.
+      time = time_start
 !
-      if (advance_flow) then
-        allocate (vt(nt,npm,nr))
-        allocate (vp(ntm,np,nr))
-        vt(:,:,:) = 0.
-        vp(:,:,:) = 0.
-!$omp target enter data map(to:vt,vp)
-      end if
+      if (advance_flow) call load_flows
 !
-      call set_unchanging_quantities
+      if (advance_diffusion) call load_diffusion
+!
+      if (advance_source) call load_source
 !
       if (assimilate_data) call load_data_assimilation
-!
-      if (use_flow_from_files) call load_flow_from_files
 !
       call create_and_open_output_log_files
 !
       call analysis_step
-!
-      if (output_map_idx_cadence .gt. 0 .or. &
-          output_map_time_cadence .gt. 0.) then
-        output_current_map = .true.
-      end if
 !
       call output_step
 !
@@ -1614,7 +1622,7 @@ subroutine write_welcome_message
       use input_parameters
       use mesh
       use globals
-      use fields
+      use output
 !
 !-----------------------------------------------------------------------
 !
@@ -1684,10 +1692,10 @@ subroutine load_initial_condition
       use mpidefs
       use input_parameters
       use mesh
-      use fields
       use globals
       use read_2d_file_interface
       use output
+      use diffusion
       use constants
       use timing
 !
@@ -2065,11 +2073,11 @@ subroutine set_realization_parameters
       use mpidefs
       use input_parameters
       use data_assimilation
-      use flow_from_files
+      use flows
       use mesh
-      use fields
       use globals
       use output
+      use diffusion
       use constants
       use timing
 !
@@ -2397,11 +2405,11 @@ subroutine tesseral_spherical_harmonic (m, l, pvec, tvec, np, nt, Y)
 !
 end subroutine
 !#######################################################################
-subroutine set_unchanging_quantities
+subroutine load_flows
 !
 !-----------------------------------------------------------------------
 !
-! ****** Set unchanging quantities.
+! ****** Load flow advance.
 !
 !-----------------------------------------------------------------------
 !
@@ -2409,7 +2417,7 @@ subroutine set_unchanging_quantities
       use input_parameters
       use mesh
       use constants
-      use globals
+      use flows
 !
 !-----------------------------------------------------------------------
 !
@@ -2417,18 +2425,21 @@ subroutine set_unchanging_quantities
 !
 !-----------------------------------------------------------------------
 !
-! ****** Define the diffusion coefficent and matrix.
+! ****** Allocate flow arrays.
 !
-      if (advance_diffusion) call load_diffusion
+      allocate (vt(nt,npm,nr))
+      allocate (vp(ntm,np,nr))
 !
-      if (advance_flow.and.advection_num_method_space.eq.WENO3) then
-        call load_weno
-      end if
+      vt(:,:,:) = 0.
+      vp(:,:,:) = 0.
+!$omp target enter data map(to:vt,vp)
 !
-      if (advance_flow) then
-        bc_flow_npole_fac = sin(dt(  1)*half)/(twopi*(one-cos(dt(  1)*half)))
-        bc_flow_spole_fac = sin(dt(ntm)*half)/(twopi*(one-cos(dt(ntm)*half)))
-      end if
+      if (use_flow_from_files) call load_flow_from_files
+!
+      if (advection_num_method_space.eq.WENO3) call load_weno
+!
+      bc_flow_npole_fac = sin(dt(  1)*half)/(twopi*(one-cos(dt(  1)*half)))
+      bc_flow_spole_fac = sin(dt(ntm)*half)/(twopi*(one-cos(dt(ntm)*half)))
 !
 end subroutine
 !#######################################################################
@@ -2445,7 +2456,6 @@ subroutine output_step
       use timing
       use globals
       use mesh
-      use fields
 !
 !-----------------------------------------------------------------------
 !
@@ -2462,8 +2472,6 @@ subroutine output_step
       call output_histories
 !
       call output_map
-!
-!     call output_restart
 !
       wtime_io = wtime_io + (MPI_Wtime() - t1)
 !
@@ -2483,6 +2491,8 @@ subroutine output_histories
       use globals
       use mpidefs
       use mesh
+      use diffusion
+      use flows
       use sts
 !
 !-----------------------------------------------------------------------
@@ -2672,7 +2682,7 @@ subroutine write_map (fname)
       use number_types
       use output
       use mpidefs
-      use fields, ONLY : f
+      use globals, ONLY : f
       use mesh, ONLY : t,npm,ntm,nr
       use timing
 !
@@ -2775,7 +2785,7 @@ subroutine write_flows (idx_str)
       use number_types
       use output
       use mpidefs
-      use fields, ONLY : vt,vp
+      use flows, ONLY : vt,vp
       use mesh
       use timing
 !
@@ -2955,7 +2965,7 @@ subroutine analysis_step
       use timing
       use globals
       use mesh
-      use fields
+      use diffusion
       use output
 !
 !-----------------------------------------------------------------------
@@ -3208,9 +3218,9 @@ subroutine update_flow
 !
       use input_parameters
       use mesh
-      use fields
       use globals
       use constants
+      use flows
 !
 !-----------------------------------------------------------------------
 !
@@ -3362,8 +3372,7 @@ subroutine add_flow_from_files
 !
       use number_types
       use input_parameters
-      use flow_from_files
-      use fields
+      use flows
       use globals
       use mpidefs
       use mesh
@@ -3517,7 +3526,7 @@ subroutine load_flow_from_files
       use globals
       use output
       use mesh
-      use flow_from_files
+      use flows
 !
 !-----------------------------------------------------------------------
 !
@@ -3611,6 +3620,8 @@ subroutine update_source
 !-----------------------------------------------------------------------
 !
       use input_parameters
+      use sources
+      use mesh
 !
 !-----------------------------------------------------------------------
 !
@@ -3618,9 +3629,28 @@ subroutine update_source
 !
 !-----------------------------------------------------------------------
 !
-!     - FILE
-!     - Random flux
-!     - Artificial AR emerge
+      integer :: i,j,k
+!
+      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
+        source(j,k,i) = 0.
+      enddo
+!
+      if (source_from_file) then
+        do concurrent (i=1:nr,k=1:npm,j=1:ntm)
+          source(j,k,i) = source(j,k,i) + source_from_file_data(j,k,i)
+        enddo
+      end if
+!
+      if (source_rfe_model.eq.1) then
+!
+!   This is currently static!
+!   Make option to re-load rfe here (every step)
+!   Tricky in parallel... slow in serial...
+!
+        do concurrent (i=1:nr,k=1:npm,j=1:ntm)
+          source(j,k,i) = source(j,k,i) + source_rfe(j,k,i)
+        enddo
+      end if
 !
 end subroutine
 !#######################################################################
@@ -3749,7 +3779,6 @@ subroutine assimilate_new_data (new_data)
       use input_parameters
       use globals
       use constants, ONLY : one,half
-      use fields, ONLY : f
       use mesh
       use data_assimilation
 !
@@ -3929,7 +3958,7 @@ subroutine update_timestep
       use globals
       use output
       use data_assimilation
-      use flow_from_files
+      use flows
       use sts
 !
 !-----------------------------------------------------------------------
@@ -4084,15 +4113,15 @@ subroutine flux_transport_step
 !
       if (strang_splitting) then
         dtime_local_half = dtime_local*half
+        if (advance_source)    call source_step    (dtime_local_half)
         if (advance_flow)      call advection_step (dtime_local_half)
-!        if (advance_source)    call source_step    (dtime_local_half)
         if (advance_diffusion) call diffusion_step (dtime_local)
-!        if (advance_source)    call source_step    (dtime_local_half)
         if (advance_flow)      call advection_step (dtime_local_half)
+        if (advance_source)    call source_step    (dtime_local_half)
       else
         if (advance_flow)      call advection_step (dtime_local)
-!        if (advance_source)    call source_step    (dtime_local)
         if (advance_diffusion) call diffusion_step (dtime_local)
+        if (advance_source)    call source_step    (dtime_local)
       end if
 !
       wtime_flux_transport = wtime_flux_transport + (MPI_Wtime() - t1)
@@ -4111,7 +4140,7 @@ subroutine advection_step (dtime_local)
       use mpidefs
       use input_parameters
       use timing
-      use globals, ONLY : advection_num_method_time,dtime_advection_used
+      use flows
 !
 !-----------------------------------------------------------------------
 !
@@ -4156,6 +4185,7 @@ subroutine diffusion_step (dtime_local)
       use constants
       use globals
       use mesh
+      use diffusion
       use sts, ONLY : need_to_load_sts
       use matrix_storage
 !
@@ -4290,14 +4320,16 @@ subroutine source_step (dtime_local)
 !
 !-----------------------------------------------------------------------
 !
-! ****** Advance the field with diffusion by the time-step DT.
+! ****** Advance the field with the source term by the time-step DT.
 !
 !-----------------------------------------------------------------------
 !
       use number_types
       use mpidefs
-      use input_parameters
       use timing
+      use globals, ONLY : f
+      use sources
+      use mesh
 !
 !-----------------------------------------------------------------------
 !
@@ -4307,12 +4339,15 @@ subroutine source_step (dtime_local)
 !
       real(r_typ), INTENT(IN) :: dtime_local
       real(r_typ) :: t1
+      integer :: i,j,k
 !
 !-----------------------------------------------------------------------
 !
       t1 = MPI_Wtime()
 !
-! ---> Add random flux, ARs, etc.
+      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
+        f(j,k,i) = f(j,k,i) + dtime_local*source(j,k,i)
+      enddo
 !
       wtime_source = wtime_source + (MPI_Wtime() - t1)
 !
@@ -4522,7 +4557,7 @@ subroutine load_diffusion_matrix
 !
       use number_types
       use mesh
-      use fields
+      use diffusion
       use input_parameters
       use matrix_storage
 !
@@ -4640,7 +4675,8 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
       use constants
       use timing
       use input_parameters, ONLY : verbose
-      use fields, ONLY : f
+      use globals, ONLY : f
+      use diffusion
 !
 !-----------------------------------------------------------------------
 !
@@ -4756,7 +4792,8 @@ subroutine diffusion_step_sts_cd (dtime_local)
 !
       use number_types
       use mesh
-      use fields
+      use globals
+      use diffusion
       use input_parameters
       use sts
       use constants
@@ -4843,7 +4880,8 @@ subroutine load_sts_rkl2 (dtime_local)
       use mesh
       use sts
       use constants
-      use globals
+      use diffusion
+      use flows
 !
 !-----------------------------------------------------------------------
 !
@@ -4959,7 +4997,8 @@ subroutine load_sts_rkg2 (dtime_local)
       use mesh
       use sts
       use constants
-      use globals
+      use diffusion
+      use flows
 !
 !-----------------------------------------------------------------------
 !
@@ -6110,12 +6149,12 @@ subroutine load_diffusion
       use number_types
       use mesh
       use mpidefs
-      use fields
       use input_parameters
       use constants
       use read_2d_file_interface
       use globals
       use sts
+      use diffusion
       use timing
 !
 !-----------------------------------------------------------------------
@@ -6377,7 +6416,7 @@ subroutine set_lf_alpha
 !
       use number_types
       use mesh
-      use fields, ONLY : vt,vp
+      use flows, ONLY : vt,vp
       use weno
 !
 !-----------------------------------------------------------------------
@@ -6480,16 +6519,15 @@ subroutine load_source
 !
 !-----------------------------------------------------------------------
 !
-! ****** Define the source term for the diffusion equation.
-!
-! ****** This is read in from the file SOURCEFILE if it is not blank.
+! ****** Load source term.
 !
 !-----------------------------------------------------------------------
 !
       use number_types
       use mesh
       use mpidefs
-      use fields
+      use sources
+      use output
       use input_parameters
       use constants
       use read_2d_file_interface
@@ -6501,26 +6539,33 @@ subroutine load_source
 !
 !-----------------------------------------------------------------------
 !
-      integer :: k,ierr,i
+      integer :: i,j,k,ierr
       real(r_typ), dimension(:), allocatable :: fn1,fs1
 !
-      integer :: nft,nfp
+      integer :: nft,nfp,num_cells
       real(r_typ), dimension(:), allocatable :: tf,pf
       real(r_typ), dimension(:,:), allocatable :: sf
       real(r_typ), dimension(:,:), allocatable :: f_tmp2d
+      real(r_typ) :: uf_per_cell_per_hour,rnd_num,random_seed,get_gaussian
 !
 !-----------------------------------------------------------------------
 !
-! ****** Read the source file if it was specified.
+! ****** Initialize source array.
 !
-      if (source_filename.ne.' ') then
+      allocate (source(ntm,npm,nr))
+      source(:,:,:) = 0.
+!$omp target enter data map(to:source)
+!
+! ****** Add the source file if it was specified.
+!
+      if (source_from_file) then
 !
 ! ****** Allocate memory for the source term.
 !
-        allocate (source(ntm,npm,nr))
-        allocate (f_tmp2d(ntm,npm))
+        allocate (source_from_file_data(ntm,npm,nr))
+        source_from_file_data(:,:,:) = 0.
 !
-        source(:,:,:) = 0.
+        allocate (f_tmp2d(ntm,npm))
 !
         if (iamp0) then
           call read_2d_file (source_filename,nfp,nft,sf,pf,tf,ierr)
@@ -6528,7 +6573,7 @@ subroutine load_source
         wtime_tmp_mpi = MPI_Wtime()
         call MPI_Bcast (nfp,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
         call MPI_Bcast (nft,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-        if (.NOT. iamp0) then
+        if (.not. iamp0) then
           allocate (pf(nfp))
           allocate (tf(nft))
           allocate (sf(nfp,nft))
@@ -6540,61 +6585,114 @@ subroutine load_source
 !
         sf(:,:) = TRANSPOSE(sf(:,:))
 !
-! ****** Interpolate the source term onto the main mesh (t,p).
+! ****** Interpolate (badly) the source term onto the main mesh (t,p).
 !
         call interp2d (nft,nfp,tf,pf,sf,ntm,npm,t,p,f_tmp2d,ierr)
-        do i=1,nr
-          source(:,:,i)=f_tmp2d(:,:)
-        enddo
 !
         if (ierr.ne.0) then
           write (*,*)
           write (*,*) '### ERROR in LOAD_SOURCE:'
           write (*,*) '### The scales in the source term file are'// &
-                        ' not monotonically increasing.'
+                      ' not monotonically increasing.'
           write (*,*) 'File name: ',trim(source_filename)
           call endrun(.true.)
         end if
 !
-! ****** Enforce periodicity.
-!
-        allocate (fn1(nr))
-        allocate (fs1(nr))
-        !
         do i=1,nr
-          source(:,   1,i)=half*(source(:,1,i)+source(:,npm,i))
-          source(:,npm-1,i)=source(:,1,i)
-!
-! ****** Set the pole value to only have an m=0 component.
-!
-          fn1(:)=0.
-          fs1(:)=0.
-          do k=1,npm-2
-            fn1(i)=fn1(i)+source(  1,k,i)*dp(k)
-            fs1(i)=fs1(i)+source(ntm,k,i)*dp(k)
-          enddo
-          fn1(i)=fn1(i)*twopi_i
-          fs1(i)=fs1(i)*twopi_i
-!
-          source(  1,:,i)=fn1(i)
-          source(ntm,:,i)=fs1(i)
+          source_from_file_data(:,:,i) = f_tmp2d(:,:)
         enddo
+!$omp target enter data map(to:source_from_file_data)
 !
-        if (verbose) then
-          write (*,*)
-          write (*,*) '   LOAD_SOURCE: A source term was read in from file: ', &
-                     trim(source_filename)
-          write (*,*) '   LOAD_SOURCE: Minimum value = ',minval(source(:,:,1))
-          write (*,*) '   LOAD_SOURCE: Maximum value = ',maxval(source(:,:,1))
-        end if
-!
-        deallocate (f_tmp2d)
-        deallocate (fn1)
-        deallocate (fs1)
         deallocate (sf)
         deallocate (tf)
         deallocate (pf)
+        deallocate (f_tmp2d)
 !
+!$omp target enter data map(to:source_from_file_data)
+      end if
+!
+      if (source_rfe_model.eq.1) then
+!
+        allocate (source_rfe(ntm,npm,nr))
+        source_rfe(:,:,:) = 0.
+!
+        call random_seed() !!! Add seed option to namelist?
+!
+        num_cells = (ntm-2)*(npm-2)
+!
+! ****** Get unsigned flux per hour per cell in code units.
+!
+        uf_per_cell_per_hour = source_rfe_total_unsigned_flux_per_hour* &
+                               input_flux_fac/(rsun_cm2*num_cells)
+!
+!       do i=1,nr   !!! Eventually, add option to have different random
+!                   !!! numbers per realization.
+          do k=2,npm-1
+            do j=2,ntm-1
+              rnd_num = (one/source_rfe_sigma)*sqrt(twopi)*half* &
+                        get_gaussian(zero,source_rfe_sigma)
+              source_rfe(j,k,:) = rnd_num*uf_per_cell_per_hour* &
+                                  dt_i(j)*dp_i(k)*st_i(j)
+            enddo
+          enddo
+!       enddo
+!
+! ****** Boundary conditions.
+!
+!       allocate (fn1(nr))
+!       allocate (fs1(nr))
+!
+        do i=1,nr
+!
+! ****** Enforce periodicity.
+!
+          source_rfe(:,  1,i) = source_rfe(:,npm-1,i)
+          source_rfe(:,npm,i) = source_rfe(:,2,    i)
+!
+        enddo
+!
+!        For now, leave poles at zero value (which should be the average of the
+!        points around phi anyways?)
+!
+!        do i=1,nr
+!
+! ****** Set the polar values as average of inner points.
+!
+!          fn1(:)=0.
+!          fs1(:)=0.
+!          do k=1,npm-2
+!            fn1(i) = fn1(i) + source_rfe(    2,k,i)*dp(k)
+!            fs1(i) = fs1(i) + source_rfe(ntm-1,k,i)*dp(k)
+!          enddo
+!          fn1(i) = fn1(i)*twopi_i
+!          fs1(i) = fs1(i)*twopi_i
+!
+!          source_rfe(  1,:,i) = fn1(i)
+!          source_rfe(ntm,:,i) = fs1(i)
+!        enddo
+!
+!        deallocate (fn1)
+!        deallocate (fs1)
+!
+!        call write_2d_file ('source.h5',npm-1,ntm, &
+!                            TRANSPOSE(source_rfe(:,1:npm-1,1)),pout,t,ierr)
+
+!$omp target enter data map(to:source_rfe)
+      end if
+!
+      if (verbose) then
+        write (*,*)
+        if (source_from_file) then
+          write (*,*) '   LOAD_SOURCE: A source term was read in from file: ', &
+                     trim(source_filename)
+          write (*,*) '   LOAD_SOURCE: Minimum value = ',minval(source_from_file_data(:,:,:))
+          write (*,*) '   LOAD_SOURCE: Maximum value = ',maxval(source_from_file_data(:,:,:))
+        end if
+        if (source_from_file) then
+          write (*,*) '   LOAD_SOURCE: A RFE source term was generated: '
+          write (*,*) '   LOAD_SOURCE: Minimum value = ',minval(source_rfe(:,:,:))
+          write (*,*) '   LOAD_SOURCE: Maximum value = ',maxval(source_rfe(:,:,:))
+        end if
       end if
 !
 end subroutine
@@ -6609,9 +6707,9 @@ subroutine add_flow_differential_rotation_analytic
 !
       use number_types
       use mesh
-      use fields
       use constants
       use globals
+      use flows
 !
 !-----------------------------------------------------------------------
 !
@@ -6643,9 +6741,9 @@ subroutine add_flow_meridianal_analytic
 !
       use number_types
       use mesh
-      use fields
       use constants
       use globals
+      use flows
 !
 !-----------------------------------------------------------------------
 !
@@ -6679,10 +6777,9 @@ subroutine get_flow_dtmax (dtmaxflow)
       use number_types
       use mpidefs
       use mesh
-      use fields, ONLY : vt,vp
+      use flows
       use constants
       use input_parameters, ONLY : strang_splitting
-      use globals
       use timing
 !
 !-----------------------------------------------------------------------
@@ -6745,9 +6842,9 @@ subroutine diffusion_step_fe_cd (dtime_local)
 !
       use number_types
       use mesh
-      use fields
       use input_parameters
       use globals
+      use diffusion
 !
 !-----------------------------------------------------------------------
 !
@@ -6800,7 +6897,7 @@ subroutine advection_step_fe (dtime_local)
 !-----------------------------------------------------------------------
 !
       use number_types
-      use fields, ONLY : f
+      use globals, ONLY : f
       use mesh
 !
 !-----------------------------------------------------------------------
@@ -6845,7 +6942,7 @@ subroutine advection_step_rk3tvd (dtime_local)
       use input_parameters
       use constants
       use mesh
-      use fields
+      use globals, ONLY : f
 !
 !-----------------------------------------------------------------------
 !
@@ -6909,7 +7006,7 @@ subroutine advection_step_ssprk43 (dtime_local)
       use input_parameters
       use constants
       use mesh
-      use fields
+      use globals, ONLY : f
 !
 !-----------------------------------------------------------------------
 !
@@ -6975,7 +7072,7 @@ subroutine advection_operator (ftemp,aop)
 !
       use number_types
       use mesh
-      use globals, ONLY : advection_num_method_space,UW,WENO3
+      use flows, ONLY : advection_num_method_space,UW,WENO3
 !
 !-----------------------------------------------------------------------
 !
@@ -7008,8 +7105,7 @@ subroutine advection_operator_upwind (ftemp,aop)
       use input_parameters
       use constants
       use mesh
-      use globals, ONLY: bc_flow_npole_fac,bc_flow_spole_fac
-      use fields, ONLY: vt,vp
+      use flows
 !
 !-----------------------------------------------------------------------
 !
@@ -7111,8 +7207,7 @@ subroutine advection_operator_weno3 (ftemp,aop)
       use constants
       use mesh
       use weno
-      use globals, ONLY: bc_flow_npole_fac,bc_flow_spole_fac
-      use fields, ONLY: vt,vp
+      use flows
 !
 !-----------------------------------------------------------------------
 !
@@ -7324,7 +7419,7 @@ subroutine diffusion_operator_cd (x,y)
       use number_types
       use constants
       use mesh
-      use fields
+      use diffusion
       use input_parameters
       use matrix_storage
 !
@@ -7712,13 +7807,14 @@ subroutine read_input_file
 !
       namelist /hipft_input_parameters/                                &
                verbose,                                                &
-               res_nt,res_np,                                          &
+               res_nt,                                                 &
+               res_np,                                                 &
                initial_map_filename,                                   &
                output_map_root_filename,                               &
                time_start,                                             &
                output_map_directory,n_realizations,validation_run,     &
                output_map_idx_cadence,output_map_time_cadence,         &
-               output_map_2d,restart_run,restart_file,time_end,        &
+               output_map_2d,time_end,                                 &
                output_flows_directory,                                 &
                output_history_time_cadence,                            &
                output_single_precision,                                &
@@ -7751,8 +7847,6 @@ subroutine read_input_file
                flow_num_method,                                        &
                output_flows,                                           &
                upwind,                                                 &
-               advance_source,                                         &
-               source_filename,                                        &
                advance_diffusion,                                      &
                diffusion_coef_filename,                                &
                diffusion_coef_grid,                                    &
@@ -7770,7 +7864,13 @@ subroutine read_input_file
                assimilate_data_lat_limit,                              &
                assimilate_data_lat_limits,                             &
                assimilate_data_mu_limit,                               &
-               assimilate_data_mu_limits
+               assimilate_data_mu_limits,                              &
+               advance_source,                                         &
+               source_from_file,                                       &
+               source_filename,                                        &
+               source_rfe_model,                                       &
+               source_rfe_total_unsigned_flux_per_hour,                &
+               source_rfe_sigma
 !
 !-----------------------------------------------------------------------
 !
@@ -7833,6 +7933,7 @@ subroutine process_input_parameters
       use input_parameters
       use globals
       use mpidefs
+      use flows
 !
 !-----------------------------------------------------------------------
 !
@@ -7968,6 +8069,62 @@ subroutine process_input_parameters
       end if
 !
 end subroutine
+!#######################################################################
+function get_gaussian(mu,sigma) result(fn_val)
+!
+!-----------------------------------------------------------------------
+!
+! ****** Generate a random normal deviate using the polar method.
+! ****** Reference: Marsaglia,G. & Bray,T.A.
+! ****** 'A convenient method for generating normal variables',
+! ****** Siam Rev., vol.6, 260-264, 1964.
+! ****** Adapted from Alam Miller's implementation from:
+! ****** https://jblevins.org/mirror/amiller
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use constants
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      real(r_typ) :: fn_val,mu,sigma
+!
+!-----------------------------------------------------------------------
+!
+      real(r_typ)       :: u,s
+      real(r_typ), save :: v,sln
+      logical, save     :: second = .false.
+!
+      if (second) then
+!
+! ****** If second, use the second random number generated on last call.
+!
+        second = .false.
+        fn_val = mu + sigma*v*sln
+      else
+!
+! ****** First call; generate a pair of random normals.
+!
+        second = .true.
+        do
+          call RANDOM_NUMBER(u)
+          call RANDOM_NUMBER(v)
+          u = SCALE(u,1) - one
+          v = SCALE(v,1) - one
+          s = u*u + v*v
+          if (s.lt.one .and. s.gt.0.) exit
+        enddo
+        sln = SQRT(-SCALE(LOG(s),1)/s)
+        fn_val = mu + sigma*u*sln
+      end if
+!
+      return
+end function get_gaussian
 !#######################################################################
 !
 !-----------------------------------------------------------------------
@@ -8192,7 +8349,7 @@ end subroutine
 !     flux-time-step.  It should be more robust and faster.
 !
 ! 05/31/2023, RC, Version 0.21.1:
-!   - BUG FIX: Automatic diffusion subcycle feature fixed.
+!   - BUG FIX:  Automatic diffusion subcycle feature fixed.
 !
 ! 06/02/2023, RC, Version 0.22.0:
 !   - BUG FIX:  Fixed incorrect MPI type and duplicate output.
@@ -8290,15 +8447,15 @@ end subroutine
 !
 ! 01/24/2024, RC+MS, Version 1.1.0:
 !   - Updated WENO3 scheme to use cell spacing for the smoother eps.
-!     This increases the order of accuracy from 2nd to 3rd in 
-!     smooth regions near extrema 
+!     This increases the order of accuracy from 2nd to 3rd in
+!     smooth regions near extrema
 !     [ See Cravero & Semplice J Sci Comput (2016) 67:1219-1246 ]
 !     [ DOI: 10.1007/s10915-015-0123-3                          ]
 !
 ! 01/24/2024, RC+MS, Version 1.2.0:
 !   - Made validation run 2 be 3, and set 2 to be blob condition
 !     for initial and final output (for phi rigid rotation tests).
-!     Validation 3 flips the initial solution for use with 
+!     Validation 3 flips the initial solution for use with
 !     symmetric theta blob tests.
 !
 ! 02/02/2024, RC, Version 1.2.1:
@@ -8307,6 +8464,16 @@ end subroutine
 !     that the reduced splitting error with Strang is not noticable,
 !     and so not worth the extra computation.  It can be turned on
 !     in the input file if desired.
+!
+! 02/08/2024, RC, Version 1.3.0:
+!   - Refactored modules to make a bit more sense.
+!   - Added ability to use source terms in the model.
+!     Use ADVANCE_SOURCE, SOURCE_FROM_FILE, SOURCE_FILENAME,
+!     SOURCE_RFE_MODEL, SOURCE_RFE_SIGMA, and
+!     SOURCE_RFE_TOTAL_UNSIGNED_FLUX_PER_HOUR to use.
+!     Currently, the RFE mode uses a fixed random number sequence
+!     that is not updated each step (a planned future feature).
+!     The input unit for unsigned_flux_per_hour is 1e21 Mx/hour.
 !
 !-----------------------------------------------------------------------
 !
