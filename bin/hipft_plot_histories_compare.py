@@ -9,7 +9,7 @@ from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_
 import os
 import itertools
 
-# Version 1.6.1
+# Version 1.7.0
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -158,6 +158,14 @@ def argParsing():
     help='Line width',
     dest='lw',
     type=float,
+    default=1.0,
+    required=False)
+
+  parser.add_argument('-flw',
+    help='Line width of fill area (default is -lw)',
+    dest='flw',
+    type=float,
+    default=0.00001,
     required=False)
 
   parser.add_argument('-ms',
@@ -165,6 +173,20 @@ def argParsing():
     dest='ms',
     type=float,
     default=6.0,
+    required=False)
+
+  parser.add_argument('-lms',
+    help='Lend marker size (default is -ms)',
+    dest='lms',
+    type=float,
+    default=10.0,
+    required=False)
+
+  parser.add_argument('-summary',
+    help='Summary mode that plots a mean line and upper-lower bound area.',
+    dest='summary',
+    action='store_true',
+    default=False,
     required=False)
 
   return parser.parse_args()
@@ -197,6 +219,10 @@ def run(args):
       if "hipft_history_sol_r" in file and file.endswith(".out"):
         hist_list.append(wDir+'/'+file)
     hist_list = sorted(hist_list)
+
+  NOTindividual=True
+  if len(hist_list) == 1:
+    NOTindividual=False 
 
   # Build the default list of labels based on the number runs the user entered
   # if no label list is entered
@@ -240,8 +266,11 @@ def run(args):
   fsize = args.fsize
   lgfsize = args.lgfsize
   MS = args.ms
-  LW = 1.0
-  LWM = LW/LABEL_LEN
+  LMS = args.lms
+
+  LW = args.lw
+  FLW = args.flw
+
   fc = 'w'
   tc = 'k'
 
@@ -314,12 +343,16 @@ def run(args):
   fig = plt.figure(num=None, figsize=(14, 7), dpi=args.dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
 
-  for run in range(len(time_list)):
-    LWu = LW-run*LWM
-    if (args.lw):
-      LWu=args.lw
-    plt.plot(time_list[run]*tfac, flux_imb_list[run],color=COLORS[run],linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.0,fillstyle='full',markeredgecolor=COLORS[run])
+  if args.summary:
+    summaryMode(flux_imb_list,time_list[0]*tfac,LW,FLW,fsize,plt)
+  else:
+    if NOTindividual:
+      for run in range(len(time_list)):
+        plt.plot(time_list[run]*tfac, flux_imb_list[run],color=COLORS[run],linewidth=LW,marker=MARKERS[run],
+          markersize=MS,markeredgewidth=0.0,fillstyle='full',markeredgecolor=COLORS[run])
+        AddLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
+    else:
+      plt.plot(time_list[0]*tfac,flux_imb_list[0],'k-',linewidth=LW,markersize=MS)
 
   xmn = np.min(time_list[0]*tfac)
   xmx = np.max(time_list[0]*tfac)
@@ -334,17 +367,6 @@ def run(args):
   ax.tick_params(axis='y',labelsize=fsize)
   ax.grid(zorder=0)
 
-  renderer = fig.canvas.get_renderer()
-  for ncol in range(1,LABEL_LEN+1):
-    lg = fig.legend(label_list,loc='outside lower center', ncol=ncol,fontsize=lgfsize)
-    fig.canvas.draw()
-    lgbbox = lg.get_window_extent(renderer).transformed(ax.transAxes.inverted())
-    lg.remove()
-    if lgbbox.width > args.lgwidth:
-      ncol -= 1   
-      break
-
-  lg = fig.legend(label_list,loc='outside lower center', bbox_to_anchor=(0.5,args.lgyoffset), ncol=ncol,fontsize=lgfsize)       
   fig.tight_layout()
   fig.savefig('history_'+args.runtag+'_flux_imb_pm.png', bbox_inches='tight', dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
@@ -354,22 +376,39 @@ def run(args):
   fig = plt.figure(num=None, figsize=(14, 7), dpi=args.dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
 
-  firstRun=True
-  for run in range(len(time_list)):
-    LWu = LW-run*LWM
-    if (args.lw):
-      LWu=args.lw
-    if firstRun:
-      h=plt.plot(time_list[run]*tfac, flux_fac*np.abs(fluxm_list[run]),color='Blue',linewidth=LWu,marker=MARKERS[run],
-          markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue')
-      h2=plt.plot(time_list[run]*tfac, flux_fac*fluxp_list[run],color='Red',linewidth=LWu,marker=MARKERS[run],
-          markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Red',label='_nolegend_')
-      firstRun=False
+  if args.summary:
+    upperBound=np.max(fluxm_list,axis=0)
+    lowerBound=np.min(fluxm_list,axis=0)
+    middleVal=np.mean(fluxm_list,axis=0)
+    mean_line1=plt.plot(time_list[0]*tfac, middleVal,color="Blue",linewidth=LW)
+    fill_area1=plt.fill_between(time_list[0]*tfac,lowerBound,upperBound,linewidth=FLW,alpha=0.5,color='Blue',label='_nolegend_')
+    upperBound=np.max(fluxp_list,axis=0)
+    lowerBound=np.min(fluxp_list,axis=0)
+    middleVal=np.mean(fluxp_list,axis=0)
+    mean_line2=plt.plot(time_list[0]*tfac, middleVal,color="Red",linewidth=LW)
+    fill_area2=plt.fill_between(time_list[0]*tfac,lowerBound,upperBound,linewidth=FLW,alpha=0.5,color='Red',label='_nolegend_')
+    legend1 = plt.legend([mean_line1[0],mean_line2[0]],["|Flux (-)|","Flux (+)"],loc='upper right',fontsize=fsize)
+  else:
+    if NOTindividual:
+      firstRun=True
+      for run in range(len(time_list)):
+        if firstRun:
+          h=plt.plot(time_list[run]*tfac, flux_fac*np.abs(fluxm_list[run]),color='Blue',linewidth=LW,marker=MARKERS[run],
+              markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue')
+          h2=plt.plot(time_list[run]*tfac, flux_fac*fluxp_list[run],color='Red',linewidth=LW,marker=MARKERS[run],
+              markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Red',label='_nolegend_')
+          firstRun=False
+        else:
+          plt.plot(time_list[run]*tfac, flux_fac*np.abs(fluxm_list[run]),color='Blue',linewidth=LW,marker=MARKERS[run],
+              markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue')
+          plt.plot(time_list[run]*tfac, flux_fac*fluxp_list[run],color='Red',linewidth=LW,marker=MARKERS[run],
+              markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Red',label='_nolegend_')
+      legend1 = plt.legend([h[0],h2[0]],["|Flux (-)|","Flux (+)"],loc='upper right',fontsize=fsize)
+      AddLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
     else:
-      plt.plot(time_list[run]*tfac, flux_fac*np.abs(fluxm_list[run]),color='Blue',linewidth=LWu,marker=MARKERS[run],
-          markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue')
-      plt.plot(time_list[run]*tfac, flux_fac*fluxp_list[run],color='Red',linewidth=LWu,marker=MARKERS[run],
-          markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Red',label='_nolegend_')
+      h = ax.plot(time_list[0]*tfac,flux_fac*np.abs(fluxm_list[0]),'-',linewidth=LW,color='Blue',markersize=MS)
+      h2 = ax.plot(time_list[0]*tfac,flux_fac*fluxp_list[0],'-',linewidth=LW,color='Red',markersize=MS)
+      legend1 = plt.legend([h[0],h2[0]],["|Flux (-)|","Flux (+)"],loc='upper right',fontsize=fsize)
 
   xmn = np.min(time_list[0]*tfac)
   xmx = np.max(time_list[0]*tfac)
@@ -380,22 +419,8 @@ def run(args):
   ax.tick_params(axis='y',labelsize=fsize)
   ax.grid(zorder=0)
   
-  legend1 = plt.legend([h[0],h2[0]],["|Flux (-)|","Flux (+)"],loc='upper right',fontsize=fsize)
-  renderer = fig.canvas.get_renderer()
-
-  for ncol in range(1,LABEL_LEN+1):
-    lg = fig.legend(label_list,loc='outside lower center', ncol=ncol,fontsize=lgfsize)
-    fig.canvas.draw()
-    lgbbox = lg.get_window_extent(renderer).transformed(ax.transAxes.inverted())
-    lg.remove()
-    if lgbbox.width > args.lgwidth:
-      ncol -= 1      
-      break
-
-  lg = fig.legend(label_list,loc='outside lower center', bbox_to_anchor=(0.5,args.lgyoffset),ncol=ncol,fontsize=lgfsize)
-  fig.tight_layout()
   ax.add_artist(legend1)  
-  
+  fig.tight_layout()
   fig.savefig('history_'+args.runtag+'_flux_pm.png', bbox_inches="tight", dpi=args.dpi, \
               facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
@@ -405,13 +430,17 @@ def run(args):
   fig = plt.figure(num=None, figsize=(14, 7), dpi=args.dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
 
-  for run in range(len(time_list)):
-    LWu = LW-run*LWM
-    if (args.lw):
-      LWu=args.lw
-    plt.plot(time_list[run]*tfac, flux_fac*flux_tot_un_list[run],color=COLORS[run],linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.0,fillstyle='full',markeredgecolor=COLORS[run])
-
+  if args.summary:
+    summaryMode(flux_tot_un_list,time_list[0]*tfac,LW,FLW,fsize,plt)
+  else:
+    if NOTindividual:
+      for run in range(len(time_list)):
+        plt.plot(time_list[run]*tfac, flux_fac*flux_tot_un_list[run],color=COLORS[run],linewidth=LW,marker=MARKERS[run],
+          markersize=MS,markeredgewidth=0.0,fillstyle='full',markeredgecolor=COLORS[run])
+      AddLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
+    else:
+      plt.plot(time_list[0]*tfac,flux_fac*flux_tot_un_list[0],'k-',linewidth=LW,markersize=MS)
+  
   xmn = np.min(time_list[0]*tfac)
   xmx = np.max(time_list[0]*tfac)
   plt.xlim(xmin=xmn,xmax=xmx)
@@ -421,17 +450,6 @@ def run(args):
   ax.tick_params(axis='y',labelsize=fsize)
   ax.grid(zorder=0)
 
-  renderer = fig.canvas.get_renderer()
-  for ncol in range(1,LABEL_LEN+1):
-    lg = fig.legend(label_list,loc='outside lower center', ncol=ncol,fontsize=lgfsize)
-    fig.canvas.draw()
-    lgbbox = lg.get_window_extent(renderer).transformed(ax.transAxes.inverted())
-    lg.remove()
-    if lgbbox.width > args.lgwidth:
-      ncol -= 1        
-      break
-
-  lg = fig.legend(label_list,loc='outside lower center', bbox_to_anchor=(0.5,args.lgyoffset),ncol=ncol,fontsize=lgfsize)
   fig.tight_layout()
   fig.savefig('history_'+args.runtag+'_flux_total_unsigned.png', bbox_inches="tight", dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
@@ -441,12 +459,16 @@ def run(args):
   fig = plt.figure(num=None, figsize=(14, 7), dpi=args.dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
 
-  for run in range(len(time_list)):
-    LWu = LW-run*LWM
-    if (args.lw):
-      LWu=args.lw
-    plt.plot(time_list[run]*tfac, flux_fac*flux_tot_s_list[run],color=COLORS[run],linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.0,fillstyle='full',markeredgecolor=COLORS[run])
+  if args.summary:
+    summaryMode(flux_tot_s_list,time_list[0]*tfac,LW,FLW,fsize,plt)
+  else:
+    if NOTindividual:
+      for run in range(len(time_list)):
+        plt.plot(time_list[run]*tfac, flux_fac*flux_tot_s_list[run],color=COLORS[run],linewidth=LW,marker=MARKERS[run],
+          markersize=MS,markeredgewidth=0.0,fillstyle='full',markeredgecolor=COLORS[run])
+      AddLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
+    else:
+      plt.plot(time_list[0]*tfac,flux_fac*flux_tot_s_list[0],'b-',linewidth=LW,markersize=MS)
 
   xmn = np.min(time_list[0]*tfac)
   xmx = np.max(time_list[0]*tfac)
@@ -457,17 +479,6 @@ def run(args):
   ax.tick_params(axis='y',labelsize=fsize)
   ax.grid(zorder=0)
 
-  renderer = fig.canvas.get_renderer()
-  for ncol in range(1,LABEL_LEN+1):
-    lg = fig.legend(label_list,loc='outside lower center', ncol=ncol,fontsize=lgfsize)
-    fig.canvas.draw()
-    lgbbox = lg.get_window_extent(renderer).transformed(ax.transAxes.inverted())
-    lg.remove()
-    if lgbbox.width > args.lgwidth:
-      ncol -= 1       
-      break
-
-  lg = fig.legend(label_list,loc='outside lower center', bbox_to_anchor=(0.5,args.lgyoffset),ncol=ncol,fontsize=lgfsize)
   fig.tight_layout()
   fig.savefig('history_'+args.runtag+'_flux_total_signed.png', bbox_inches="tight", dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')  
@@ -482,30 +493,59 @@ def run(args):
   xmn = np.min(time_list[0]*tfac)
   xmx = np.max(time_list[0]*tfac)
 
-  firstRun=True
-  for run in range(len(time_list)):
-    LWu = LW-run*LWM
-    if (args.lw):
-      LWu=args.lw
-    if firstRun:
-      h=plt.plot(time_list[run]*tfac, flux_fac*fluxp_pn_list[run],color='Red',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Red')
-      h2=plt.plot(time_list[run]*tfac, flux_fac*fluxm_pn_list[run],color='Blue',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue',label='_nolegend_')
-      h3=plt.plot(time_list[run]*tfac, flux_fac*fluxp_ps_list[run],color='firebrick',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='firebrick',label='_nolegend_')
-      h4=plt.plot(time_list[run]*tfac, flux_fac*fluxm_ps_list[run],color='navy',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.3,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='navy',label='_nolegend_')
-      firstRun=False
+  if args.summary:
+    upperBound=flux_fac*np.max(fluxp_pn_list,axis=0)
+    lowerBound=flux_fac*np.min(fluxp_pn_list,axis=0)
+    middleVal=flux_fac*np.mean(fluxp_pn_list,axis=0)
+    mean_line1=plt.plot(time_list[0]*tfac, middleVal,color="Red",linewidth=LW)
+    fill_area1=plt.fill_between(time_list[0]*tfac,lowerBound,upperBound,linewidth=FLW,alpha=0.5,color='Red',label='_nolegend_')
+    upperBound=flux_fac*np.max(fluxm_pn_list,axis=0)
+    lowerBound=flux_fac*np.min(fluxm_pn_list,axis=0)
+    middleVal=flux_fac*np.mean(fluxm_pn_list,axis=0)
+    mean_line2=plt.plot(time_list[0]*tfac, middleVal,color="Blue",linewidth=LW)
+    fill_area2=plt.fill_between(time_list[0]*tfac,lowerBound,upperBound,linewidth=FLW,alpha=0.5,color='Blue',label='_nolegend_')
+    upperBound=flux_fac*np.max(fluxp_ps_list,axis=0)
+    lowerBound=flux_fac*np.min(fluxp_ps_list,axis=0)
+    middleVal=flux_fac*np.mean(fluxp_ps_list,axis=0)
+    mean_line3=plt.plot(time_list[0]*tfac, middleVal,color="firebrick",linewidth=LW)
+    fill_area3=plt.fill_between(time_list[0]*tfac,lowerBound,upperBound,linewidth=FLW,alpha=0.5,color='firebrick',label='_nolegend_')
+    upperBound=flux_fac*np.max(fluxm_ps_list,axis=0)
+    lowerBound=flux_fac*np.min(fluxm_ps_list,axis=0)
+    middleVal=flux_fac*np.mean(fluxm_ps_list,axis=0)
+    mean_line4=plt.plot(time_list[0]*tfac, middleVal,color="navy",linewidth=LW)
+    fill_area4=plt.fill_between(time_list[0]*tfac,lowerBound,upperBound,linewidth=FLW,alpha=0.5,color='navy',label='_nolegend_')  
+    legend1 = plt.legend([mean_line1[0],mean_line2[0],mean_line3[0],mean_line4[0]],["N (+)","N (-)","S (+)","S (-)"],loc='upper right',fontsize=fsize)
+  else:
+    if NOTindividual:
+      firstRun=True
+      for run in range(len(time_list)):
+        if firstRun:
+          h=plt.plot(time_list[run]*tfac, flux_fac*fluxp_pn_list[run],color='Red',linewidth=LW,marker=MARKERS[run],
+            markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Red')
+          h2=plt.plot(time_list[run]*tfac, flux_fac*fluxm_pn_list[run],color='Blue',linewidth=LW,marker=MARKERS[run],
+            markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue',label='_nolegend_')
+          h3=plt.plot(time_list[run]*tfac, flux_fac*fluxp_ps_list[run],color='firebrick',linewidth=LW,marker=MARKERS[run],
+            markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='firebrick',label='_nolegend_')
+          h4=plt.plot(time_list[run]*tfac, flux_fac*fluxm_ps_list[run],color='navy',linewidth=LW,marker=MARKERS[run],
+            markersize=MS,markeredgewidth=0.3,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='navy',label='_nolegend_')
+          firstRun=False
+        else:
+          plt.plot(time_list[run]*tfac, flux_fac*fluxp_pn_list[run],color='Red',linewidth=LW,marker=MARKERS[run],
+            markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Red')
+          plt.plot(time_list[run]*tfac, flux_fac*fluxm_pn_list[run],color='Blue',linewidth=LW,marker=MARKERS[run],
+            markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue',label='_nolegend_')
+          plt.plot(time_list[run]*tfac, flux_fac*fluxp_ps_list[run],color='firebrick',linewidth=LW,marker=MARKERS[run],
+            markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='firebrick',label='_nolegend_')
+          plt.plot(time_list[run]*tfac, flux_fac*fluxm_ps_list[run],color='navy',linewidth=LW,marker=MARKERS[run],
+            markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='navy',label='_nolegend_')
+      legend1 = plt.legend([h[0],h2[0],h3[0],h4[0]],["N (+)","N (-)","S (+)","S (-)"],loc='upper right',fontsize=fsize)
+      AddLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
     else:
-      plt.plot(time_list[run]*tfac, flux_fac*fluxp_pn_list[run],color='Red',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Red')
-      plt.plot(time_list[run]*tfac, flux_fac*fluxm_pn_list[run],color='Blue',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue',label='_nolegend_')
-      plt.plot(time_list[run]*tfac, flux_fac*fluxp_ps_list[run],color='firebrick',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='firebrick',label='_nolegend_')
-      plt.plot(time_list[run]*tfac, flux_fac*fluxm_ps_list[run],color='navy',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='navy',label='_nolegend_')
+      h = plt.plot(time_list[0]*tfac,flux_fac*fluxp_pn_list[0],'r-',linewidth=LW,markersize=MS)
+      h2 = plt.plot(time_list[0]**tfac,flux_fac*fluxm_pn_list[0],'b-',linewidth=LW,markersize=MS) 
+      h3 = plt.plot(time_list[0]**tfac,flux_fac*fluxp_ps_list[0],'-',color='firebrick',linewidth=LW,markersize=MS)
+      h4 = plt.plot(time_list[0]**tfac,flux_fac*fluxm_ps_list[0],'-',color='navy',linewidth=LW,markersize=MS)
+      legend1 = plt.legend([h[0],h2[0],h3[0],h4[0]],["N (+)","N (-)","S (+)","S (-)"],loc='upper right',fontsize=fsize)
 
   plt.xlim(xmin=xmn,xmax=xmx)
   plt.ylim(ymin=ymin,ymax=ymax)
@@ -515,21 +555,7 @@ def run(args):
   ax.tick_params(axis='y',labelsize=fsize)
   ax.grid(zorder=0)
 
-  legend1 = plt.legend([h[0],h2[0],h3[0],h4[0]],["N (+)","N (-)","S (+)","S (-)"],loc='upper right',fontsize=fsize)
-  renderer = fig.canvas.get_renderer()
-
-  for ncol in range(1,LABEL_LEN+1):
-    lg = fig.legend(label_list,loc='outside lower center', ncol=ncol,fontsize=lgfsize)
-    fig.canvas.draw()
-    lgbbox = lg.get_window_extent(renderer).transformed(ax.transAxes.inverted())
-    lg.remove()
-    if lgbbox.width > args.lgwidth:
-      ncol -= 1        
-      break
-
-  lg = fig.legend(label_list,loc='outside lower center', bbox_to_anchor=(0.5,args.lgyoffset),ncol=ncol,fontsize=lgfsize)
   ax.add_artist(legend1)  
-
   fig.tight_layout()
   fig.savefig('history_'+args.runtag+'_flux_poles_30.png', bbox_inches="tight", dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
@@ -543,22 +569,39 @@ def run(args):
   xmn = np.min(time_list[0]*tfac)
   xmx = np.max(time_list[0]*tfac)
 
-  firstRun=True
-  for run in range(len(time_list)):
-    LWu = LW-run*LWM
-    if (args.lw):
-      LWu=args.lw
-    if firstRun:
-      h=plt.plot(time_list[run]*tfac, pole_n_avg_field_list[run],color='Black',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Black')
-      h2=plt.plot(time_list[run]*tfac, pole_s_avg_field_list[run],color='Blue',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue',label='_nolegend_')
-      firstRun=False
+  if args.summary:
+    upperBound=np.max(pole_n_avg_field_list,axis=0)
+    lowerBound=np.min(pole_n_avg_field_list,axis=0)
+    middleVal=np.mean(pole_n_avg_field_list,axis=0)
+    mean_line1=plt.plot(time_list[0]*tfac, middleVal,color="Black",linewidth=LW)
+    fill_area1=plt.fill_between(time_list[0]*tfac,lowerBound,upperBound,linewidth=FLW,alpha=0.5,color='Black',label='_nolegend_')
+    upperBound=np.max(pole_s_avg_field_list,axis=0)
+    lowerBound=np.min(pole_s_avg_field_list,axis=0)
+    middleVal=np.mean(pole_s_avg_field_list,axis=0)
+    mean_line2=plt.plot(time_list[0]*tfac, middleVal,color="Blue",linewidth=LW)
+    fill_area2=plt.fill_between(time_list[0]*tfac,lowerBound,upperBound,linewidth=FLW,alpha=0.5,color='Blue',label='_nolegend_')
+    legend1 = plt.legend([mean_line1[0],mean_line2[0]],["North","South"],loc='upper right',fontsize=fsize)
+  else:
+    if NOTindividual:
+      firstRun=True
+      for run in range(len(time_list)):
+        if firstRun:
+          h=plt.plot(time_list[run]*tfac, pole_n_avg_field_list[run],color='Black',linewidth=LW,marker=MARKERS[run],
+            markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Black')
+          h2=plt.plot(time_list[run]*tfac, pole_s_avg_field_list[run],color='Blue',linewidth=LW,marker=MARKERS[run],
+            markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue',label='_nolegend_')
+          firstRun=False
+        else:
+          plt.plot(time_list[run]*tfac, pole_n_avg_field_list[run],color='Black',linewidth=LW,marker=MARKERS[run],
+            markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Black')
+          plt.plot(time_list[run]*tfac, pole_s_avg_field_list[run],color='Blue',linewidth=LW,marker=MARKERS[run],
+            markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue',label='_nolegend_')
+      legend1 = plt.legend([h[0],h2[0]],["North","South"],loc='upper right',fontsize=fsize)
+      AddLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
     else:
-      plt.plot(time_list[run]*tfac, pole_n_avg_field_list[run],color='Black',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Black')
-      plt.plot(time_list[run]*tfac, pole_s_avg_field_list[run],color='Blue',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='Blue',label='_nolegend_')
+      h = plt.plot(time_list[0]*tfac,pole_n_avg_field_list[0],'k-',linewidth=LW,markersize=MS)
+      h2 = plt.plot(time_list[0]*tfac,pole_s_avg_field_list[0],'b-',linewidth=LW,markersize=MS) 
+      legend1 = plt.legend([h[0],h2[0]],["North","South"],loc='upper right',fontsize=fsize)
 
   plt.xlim(xmin=xmn,xmax=xmx)
   plt.ylim(ymin=ymin,ymax=ymax)
@@ -568,20 +611,7 @@ def run(args):
   ax.tick_params(axis='y',labelsize=fsize)
   ax.grid(zorder=0)
   
-  legend1 = plt.legend([h[0],h2[0]],["North","South"],loc='upper right',fontsize=fsize)
-  renderer = fig.canvas.get_renderer()
-  for ncol in range(1,LABEL_LEN+1):
-    lg = fig.legend(label_list,loc='outside lower center', ncol=ncol,fontsize=lgfsize)
-    fig.canvas.draw()
-    lgbbox = lg.get_window_extent(renderer).transformed(ax.transAxes.inverted())
-    lg.remove()
-    if lgbbox.width > args.lgwidth:
-      ncol -= 1
-      break
-
-  lg = fig.legend(label_list,loc='outside lower center', bbox_to_anchor=(0.5,args.lgyoffset), ncol=ncol,fontsize=lgfsize)  
   ax.add_artist(legend1)  
-
   fig.tight_layout()
   fig.savefig('history_'+args.runtag+'_field_poles_30.png', bbox_inches="tight", dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
@@ -591,18 +621,39 @@ def run(args):
   fig = plt.figure(num=None, figsize=(14, 7), dpi=args.dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
 
-  firstRun=True
-  for run in range(len(time_list)):
-    LWu = LW-run*LWM
-    if (args.lw):
-      LWu=args.lw
-    if firstRun:
-      h=plt.plot(time_list[run]*tfac, brmax_list[run],color='blue',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='blue')
-      firstRun=False
+  if args.summary:
+    upperBound=np.max(brmax_list,axis=0)
+    lowerBound=np.min(brmax_list,axis=0)
+    middleVal=np.mean(brmax_list,axis=0)
+    mean_line1=plt.plot(time_list[0]*tfac, middleVal,color="blue",linewidth=LW)
+    fill_area1=plt.fill_between(time_list[0]*tfac,lowerBound,upperBound,linewidth=FLW,alpha=0.5,color='blue',label='_nolegend_')
+    upperBound=np.max(brmin_list,axis=0)
+    lowerBound=np.min(brmin_list,axis=0)
+    middleVal=np.mean(brmin_list,axis=0)
+    mean_line2=plt.plot(time_list[0]*tfac, middleVal,color="red",linewidth=LW)
+    fill_area2=plt.fill_between(time_list[0]*tfac,lowerBound,upperBound,linewidth=FLW,alpha=0.5,color='red',label='_nolegend_')
+    legend1 = plt.legend([mean_line1[0],mean_line2[0]],["max(Br)","|min(Br)|"],loc='upper right',fontsize=fsize)
+  else:
+    if NOTindividual:
+      firstRun=True
+      for run in range(len(time_list)):
+        if firstRun:
+          h=plt.plot(time_list[run]*tfac, brmax_list[run],color='blue',linewidth=LW,marker=MARKERS[run],
+            markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='blue')
+          h1=plt.plot(time_list[run]*tfac, np.abs(brmin_list[run]),color='red',linewidth=LW,marker=MARKERS[run],
+            markersize=MS,markeredgewidth=0.0,fillstyle='full', markerfacecolor=COLORS[run],markeredgecolor='red',label='_nolegend_')
+          firstRun=False
+        else:
+          plt.plot(time_list[run]*tfac, brmax_list[run],color='blue',linewidth=LW,marker=MARKERS[run],
+            markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='blue')
+          plt.plot(time_list[run]*tfac, np.abs(brmin_list[run]),color='red',linewidth=LW,marker=MARKERS[run],
+            markersize=MS,markeredgewidth=0.0,fillstyle='full', markerfacecolor=COLORS[run],markeredgecolor='red',label='_nolegend_')
+      legend1 = plt.legend([h[0],h1[0]],["max(Br)","|min(Br)|"],loc='upper right',fontsize=fsize)
+      AddLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
     else:
-      plt.plot(time_list[run]*tfac, brmax_list[run],color='blue',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=COLORS[run],markeredgecolor='blue')
+      h = plt.plot(time_list[0]*tfac,brmax_list[0],'b-',linewidth=LW,markersize=MS)
+      h1 = plt.plot(time_list[0]*tfac,np.abs(brmin_list[0]),'r-',linewidth=LW,markersize=MS)
+      legend1 = plt.legend([h[0],h1[0]],["max(Br)","|min(Br)|"],loc='upper right',fontsize=fsize)
 
   xmn = np.min(time_list[0]*tfac)
   xmx = np.max(time_list[0]*tfac)
@@ -611,37 +662,9 @@ def run(args):
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
   plt.title('Min and Max Br', {'fontsize': fsize, 'color': tc})
   ax.tick_params(axis='y',labelsize=fsize)
-
-  firstRun=True
-  for run in range(len(time_list)):
-    LWu = LW-run*LWM
-    if (args.lw):
-      LWu=args.lw
-    if firstRun:
-      h1=plt.plot(time_list[run]*tfac, np.abs(brmin_list[run]),color='red',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.0,fillstyle='full', markerfacecolor=COLORS[run],markeredgecolor='red',label='_nolegend_')
-      firstRun=False
-    else:
-      plt.plot(time_list[run]*tfac, np.abs(brmin_list[run]),color='red',linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.0,fillstyle='full', markerfacecolor=COLORS[run],markeredgecolor='red',label='_nolegend_')
-  
   ax.grid(zorder=0)
-  
-  legend1 = plt.legend([h[0],h1[0]],["max(Br)","|min(Br)|"],loc='upper right',fontsize=fsize)
-  renderer = fig.canvas.get_renderer()
 
-  for ncol in range(1,LABEL_LEN+1):
-    lg = fig.legend(label_list,loc='outside lower center', ncol=ncol,fontsize=lgfsize)
-    fig.canvas.draw()
-    lgbbox = lg.get_window_extent(renderer).transformed(ax.transAxes.inverted())
-    lg.remove()
-    if lgbbox.width > args.lgwidth:
-      ncol -= 1       
-      break
-
-  lg = fig.legend(label_list,loc='outside lower center', bbox_to_anchor=(0.5,args.lgyoffset), ncol=ncol,fontsize=lgfsize) 
   ax.add_artist(legend1)  
-
   fig.tight_layout()
   fig.savefig('history_'+args.runtag+'_br.png', bbox_inches="tight", dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
@@ -653,12 +676,16 @@ def run(args):
   xmn = np.min(time_list[0]*tfac)
   xmx = np.max(time_list[0]*tfac)
 
-  for run in range(len(time_list)):
-    LWu = LW-run*LWM
-    if (args.lw):
-      LWu=args.lw
-    plt.plot(time_list[run]*tfac, ax_dipole_list[run],color=COLORS[run],linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.0,fillstyle='full',markeredgecolor=COLORS[run])
+  if args.summary:
+    summaryMode(ax_dipole_list,time_list[0]*tfac,LW,FLW,fsize,plt)
+  else:
+    if NOTindividual:
+      for run in range(len(time_list)):
+        plt.plot(time_list[run]*tfac, ax_dipole_list[run],color=COLORS[run],linewidth=LW,marker=MARKERS[run],
+          markersize=MS,markeredgewidth=0.0,fillstyle='full',markeredgecolor=COLORS[run])
+      AddLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
+    else:
+      plt.plot(time_list[0]*tfac,ax_dipole_list[0],'k-',linewidth=LW,markersize=MS)
 
   plt.xlim(xmin=xmn,xmax=xmx)
   xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs)
@@ -667,17 +694,6 @@ def run(args):
   ax.tick_params(axis='y',labelsize=fsize)
   ax.grid(zorder=0)
 
-  renderer = fig.canvas.get_renderer()
-  for ncol in range(1,LABEL_LEN+1):
-    lg = fig.legend(label_list,loc='outside lower center', ncol=ncol,fontsize=lgfsize)
-    fig.canvas.draw()
-    lgbbox = lg.get_window_extent(renderer).transformed(ax.transAxes.inverted())
-    lg.remove()
-    if lgbbox.width > args.lgwidth:
-      ncol -= 1      
-      break
-
-  lg = fig.legend(label_list,loc='outside lower center', bbox_to_anchor=(0.5,args.lgyoffset), ncol=ncol,fontsize=lgfsize) 
   fig.tight_layout()
   fig.savefig('history_'+args.runtag+'_dipole_axial.png', bbox_inches="tight", dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
@@ -689,12 +705,16 @@ def run(args):
   xmn = np.min(time_list[0]*tfac)
   xmx = np.max(time_list[0]*tfac)
 
-  for run in range(len(time_list)):
-    LWu = LW-run*LWM
-    if (args.lw):
-      LWu=args.lw
-    plt.plot(time_list[run]*tfac, eq_dipole_list[run],color=COLORS[run],linewidth=LWu,marker=MARKERS[run],
-        markersize=MS,markeredgewidth=0.0,fillstyle='full',markeredgecolor=COLORS[run])
+  if args.summary:
+    summaryMode(eq_dipole_list,time_list[0]*tfac,LW,FLW,fsize,plt)
+  else:
+    if NOTindividual:
+      for run in range(len(time_list)):
+        plt.plot(time_list[run]*tfac, eq_dipole_list[run],color=COLORS[run],linewidth=LW,marker=MARKERS[run],
+          markersize=MS,markeredgewidth=0.0,fillstyle='full',markeredgecolor=COLORS[run])
+      AddLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
+    else:
+      plt.plot(time_list[0]*tfac,eq_dipole_list[0],'k-',linewidth=LW,markersize=MS)
 
   plt.xlim(xmin=xmn,xmax=xmx)
   xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs)
@@ -703,17 +723,6 @@ def run(args):
   ax.tick_params(axis='y',labelsize=fsize)
   ax.grid(zorder=0)
 
-  renderer = fig.canvas.get_renderer()
-  for ncol in range(1,LABEL_LEN+1):
-    lg = fig.legend(label_list,loc='outside lower center', ncol=ncol,fontsize=lgfsize)
-    fig.canvas.draw()
-    lgbbox = lg.get_window_extent(renderer).transformed(ax.transAxes.inverted())
-    lg.remove()
-    if lgbbox.width > args.lgwidth:
-      ncol -= 1         
-      break
-
-  lg = fig.legend(label_list,loc='outside lower center', bbox_to_anchor=(0.5,args.lgyoffset), ncol=ncol,fontsize=lgfsize) 
   fig.tight_layout()
   fig.savefig('history_'+args.runtag+'_dipole_eq.png', bbox_inches="tight", dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
@@ -725,12 +734,16 @@ def run(args):
     fig = plt.figure(num=None, figsize=(14, 7), dpi=args.dpi, facecolor=fc,frameon=True)
     ax = plt.gca()
 
-    for run in range(len(time_list)):
-      LWu = LW-run*LWM
-      if (args.lw):
-        LWu=args.lw
-      plt.plot(time_list[run]*tfac, (1e5)*valerr_list[run],color=COLORS[run],linewidth=LWu,marker=MARKERS[run],
-          markersize=MS,markeredgewidth=0.0,fillstyle='full',markeredgecolor=COLORS[run])
+    if args.summary:
+      summaryMode(valerr_list,time_list[0]*tfac,LW,FLW,fsize,plt)
+    else:
+      if NOTindividual:
+        for run in range(len(time_list)):
+          plt.plot(time_list[run]*tfac, (1e5)*valerr_list[run],color=COLORS[run],linewidth=LW,marker=MARKERS[run],
+            markersize=MS,markeredgewidth=0.0,fillstyle='full',markeredgecolor=COLORS[run])
+        AddLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
+      else:
+        plt.plot(time_list[0]*tfac,(1e5)*valerr_list[0],'k-',linewidth=LW,markersize=MS)
 
     plt.title('Validation Error', {'fontsize': fsize, 'color': tc})
     xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs)
@@ -738,20 +751,37 @@ def run(args):
     ax.tick_params(axis='y',labelsize=fsize)
     ax.grid(zorder=0)
 
-    renderer = fig.canvas._get_renderer()
-    for ncol in range(1,LABEL_LEN+1):
-      lg = fig.legend(label_list,loc='outside lower center', ncol=ncol,fontsize=lgfsize)
-      fig.canvas.draw()
-      lgbbox = lg.get_window_extent(renderer).transformed(ax.transAxes.inverted())
-      lg.remove()
-      if lgbbox.width > args.lgwidth:
-        ncol -= 1     
-        break
-
-    lg = fig.legend(label_list,loc='outside lower center', bbox_to_anchor=(0.5,args.lgyoffset), ncol=ncol,fontsize=lgfsize) 
     fig.tight_layout()  
     fig.savefig('history_'+args.runtag+'_val.png', bbox_inches="tight", dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   
+
+def summaryMode(llist,xlist,LW,FLW,fsize,plt):
+  upperBound=np.max(llist,axis=0)
+  lowerBound=np.min(llist,axis=0)
+  middleVal=np.mean(llist,axis=0)
+  stdVal=np.std(llist,axis=0)
+  stdVal0=middleVal - stdVal
+  stdVal1=middleVal + stdVal
+  mean_line=plt.plot(xlist, middleVal,color="k",linewidth=LW,label="$\mu$")
+  fill_area=plt.fill_between(xlist,stdVal0,stdVal1,linewidth=FLW,alpha=0.5,color='blue',label="$\sigma$")
+  fill_area=plt.fill_between(xlist,lowerBound,upperBound,linewidth=FLW,alpha=0.25,color='blue',label="[Min,Max]")
+  legend1 = plt.legend(loc='upper left',fontsize=fsize)
+
+
+def AddLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig):
+  renderer = fig.canvas.get_renderer()
+  for ncol in range(1,LABEL_LEN+1):
+    lg = fig.legend(label_list,loc='outside lower center', ncol=ncol,fontsize=lgfsize)
+    fig.canvas.draw()
+    lgbbox = lg.get_window_extent(renderer).transformed(ax.transAxes.inverted())
+    lg.remove()
+    if lgbbox.width > args.lgwidth:
+      ncol -= 1
+      break
+  lg = fig.legend(label_list,loc='outside lower center', bbox_to_anchor=(0.5,args.lgyoffset), ncol=ncol,fontsize=lgfsize) 
+  for handle in lg.legend_handles:
+    handle.set_markersize(LMS)
+    handle.set_linestyle("")
 
 #
 # ****** x-axis label and ticks
