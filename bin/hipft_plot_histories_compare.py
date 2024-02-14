@@ -1131,9 +1131,6 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
       plt.xlabel('Hours', {'fontsize': args.fsize, 'color': tc})
     ax.tick_params(axis='x',labelsize=args.xlabelfsize)
 
-def rearr(items, ncol):
-    return itertools.chain(*[items[i::ncol] for i in range(ncol)])
-
 def main():
   ## Get input agruments:
   args = argParsing()
