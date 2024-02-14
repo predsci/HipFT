@@ -9,7 +9,7 @@ from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_
 import os
 import itertools
 
-# Version 1.7.0
+# Version 1.7.1
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -143,7 +143,7 @@ def argParsing():
   parser.add_argument('-lgyoffset',
     help='Legend box height offset (default:-0.1)',
     dest='lgyoffset',
-    default=-0.1,
+    default=-0.025,
     type=float,
     required=False)
 
@@ -366,13 +366,15 @@ def run(args):
   else:
     normalMode(plt,ax,fig,args,flux_imb_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-')
 
+  ymax = np.amax(np.abs(flux_imb_list))
+  ymin = -ymax 
 
   plt.title('Relative Flux Imbalance', {'fontsize': fsize, 'color': tc})
   plt.ylabel('%', {'fontsize': fsize, 'color': tc})
   init_locs = plt.xticks()[0]
   locs, labels, utstartSecs = get_xticks(args,xmn,xmx,init_locs)
   
-  makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,fsize)
+  makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,ymin,ymax,fsize)
   fig.savefig('history_'+args.runtag+'_flux_imb_pm.png', bbox_inches='tight', dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
 #
@@ -382,16 +384,20 @@ def run(args):
   ax = plt.gca()
 
   if args.summary:
-    legend1 = summaryMode2(fluxm_list,fluxp_list,time_tfac[0],LW,FLW,fsize,plt,"Blue","Red","|Flux (-)|","Flux (+)")
+    legend1 = summaryMode2(fluxm_FF,fluxp_FF,time_tfac[0],LW,FLW,fsize,plt,"Blue","Red","|Flux (-)|","Flux (+)")
   else:
     legend1 = normalMode2(plt,ax,fig,args,fluxm_FF,fluxp_FF,time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
       NOTindividual,LABEL_LEN,label_list,lgfsize,'Blue','Red',["|Flux (-)|","Flux (+)"])
 
+  ymin=0.0#np.amin([np.amin(fluxm_FF),np.amin(fluxp_FF)])
+  ymax=np.amax([np.amax(fluxm_FF),np.amax(fluxp_FF)])
   plt.title('Total Positive and Negative Flux', {'fontsize': fsize, 'color': tc})
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})  
   ax.add_artist(legend1)  
 
-  makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,fsize)
+  makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,ymin,ymax,fsize)
+  plt.ylim(ymin=0.0)
+  
   fig.savefig('history_'+args.runtag+'_flux_pm.png', bbox_inches="tight", dpi=args.dpi, \
               facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
@@ -409,7 +415,10 @@ def run(args):
   plt.title('Total Unsigned Flux', {'fontsize': fsize, 'color': tc})
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})
 
-  makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,fsize)
+  ymin=0.0 #np.amin(flux_tot_un_FF)
+  ymax=np.amax(flux_tot_un_FF)
+  makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,ymin,ymax,fsize)
+  plt.ylim(ymin=0.0)
   fig.savefig('history_'+args.runtag+'_flux_total_unsigned.png', bbox_inches="tight", dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
 #
@@ -426,14 +435,20 @@ def run(args):
   plt.title('Total Signed Flux', {'fontsize': fsize, 'color': tc})
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})
 
-  makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,fsize)
+  #ymin=np.amin(flux_tot_s_FF)
+  #ymax=np.amax(flux_tot_s_FF)
+  
+  ymax = np.amax(np.abs(flux_tot_s_FF))
+  ymin = -ymax 
+  
+  makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,ymin,ymax,fsize)
   fig.savefig('history_'+args.runtag+'_flux_total_signed.png', bbox_inches="tight", dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')  
 #
 # ****** Polar +/- fluxes.
 #
-  ymax = 1.1*np.amax([np.amax(np.abs(fluxp_pn_FF)),np.amax(np.abs(fluxm_pn_FF)),\
-                      np.amax(np.abs(fluxp_ps_FF)),np.amax(np.abs(fluxm_ps_FF))])
+  ymax = np.amax([np.amax(np.abs(fluxp_pn_FF)),np.amax(np.abs(fluxm_pn_FF)),\
+                  np.amax(np.abs(fluxp_ps_FF)),np.amax(np.abs(fluxm_ps_FF))])
   ymin = -ymax 
   fig = plt.figure(num=None, figsize=(14, 7), dpi=args.dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
@@ -445,18 +460,17 @@ def run(args):
     legend1 = normalMode4(plt,ax,fig,args,fluxp_pn_FF,fluxm_pn_FF,fluxp_ps_FF,fluxm_ps_FF,time_tfac,COLORS,MARKERS,LW,MS,LMS,\
         fsize,NOTindividual,LABEL_LEN,label_list,lgfsize,"Red","Blue","firebrick","navy",["N (+)","N (-)","S (+)","S (-)"])
 
-  plt.ylim(ymin=ymin,ymax=ymax)
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})
   plt.title('Polar Flux (within 30 degrees of poles)', {'fontsize': fsize, 'color': tc})
 
   ax.add_artist(legend1)  
-  makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,fsize)
+  makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,ymin,ymax,fsize)
   fig.savefig('history_'+args.runtag+'_flux_poles_30.png', bbox_inches="tight", dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
 #
 # ****** Polar average field strengths.
 #
-  ymax = 1.1*np.amax([np.amax(np.abs(np.array(pole_n_avg_field_list))),np.amax(np.abs(np.array(pole_s_avg_field_list)))])
+  ymax = np.amax([np.amax(np.abs(np.array(pole_n_avg_field_list))),np.amax(np.abs(np.array(pole_s_avg_field_list)))])
   ymin = -ymax 
   fig = plt.figure(num=None, figsize=(14, 7), dpi=args.dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
@@ -467,12 +481,11 @@ def run(args):
     legend1 = normalMode2(plt,ax,fig,args,pole_n_avg_field_list,pole_s_avg_field_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
       NOTindividual,LABEL_LEN,label_list,lgfsize,'Black','Blue',["North","South"])
 
-  plt.ylim(ymin=ymin,ymax=ymax)
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
   plt.title('Polar Average Field (within 30 degrees of poles)', {'fontsize': fsize, 'color': tc})
   
   ax.add_artist(legend1)  
-  makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,fsize)
+  makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,ymin,ymax,fsize)
   fig.savefig('history_'+args.runtag+'_field_poles_30.png', bbox_inches="tight", dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
 #
@@ -482,16 +495,23 @@ def run(args):
   ax = plt.gca()
 
   if args.summary:
-    legend1 = summaryMode2(brmax_list,brmin_list,time_tfac[0],LW,FLW,fsize,plt,"blue","red","max(Br)","|min(Br)|")
+    legend1 = summaryMode2(brmax_list,np.abs(brmin_list),time_tfac[0],LW,FLW,fsize,plt,"blue","red","max(Br)","|min(Br)|")
   else:
-    legend1 = normalMode2(plt,ax,fig,args,brmax_list,brmin_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
+    legend1 = normalMode2(plt,ax,fig,args,brmax_list,np.abs(brmin_list),time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
       NOTindividual,LABEL_LEN,label_list,lgfsize,'blue','red',["max(Br)","|min(Br)|"])
-
+  
+  ymax = np.amax([np.amax(np.abs(brmax_list)),np.amax(np.abs(brmin_list))])
+  ymin = 0.0 
+  
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
   plt.title('Min and Max Br', {'fontsize': fsize, 'color': tc})
 
   ax.add_artist(legend1)  
-  makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,fsize)
+  makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,ymin,ymax,fsize)
+
+  if not args.summary:
+      plt.ylim(ymin=0.0)
+      
   fig.savefig('history_'+args.runtag+'_br.png', bbox_inches="tight", dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
 #
@@ -508,8 +528,14 @@ def run(args):
   plt.title('Axial Dipole Strength', {'fontsize': fsize, 'color': tc})
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
 
-
-  makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,fsize)
+  #ymin=np.amin(ax_dipole_list)
+  #ymax=np.amax(ax_dipole_list)
+  
+  ymax = np.amax(np.abs(ax_dipole_list))
+  ymin = -ymax 
+  
+  
+  makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,ymin,ymax,fsize)
   fig.savefig('history_'+args.runtag+'_dipole_axial.png', bbox_inches="tight", dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
 #
@@ -522,11 +548,13 @@ def run(args):
     summaryMode(eq_dipole_list,time_tfac[0],LW,FLW,fsize,plt)
   else:
     normalMode(plt,ax,fig,args,eq_dipole_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-')
-
+ 
+  ymin=np.amin(eq_dipole_list)
+  ymax=np.amax(eq_dipole_list)
   plt.title('Equatorial Dipole Strength', {'fontsize': fsize, 'color': tc})
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
 
-  makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,fsize)
+  makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,ymin,ymax,fsize)
   fig.savefig('history_'+args.runtag+'_dipole_eq.png', bbox_inches="tight", dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
   plt.close('all')
   
@@ -556,8 +584,11 @@ def run(args):
 #
 
 
-def makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,fsize):
+def makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,ymin,ymax,fsize):
   plt.xlim(xmin=xmn,xmax=xmx)
+  deltay = np.abs(ymax-ymin)
+  ybuf = 0.175*deltay
+  plt.ylim(ymin=ymin-ybuf,ymax=ymax+ybuf)
   xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs)
   ax.tick_params(axis='y',labelsize=fsize)
   ax.grid(zorder=0)
@@ -565,25 +596,29 @@ def makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,fsize):
 
 
 def summaryMode(llist,xlist,LW,FLW,fsize,plt):
-  summaryHelper(llist,xlist,LW,FLW,plt,"k",'blue',"$\mu$","$\sigma$","[Min,Max]")
-  plt.legend(loc='upper left',fontsize=fsize)
+  summaryHelper1(llist,xlist,LW,FLW,plt,"k",'blue',"$\mu$","$\sigma$","[Min,Max]")
+  plt.legend(loc='upper left',fontsize=fsize, ncol=3)
 
 
 def summaryMode2(llist1,llist2,xlist,LW,FLW,fsize,plt,CM1,CM2,LT1,LT2):
-  summaryHelper(llist1,xlist,LW,FLW,plt,CM1,CM1,("$\mu$ ("+LT1+")"),'_nolegend_','_nolegend_')
-  summaryHelper(llist2,xlist,LW,FLW,plt,CM2,CM2,("$\mu$ ("+LT2+")"),'_nolegend_','_nolegend_')
-  return plt.legend(loc='upper right',fontsize=fsize)
+  summaryHelper1(llist1,xlist,LW,FLW,plt,CM1,CM1,LT1,'_nolegend_','_nolegend_')
+  summaryHelper1(llist2,xlist,LW,FLW,plt,CM2,CM2,LT2,'_nolegend_','_nolegend_')
+  legend1 = plt.legend(loc='upper right',fontsize=fsize, ncol=2)
+  addLegendGeneric(LW,FLW,fsize,plt,"k","gray","$\mu$","$\sigma$","[Min,Max]")
+  return legend1
 
 
 def summaryMode4(llist1,llist2,llist3,llist4,xlist,LW,FLW,fsize,plt,CM1,CM2,CM3,CM4,LT1,LT2,LT3,LT4):
-  summaryHelper(llist1,xlist,LW,FLW,plt,CM1,CM1,("$\mu$ ("+LT1+")"),'_nolegend_','_nolegend_')
-  summaryHelper(llist2,xlist,LW,FLW,plt,CM2,CM2,("$\mu$ ("+LT2+")"),'_nolegend_','_nolegend_')
-  summaryHelper(llist3,xlist,LW,FLW,plt,CM3,CM3,("$\mu$ ("+LT3+")"),'_nolegend_','_nolegend_')
-  summaryHelper(llist4,xlist,LW,FLW,plt,CM4,CM4,("$\mu$ ("+LT4+")"),'_nolegend_','_nolegend_')
-  return plt.legend(loc='upper right',fontsize=fsize)
+  summaryHelper1(llist1,xlist,LW,FLW,plt,CM1,CM1,LT1,'_nolegend_','_nolegend_')
+  summaryHelper1(llist2,xlist,LW,FLW,plt,CM2,CM2,LT2,'_nolegend_','_nolegend_')
+  summaryHelper1(llist3,xlist,LW,FLW,plt,CM3,CM3,LT3,'_nolegend_','_nolegend_')
+  summaryHelper1(llist4,xlist,LW,FLW,plt,CM4,CM4,LT4,'_nolegend_','_nolegend_')
+  legend1 = plt.legend(loc='upper right',fontsize=fsize, ncol=4)
+  addLegendGeneric(LW,FLW,fsize,plt,"k","gray","$\mu$","$\sigma$","[Min,Max]")
+  return legend1
 
 
-def summaryHelper(llist,xlist,LW,FLW,plt,CM,CF,LT1,LT2,LT3):
+def summaryHelper1(llist,xlist,LW,FLW,plt,CM,CF,LT1,LT2,LT3):
   upperBound=np.max(llist,axis=0)
   lowerBound=np.min(llist,axis=0)
   middleVal=np.mean(llist,axis=0)
@@ -593,6 +628,13 @@ def summaryHelper(llist,xlist,LW,FLW,plt,CM,CF,LT1,LT2,LT3):
   plt.plot(xlist, middleVal,color=CM,linewidth=LW,label=LT1)
   plt.fill_between(xlist,stdVal0,stdVal1,linewidth=FLW,alpha=0.5,color=CF,label=LT2)
   plt.fill_between(xlist,lowerBound,upperBound,linewidth=FLW,alpha=0.25,color=CF,label=LT3)
+
+
+def addLegendGeneric(LW,FLW,fsize,plt,CM,CF,LT1,LT2,LT3):
+  h1=plt.plot(np.NaN, np.NaN,color=CM,linewidth=LW,label='_nolegend_')
+  h2=plt.fill_between([np.NaN],[0],[0],linewidth=FLW,alpha=0.5,color=CF,label='_nolegend_')
+  h3=plt.fill_between([np.NaN],[0],[0],linewidth=FLW,alpha=0.25,color=CF,label='_nolegend_')
+  plt.legend([h1[0],h2,h3],[LT1,LT2,LT3],loc='lower left',fontsize=fsize, ncol=3)
 
 
 def normalMode(plt,ax,fig,args,llist,xlist,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,CL):
@@ -616,13 +658,13 @@ def normalMode2(plt,ax,fig,args,llist1,llist2,xlist,COLORS,MARKERS,LW,MS,LMS,fsi
       else:
         plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS)
         plothelper3(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS)
-    legend1 = plt.legend([h1[0],h2[0]],LegT,loc='upper right',fontsize=fsize)
+    legend1 = plt.legend([h1[0],h2[0]],LegT,loc='upper right',fontsize=fsize, ncol=2)
     addLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
     return legend1
   else:
     h1 = plt.plot(xlist[0],llist1[0],color=CL1,linewidth=LW,markersize=MS)
     h2 = plt.plot(xlist[0],np.abs(llist2[0]),color=CL2,linewidth=LW,markersize=MS)
-    return plt.legend([h1[0],h2[0]],LegT,loc='upper right',fontsize=fsize)
+    return plt.legend([h1[0],h2[0]],LegT,loc='upper right',fontsize=fsize, ncol=2)
 
 def normalMode4(plt,ax,fig,args,llist1,llist2,llist3,llist4,xlist,COLORS,MARKERS,LW,MS,LMS,fsize,NOTindividual,\
                 LABEL_LEN,label_list,lgfsize,CL1,CL2,CL3,CL4,LegT):
@@ -640,7 +682,7 @@ def normalMode4(plt,ax,fig,args,llist1,llist2,llist3,llist4,xlist,COLORS,MARKERS
         plothelper3(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS)
         plothelper3(xlist[run],llist3[run],CL3,COLORS[run],MARKERS[run],LW,MS)
         plothelper3(xlist[run],llist4[run],CL4,COLORS[run],MARKERS[run],LW,MS)
-    legend1 = plt.legend([h1[0],h2[0],h3[0],h4[0]],LegT,loc='upper right',fontsize=fsize)
+    legend1 = plt.legend([h1[0],h2[0],h3[0],h4[0]],LegT,loc='upper right',fontsize=fsize, ncol=4)
     addLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
     return legend1
   else:
@@ -648,7 +690,7 @@ def normalMode4(plt,ax,fig,args,llist1,llist2,llist3,llist4,xlist,COLORS,MARKERS
     h2 = plt.plot(xlist[0],llist2[0],color=CL2,linewidth=LW,markersize=MS) 
     h3 = plt.plot(xlist[0],llist3[0],color=CL3,linewidth=LW,markersize=MS)
     h4 = plt.plot(xlist[0],llist4[0],color=CL4,linewidth=LW,markersize=MS)
-    return plt.legend([h1[0],h2[0],h3[0],h4[0]],LegT,loc='upper right',fontsize=fsize)
+    return plt.legend([h1[0],h2[0],h3[0],h4[0]],LegT,loc='upper right',fontsize=fsize, ncol=4)
 
 
 def plothelper1(x,l,c,m,LW,MS):
@@ -674,7 +716,11 @@ def addLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig):
     if lgbbox.width > args.lgwidth:
       ncol -= 1
       break
-  lg = fig.legend(label_list,loc='outside lower center', bbox_to_anchor=(0.5,args.lgyoffset), ncol=ncol,fontsize=lgfsize) 
+  lg = fig.legend(label_list,ncol=ncol,fontsize=lgfsize) 
+  lgh = args.lgyoffset - lg.get_window_extent().height/(7*args.dpi)
+  lg.remove()
+  lg = fig.legend(label_list,loc='outside lower center', bbox_to_anchor=(0.5,lgh), ncol=ncol,fontsize=lgfsize) 
+  
   for handle in lg.legend_handles:
     handle.set_markersize(LMS)
     handle.set_linestyle("")
@@ -1095,4 +1141,5 @@ def main():
 
 if __name__ == '__main__':
   main()
+
 
