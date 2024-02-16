@@ -4,6 +4,8 @@ import numpy as np
 import argparse
 from pathlib import Path
 
+# Version 1.0.1
+
 def argParsing():
 
     parser = argparse.ArgumentParser(description='Extract realization slices from an output 3D hipft map file and write it out in 2D files.  If no slice indecies are specified, it extracts all of them.')
@@ -45,7 +47,7 @@ def main():
         rlist = np.array(arg_dict['rlist'].split(','))
         rlist = rlist.astype(float)
     else:
-        rlist = np.array(rvec)+1
+        rlist = np.array(rvec)
 
     for i in rlist:
         j = int(i)
