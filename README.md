@@ -20,6 +20,10 @@ HipFT can be used with MacOS, Linux, and Windows (through WSL) on CPUs and GPUs 
   
 HipFT has been tested to work using GCC's `gfortran` (>8), Intel's `ifx` (>21), or NVIDIA's `nvfortran` (>21.5) compilers.  Note that it is NOT compatible with the older Intel `ifort` compiler.  
 It is recommended to use the latest compiler version available.  
+
+HipFT requires the HDF5 library.  
+When building for GPUs, the HDF5 library must be compiled by the same compiler HipFt is using (e.g. nvfortran).  
+Often, this requires building HDF5 from source.  Instructions on how to do this will be added to this README in an upcoming update.
   
 1. Find the build script from the `build_examples` folder that is closest to your setup and copy it into the top-level directory.  
 2. Modify the script to set the `HDF5` library paths/flags and compiler flags compatible with your system environment.  
