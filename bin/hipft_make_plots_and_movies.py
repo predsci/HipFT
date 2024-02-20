@@ -4,7 +4,7 @@ import os
 import h5py
 import re
 
-# Version 2.0.1
+# Version 2.0.2
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt Movie Maker.')
@@ -63,7 +63,7 @@ def argParsing():
     required=False)
 
   parser.add_argument('-mlut',
-    default='hipft_output_map_list_ut.out',
+    default='hipft_output_map_list_tai.out',
     required=False,
     help='Name of the HipFT map text file with ut dates.')
 
