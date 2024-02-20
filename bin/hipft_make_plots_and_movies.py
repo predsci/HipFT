@@ -3,11 +3,21 @@ import argparse
 import os
 import h5py
 import re
+import signal
+import sys
 
-# Version 2.0.2
+# Version 2.1.0
+
+def handle_int(signum, frame):
+    print('You pressed Ctrl+C! Stopping!')
+    signal.signal(signum, signal.SIG_DFL)
+    os.kill(os.getpid(), signum)
+    sys.exit(1)
+    
+signal.signal(signal.SIGINT, handle_int)
 
 def argParsing():
-  parser = argparse.ArgumentParser(description='HipFt Movie Maker.')
+  parser = argparse.ArgumentParser(description='HipFT Movie Maker.')
 
   parser.add_argument('-dir',
     help='Directory of output files (full path!)',
@@ -62,10 +72,10 @@ def argParsing():
     type=str,
     required=False)
 
-  parser.add_argument('-mlut',
+  parser.add_argument('-mldfile',
     default='hipft_output_map_list_tai.out',
     required=False,
-    help='Name of the HipFT map text file with ut dates.')
+    help='Name of the HipFT map text file with dates.')
 
   return parser.parse_args()
 
@@ -76,18 +86,26 @@ def run(args):
   else:
     odir=os.getcwd()
 
-  ut_dates=[]
+  title_str=[]
 
-  if os.path.exists(args.mlut):
-    with open(args.mlut, "r") as ftmp:
+  if os.path.exists(args.mldfile):
+    with open(args.mldfile, "r") as ftmp:
       next(ftmp)
       for line in ftmp:
-        ut_dates.append(str(line.split()[4]))
+        title_str.append(str(line.split()[4]))
+    with open(args.mldfile, "r") as ftmp:
+        first_line = ftmp.readline().strip('\n').split()
+    date_fmt=first_line[4]
   elif os.path.exists('hipft_output_map_list.out'):
     with open('hipft_output_map_list.out', "r") as ftmp:
       next(ftmp)
       for line in ftmp:
-        ut_dates.append(str(float(line.split()[1]))+' hours')
+        title_str.append(str(float(line.split()[1]))+' hours')
+  else:
+      idx=0
+      for filetmp in os.listdir(args.datadir):
+          idx+=1
+          title_str.append("File index: {%06d}".format(idx))
 
   if not os.path.exists(args.datadir+'/plots'):
     os.makedirs(args.datadir+'/plots')
@@ -99,7 +117,7 @@ def run(args):
     file=args.datadir+'/'+filetmp
     if filetmp.endswith('.h5'):
       idxx=int(re.search("[0-9]+",re.search("idx[0-9]+",filetmp).group()).group())
-      TITLE=ut_dates[idxx-1]
+      TITLE=date_fmt+': '+title_str[idxx-1]
       idx+=1
       with h5py.File(file,'r') as f1:
         twoD=True

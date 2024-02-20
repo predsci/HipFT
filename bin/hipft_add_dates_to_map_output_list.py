@@ -72,8 +72,8 @@ def run(args):
     FirstLine=True
     for line in infile:
         if FirstLine:
-            outfile_tai.write(line[:-1] + ' TAI(sec) TAI(str)\n')
-            outfile_utc.write(line[:-1] + ' UTC(sec) UTC(str)\n')
+            outfile_tai.write(line[:-1] + ' TAI(sec) TAI\n')
+            outfile_utc.write(line[:-1] + ' UTC(sec) UTC\n')
             FirstLine=False
         else:
             outfile_utc.write(line[:-1] + ' '+\
