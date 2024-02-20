@@ -115,12 +115,12 @@ The `/bin` folder contains several python and bash scripts that can be used to p
 
 ## Sample Data for Convective Flows and Data Assimilation
   
-To use HipFT with data assimilation and convective flows requires that these input data be available.  We plan to release ConFlow and OFTpy which can generate these required data, but for now we have provided sample sets of these data in a zenodo data set located here:  
+To use HipFT with data assimilation and convective flows requires that these input data be available.  We are working on releasing the software that can generate these required data, so for now we provid sample sets of these data in a zenodo data set located here:  
   
 [HipFT Sample Input Dataset for Convective Flows and Data Assimilation](https://zenodo.org/doi/10.5281/zenodo.10271120)
   
-This data package contains a Carrington rotation of ConFlow convective flows at 15 minute cadence as well as a year of OFTpy HMI-derived data assimilation maps for 2022.  We have also provided an example HipFT input file for running a full year simulation using this data in this repo's `examples/flux_transport_1yr_flowCAa_diff175_data_assim/` folder.  
-Note that the Conflow flow files are auto-repeated in HipFT when run for longer than a Carrington rotation, so they can be used for arbitrary length runs of HipFT.  
+This data package contains a Carrington rotation of convective flows at 15 minute cadence as well as a year of HMI-derived data assimilation maps for 2022.  We have also provided an example HipFT input file for running a full year simulation using this data in this repo's `examples/flux_transport_1yr_flowCAa_diff175_data_assim/` folder.  
+Note that the flow files are auto-repeated in HipFT when run for longer than a Carrington rotation, so they can be used for arbitrary length runs of HipFT.  
 
 --------------------------------
   
