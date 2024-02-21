@@ -2,7 +2,9 @@
 import argparse
 import psihdf as ps
 import numpy as np
-from datetime import datetime, timezone
+from astropy.time import Time
+
+# Version 1.1.0
 
 def argParsing():
   parser = argparse.ArgumentParser(description='hipft_make_butterfly_diagram:  This tool makes the data for a butterfly diagram by averaging each hipft map along longitude, and then taking a running average of the results over the files.  The result is a single 2D file where each column is the running average of logitudinal averages.  By specifying a UT start time, the x-axis scales is set correctly for easy plotting.')
@@ -12,7 +14,7 @@ def argParsing():
 
   parser.add_argument('-outpath',
     help='Path to folder where output data is. Default: rundir/output_maps',
-    dest='folder',
+    dest='outpath',
     required=False)
 #   Could grep for output_map_directory in hipft.in, if not there,
 #   use default.
@@ -97,6 +99,13 @@ def argParsing():
     default=0,
     required=False)
 
+  parser.add_argument('-tai',
+    help='Use tai which ignores leap seconds.',
+    dest='tai',
+    action='store_true',
+    default=False,
+    required=False)
+
   return parser.parse_args()
 
 def run(args):
@@ -120,7 +129,7 @@ def run(args):
   i = 0
   time = []
   count = 0
-  with open(mapfile, 'r') as infile:
+  with open(args.mapfile, 'r') as infile:
     FirstLine=True
     for line in infile:
         if FirstLine:
@@ -129,6 +138,7 @@ def run(args):
             time.append(int(float(line.split()[1]))*3600*tfac)
             count = count + 1
   time = np.array(time)
+  skip = int(args.cadence)+1
   time = time[::skip]
 
   if (args.tf is None):
@@ -137,7 +147,6 @@ def run(args):
   iRange = list(range(int(args.t0),int(args.tf)+1))
   
   #thin out range
-  skip = int(args.cadence)+1
   iRange = iRange[::skip]
   
   liRange=len(iRange)
@@ -145,7 +154,7 @@ def run(args):
   firstPass = True
 
   for idx in iRange:
-    filename=args.folder+"/"+args.bfile+"_idx"+"{:06d}".format(idx)+".h5"
+    filename=args.outpath+"/"+args.bfile+"_idx"+"{:06d}".format(idx)+".h5"
     # Read the data:
     if bool(args.dim3):
       if (args.sall):
@@ -191,8 +200,7 @@ def run(args):
   if args.utstart == "0000-00-00T00:00:00":
     sDateSec = 0
   else:
-    sDate = datetime.strptime(args.utstart, '%Y-%m-%dT%H:%M:%S')
-    sDateSec = int(sDate.replace(tzinfo=timezone.utc).timestamp())
+    sDateSec = getSec(args.tai,args.utstart,'%Y-%m-%dT%H:%M:%S')
   uttime = time+sDateSec
 
   if (args.sall):
@@ -202,6 +210,14 @@ def run(args):
   else:
     writeOut2d(args,liRange,time,new_data,uttime,yvec)
 
+def getSec(atai,x,xformat):
+  if atai:
+    t = Time.strptime(x,xformat,scale='tai')
+    currDateSeconds = t.unix_tai
+  else:
+    t = Time.strptime(x,xformat,scale='utc')
+    currDateSeconds = t.unix
+  return currDateSeconds
 
 def writeOut3d(args,liRange,time,zvec,newData,uttime,yvec,dim3):
   aveOut = np.zeros((dim3,len(yvec), liRange))
