@@ -386,7 +386,7 @@ module flows
       integer :: advection_num_method_time
 !
       integer, parameter :: FE      = 1
-      integer, parameter :: RK3TVD  = 2
+      integer, parameter :: SSPRK33 = 2
       integer, parameter :: SSPRK43 = 3
 !
       integer, parameter :: UW      = 1
@@ -616,8 +616,8 @@ module input_parameters
 ! ****** Algorithm options.
 !        Can set upwind to central differencing by setting UPWIND=0.
 ! ****** 1: Forward Euler + Upwind.
-! ****** 2: RK3TVD/SSPRK(3,3) + Upwind.
-! ****** 3: RK3TVD/SSPRK(3,3) + WENO3.
+! ****** 2: SSPRK(3,3) + Upwind.
+! ****** 3: SSPRK(3,3) + WENO3.
 ! ****** 4: SSPRK(4,3) + WENO3
 !
       integer :: flow_num_method = 4
@@ -4160,7 +4160,7 @@ subroutine advection_step (dtime_local)
       if (advection_num_method_time .eq. 1) then
         call advection_step_fe (dtime_local)
       elseif (advection_num_method_time .eq. 2) then
-        call advection_step_rk3tvd (dtime_local)
+        call advection_step_ssprk33 (dtime_local)
       elseif (advection_num_method_time .eq. 3) then
         call advection_step_ssprk43 (dtime_local)
       end if
@@ -6929,12 +6929,12 @@ subroutine advection_step_fe (dtime_local)
 !
 end subroutine
 !#######################################################################
-subroutine advection_step_rk3tvd (dtime_local)
+subroutine advection_step_ssprk33 (dtime_local)
 !
 !-----------------------------------------------------------------------
 !
 ! ****** Advance the field with advection by the time-step dtime_local
-! ****** using the low storage RK3TVD/SSPRK(3,3) method.
+! ****** using the low storage SSPRK(3,3) (RK3TVD) method.
 !
 !-----------------------------------------------------------------------
 !
@@ -8045,10 +8045,10 @@ subroutine process_input_parameters
         advection_num_method_time  = FE
         advection_num_method_space = UW
       elseif (flow_num_method .eq. 2) then
-        advection_num_method_time  = RK3TVD
+        advection_num_method_time  = SSPRK33
         advection_num_method_space = UW
       elseif (flow_num_method .eq. 3) then
-        advection_num_method_time  = RK3TVD
+        advection_num_method_time  = SSPRK33
         advection_num_method_space = WENO3
       elseif (flow_num_method .eq. 4) then
         advection_num_method_time  = SSPRK43
@@ -8061,8 +8061,8 @@ subroutine process_input_parameters
           write (*,*) 'flow_num_method  = ',flow_num_method
           write (*,*) 'Valid values: {1,2,3,4}'
           write (*,*) '  1: FE+Upwind'
-          write (*,*) '  2: RK3TVD+Upwind'
-          write (*,*) '  3: RK3TVD+WENO3'
+          write (*,*) '  2: SSPRK(3,3)+Upwind'
+          write (*,*) '  3: SSPRK(3,3)+WENO3'
           write (*,*) '  4: SSPRK(4,3)+WENO3'
         end if
         call endrun (.true.)
@@ -8199,13 +8199,13 @@ end function get_gaussian
 !   - Small robustness updates.
 !
 ! 04/11/2022, RC, Version 0.7.0:
-!   - Added the RK3TVD time-stepping scheme for advection.
+!   - Added the SSPRK33 time-stepping scheme for advection.
 !     This is now the default.
 !   - DEFAULT CHANGE: Made the default splitting method to be Strang
 !                     splitting. The "-strang" input flag is now
 !                     "-nostrang" and disables strang splitting.
 !   - Added "-fm" input flag to set advection numerical method.
-!     1) FE+UW  2) RK3TVD+UW  3) RK3TVD+WENO3 (coming soon).
+!     1) FE+UW  2) SSPRK33+UW  3) SSPRK33+WENO3 (coming soon).
 !   - Removed "-flowpoleavg".  No use case.
 !
 ! 04/29/2022, RC, Version 0.7.1:

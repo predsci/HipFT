@@ -12,7 +12,7 @@ import psihdf as ps
 import psipals
 import psimath
 
-# Version 1.2.0
+# Version 1.2.1
 
 def signal_handler(signal, frame):
   print('You pressed Ctrl+C! Stopping!')
@@ -337,20 +337,24 @@ def run(args):
         oFileNew = oFile.replace('.png','_r'+str(int(zvec[islice])).zfill(6)+'.png')
         data = np.squeeze(data_in[islice,:,:])
         plot(args, xvec, yvec, data, oFileNew)
+        matplotlib.pyplot.close()
     elif (args.slices):
       xvec, yvec, zvec, data_in = ps.rdhdf_3d(args.iFile)
       for islice in args.slices:
         oFileNew = oFile.replace('.png','_r'+str(islice).zfill(6)+'.png')
         data = np.squeeze(data_in[islice-1,:,:])
         plot(args, xvec, yvec, data, oFileNew)
+        matplotlib.pyplot.close()
     else:
       xvec, yvec, zvec, data_in = ps.rdhdf_3d(args.iFile)
       data = np.squeeze(data_in[int(args.slice)-1,:,:])
       plot(args, xvec, yvec, data, oFile)
+      matplotlib.pyplot.close()
   else:
     # Read the data:
     xvec, yvec, data = ps.rdhdf_2d(args.iFile)
     plot(args, xvec, yvec, data, oFile)
+    matplotlib.pyplot.close()
 
 
 
@@ -552,7 +556,6 @@ def plot(args, xvec, yvec, data, oFile):
   if args.verbose:
     print('{}'.format(oFile))
   fig.savefig(oFile, bbox_inches="tight", pad_inches=0, dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
-
 
 #
 # ****** x-axis label and ticks
