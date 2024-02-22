@@ -6,7 +6,7 @@ import re
 import signal
 import sys
 
-# Version 2.1.0
+# Version 2.1.1
 
 def handle_int(signum, frame):
     print('You pressed Ctrl+C! Stopping!')
@@ -87,6 +87,8 @@ def run(args):
     odir=os.getcwd()
 
   title_str=[]
+
+  date_fmt = ' '
 
   if os.path.exists(args.mldfile):
     with open(args.mldfile, "r") as ftmp:
