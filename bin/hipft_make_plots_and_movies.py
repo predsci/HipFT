@@ -88,7 +88,7 @@ def run(args):
 
   title_str=[]
 
-  date_fmt = ' '
+  date_fmt = ''
 
   if os.path.exists(args.mldfile):
     with open(args.mldfile, "r") as ftmp:
@@ -97,7 +97,7 @@ def run(args):
         title_str.append(str(line.split()[4]))
     with open(args.mldfile, "r") as ftmp:
         first_line = ftmp.readline().strip('\n').split()
-    date_fmt=first_line[4]
+    date_fmt=first_line[4]+': '
   elif os.path.exists('hipft_output_map_list.out'):
     with open('hipft_output_map_list.out', "r") as ftmp:
       next(ftmp)
@@ -119,7 +119,7 @@ def run(args):
     file=args.datadir+'/'+filetmp
     if filetmp.endswith('.h5'):
       idxx=int(re.search("[0-9]+",re.search("idx[0-9]+",filetmp).group()).group())
-      TITLE=date_fmt+': '+title_str[idxx-1]
+      TITLE=date_fmt+title_str[idxx-1]
       idx+=1
       with h5py.File(file,'r') as f1:
         twoD=True
