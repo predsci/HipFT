@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import os
 
-# Version 1.0.1
+# Version 1.1.0
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -41,19 +41,19 @@ def stats(data):
 
   return data_stats
 
-def GetRealization(ll,x):
+def GetRealization(ll,x,rl):
   for idx in range(len(ll)+1):
     if x <= ll[idx]:
-        return idx+1
+        return rl[idx]
   return -1
 
 
-def stats2(data,ll):
+def stats2(data,ll,rl):
 
   stat0 = np.min(data)
-  stat1 = GetRealization(ll,np.argmin(data)+1)
+  stat1 = GetRealization(ll,np.argmin(data)+1,rl)
   stat2 = np.max(data)
-  stat3 = GetRealization(ll,np.argmax(data)+1)
+  stat3 = GetRealization(ll,np.argmax(data)+1,rl)
   stat4 = np.mean(data)
   stat5 = np.std(data)
   return [stat0,stat1,stat2,stat3,stat4,stat5]
@@ -76,6 +76,7 @@ def run(args):
   brabsmin_list = []
   valerr_list = []
   lengthArrays = []
+  rList = []
   length = 0
 
   arg_dict = vars(args)
@@ -102,6 +103,8 @@ def run(args):
     if str(r) in rexclude_list:
       continue
     elif str(r) in rlist_list or 'all' in rlist_list:
+      rList.append(r)
+
       h_file_name = dire
       hist_sol = pd.read_table(h_file_name,header=0,sep='\s+')
 
@@ -193,20 +196,20 @@ def run(args):
 
   print('Global Statistics')
   print('Quantity  Min Min_Realization Max Max_Realization Mean  StdDev')
-  print('flux +     ',stats2(fluxp_list,lengthArrays))
-  print('flux -     ',stats2(fluxm_list,lengthArrays))
-  print('flux + NP  ',stats2(fluxp_pn_list,lengthArrays))
-  print('flux - NP  ',stats2(fluxm_pn_list,lengthArrays))
-  print('Area NP    ',stats2(area_pn_list,lengthArrays))
-  print('flux + SP  ',stats2(fluxp_ps_list,lengthArrays))
-  print('flux - SP  ',stats2(fluxm_ps_list,lengthArrays))
-  print('Area SP    ',stats2(area_ps_list,lengthArrays))
-  print('Ax Dipole  ',stats2(ax_dipole_list,lengthArrays))
-  print('Eq Dipole  ',stats2(eq_dipole_list,lengthArrays))
-  print('max(Br)    ',stats2(brmax_list,lengthArrays))
-  print('|min(Br)|  ',stats2(brminabs_list,lengthArrays))
-  print('min(|Br|)  ',stats2(brabsmin_list,lengthArrays))
-  print('Valerr     ',stats2(valerr_list,lengthArrays))
+  print('flux +     ',stats2(fluxp_list,lengthArrays,rList))
+  print('flux -     ',stats2(fluxm_list,lengthArrays,rList))
+  print('flux + NP  ',stats2(fluxp_pn_list,lengthArrays,rList))
+  print('flux - NP  ',stats2(fluxm_pn_list,lengthArrays,rList))
+  print('Area NP    ',stats2(area_pn_list,lengthArrays,rList))
+  print('flux + SP  ',stats2(fluxp_ps_list,lengthArrays,rList))
+  print('flux - SP  ',stats2(fluxm_ps_list,lengthArrays,rList))
+  print('Area SP    ',stats2(area_ps_list,lengthArrays,rList))
+  print('Ax Dipole  ',stats2(ax_dipole_list,lengthArrays,rList))
+  print('Eq Dipole  ',stats2(eq_dipole_list,lengthArrays,rList))
+  print('max(Br)    ',stats2(brmax_list,lengthArrays,rList))
+  print('|min(Br)|  ',stats2(brminabs_list,lengthArrays,rList))
+  print('min(|Br|)  ',stats2(brabsmin_list,lengthArrays,rList))
+  print('Valerr     ',stats2(valerr_list,lengthArrays,rList))
   print('')
 
 def main():
