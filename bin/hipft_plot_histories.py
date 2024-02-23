@@ -9,7 +9,7 @@ from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_
 import os
 import itertools
 
-# Version 1.7.2
+# Version 1.8.0
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -26,6 +26,18 @@ def argParsing():
 
   parser.add_argument('-histfiles',
     help='A comma separated list of history files',
+    type=str,
+    required=False,
+    default=' ')
+
+  parser.add_argument('-rlist',
+    help='A comma separated list of history file numbers to include',
+    type=str,
+    required=False,
+    default=' ')
+
+  parser.add_argument('-rexclude',
+    help='A comma separated list of history file numbers to ignore (Overrides rlist)',
     type=str,
     required=False,
     default=' ')
@@ -199,33 +211,39 @@ def argParsing():
   return parser.parse_args()
 
 
-def stats(data):
-
-  data_stats = np.zeros(4)
-
-  data_stats[0] = np.min(data)
-  data_stats[1] = np.max(data)
-  data_stats[2] = np.mean(data)
-  data_stats[3] = np.std(data)
-
-  return data_stats
-
-
 def run(args):  
 
   flux_fac=1e-21
 
   arg_dict = vars(args)
-  hist_list = arg_dict['histfiles'].split(',')
+  temphist_list = arg_dict['histfiles'].split(',')
+  rexclude_list = arg_dict['rexclude'].split(',')
+  rlist_list = arg_dict['rlist'].split(',')
   label_list = arg_dict['labels'].split(',')
 
+  if rlist_list[0] == ' ':
+    rlist_list='all'
+
+  rList = []
+
   if arg_dict['histfiles'] == ' ':
-    hist_list=[]
+    temphist_list=[]
     wDir=os.getcwd()
     for file in os.listdir(wDir):
       if "hipft_history_sol_r" in file and file.endswith(".out"):
-        hist_list.append(wDir+'/'+file)
-    hist_list = sorted(hist_list)
+        temphist_list.append(wDir+'/'+file)
+    temphist_list = sorted(temphist_list)
+
+
+  hist_list=[]
+
+  for file in temphist_list:
+    r=int((file.split('/')[-1]).replace('hipft_history_sol_r','').replace('.out',''))
+    if str(r) in rexclude_list:
+        continue
+    elif str(r) in rlist_list or 'all' in rlist_list:
+      hist_list.append(file)
+      rList.append(r)
 
   NOTindividual=True
   if len(hist_list) == 1:
@@ -236,8 +254,8 @@ def run(args):
   if arg_dict['labels'] == ' ':
       label_list = []
       def_label = 'r'
-      for i,dire in enumerate(hist_list):
-          label_list.append(def_label+str(i+1))
+      for i in rList:
+        label_list.append(def_label+str(i))
 
   LABEL_LEN = len(label_list)
   # Validate the list arguments:
