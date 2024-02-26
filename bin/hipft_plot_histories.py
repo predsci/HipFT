@@ -9,7 +9,7 @@ from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_
 import os
 import itertools
 
-# Version 1.8.0
+# Version 1.8.1
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -238,12 +238,16 @@ def run(args):
   hist_list=[]
 
   for file in temphist_list:
-    r=int((file.split('/')[-1]).replace('hipft_history_sol_r','').replace('.out',''))
-    if str(r) in rexclude_list:
+    if arg_dict['histfiles'] == ' ':
+      r=int((file.split('/')[-1]).replace('hipft_history_sol_r','').replace('.out',''))
+      if str(r) in rexclude_list:
         continue
-    elif str(r) in rlist_list or 'all' in rlist_list:
+      elif str(r) in rlist_list or 'all' in rlist_list:
+        hist_list.append(file)
+        rList.append(r)
+    else:
       hist_list.append(file)
-      rList.append(r)
+      rList.append(1)
 
   NOTindividual=True
   if len(hist_list) == 1:
@@ -261,10 +265,11 @@ def run(args):
   # Validate the list arguments:
   if not len(hist_list) == LABEL_LEN:
       print('ERROR: Number of runs, dirs, and labels must match. Use -h for more information.')
-      sys.exit()
+      quit()
 
   if LABEL_LEN > 256:
-      print('ERROR: Can only compare a maximum of 5 runs.')
+      print('ERROR: Can only compare a maximum of 256 runs.')
+      quit()
 
   print("==> Reading history files...")
   time_list=[]

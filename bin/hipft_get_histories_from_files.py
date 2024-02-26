@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 # ntime is set to the file index here, but is not plotted in the history plotter.
 # A new option in the history plotter to use it instead of time should be made.
 
+# Version 1.0.1
 
 def argParsing():
 
@@ -44,12 +45,18 @@ def argParsing():
         help='Cadence for time in hours (default: 1).',
         dest='cadence',
         default=1,
-        required=False)    
+        required=False)
+    
+    parser.add_argument('-tstart',
+        help='Start time in hours',
+        dest='tstart',
+        default=0.0,
+        required=False)
 
     return parser.parse_args()
     
 
-# hipft_analysis_step: Version 1.0.0 (MS 10/17/22)
+# hipft_analysis_step: Version 1.1.0 (MS 10/17/22)
 #
 # Compute analysis of HIPFT run.
 # Takes in a folder name, base file name, and sequence start and stop indexes.
@@ -64,7 +71,9 @@ def run(args):
         time = int(sDate.replace(tzinfo=timezone.utc).timestamp())    
     else:
         time = 0
-    cadence = float(args.cadence)*3600
+
+    time=float(args.tstart)
+    cadence = float(args.cadence)
 
 
     #Calculation constants
