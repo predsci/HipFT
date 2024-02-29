@@ -9,7 +9,7 @@
 !              | |
 !              |_|
 !
-! ****** HipFT: High Performance Flux Transport.
+! ****** HipFT: High-performance Flux Transport.
 !
 !     Authors:  Ronald M. Caplan
 !               Miko M. Stulajter
@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.3.0'
-      character(*), parameter :: cdate='02/08/2024'
+      character(*), parameter :: cvers='1.4.0'
+      character(*), parameter :: cdate='02/28/2024'
 !
 end module
 !#######################################################################
@@ -290,7 +290,14 @@ module sources
 !
       real(r_typ), dimension(:,:,:), allocatable :: source
       real(r_typ), dimension(:,:,:), allocatable :: source_from_file_data
-      real(r_typ), dimension(:,:,:), allocatable :: source_rfe
+      real(r_typ), dimension(:,:,:,:), allocatable :: source_rfe
+!
+      integer :: rfe1 = 1
+      integer :: rfe2 = 2
+!
+      real(r_typ) :: time_of_next_source_rfe
+      real(r_typ) :: time_of_prev_source_rfe
+      real(r_typ) :: uf_per_cell_per_hour
 !
 end module
 !#######################################################################
@@ -425,7 +432,6 @@ end module
 module weno
 !
       use number_types
-      use constants, ONLY : ten,one
 !
       implicit none
 !
@@ -445,8 +451,6 @@ module weno
 !
       real(r_typ), dimension(:,:,:), allocatable :: alpha_t
       real(r_typ), dimension(:,:,:), allocatable :: alpha_p
-!
-      real(r_typ), parameter :: weno_eps = ten*SQRT(TINY(one))
 !
 end module
 !#######################################################################
@@ -664,6 +668,8 @@ module input_parameters
       logical :: source_rfe_model = 0
       real(r_typ) :: source_rfe_total_unsigned_flux_per_hour = 0.
       real(r_typ) :: source_rfe_sigma = one
+      integer*8   :: source_rfe_seed = -9999
+      real(r_typ) :: source_rfe_lifetime = 0.3_r_typ
 !
       logical :: source_from_file = .false.
       character(512) :: source_filename = ' '
@@ -1158,15 +1164,15 @@ subroutine setup
           cmd = 'mkdir -p '//trim(output_map_directory)
           call EXECUTE_COMMAND_LINE (cmd,exitstat=ierr)
           if (ierr.ne.0) then
-            write (*,*) '### Could not make output subdirectory, using ./'
+            write (*,*) '### Could not make map output subdirectory, using ./'
             output_map_directory = '.'
           end if
           if (output_flows) then
             cmd = 'mkdir -p '//trim(output_flows_directory)
             call EXECUTE_COMMAND_LINE (cmd,exitstat=ierr)
             if (ierr.ne.0) then
-              write (*,*) '### Could not make output subdirectory, using ./'
-              output_map_directory = '.'
+              write (*,*) '### Could not make flow output subdirectory, using ./'
+              output_flows_directory = '.'
             end if
           end if
         end if
@@ -1181,13 +1187,13 @@ subroutine setup
 !
       time = time_start
 !
-      if (advance_flow) call load_flows
+      if (advance_flow)      call load_flows
 !
       if (advance_diffusion) call load_diffusion
 !
-      if (advance_source) call load_source
+      if (advance_source)    call load_source
 !
-      if (assimilate_data) call load_data_assimilation
+      if (assimilate_data)   call load_data_assimilation
 !
       call create_and_open_output_log_files
 !
@@ -1242,10 +1248,6 @@ function the_run_is_done ()
         the_run_is_done = .true.
         return
       end if
-!
-! ****** Check if the maximum wall clock time has been reached.
-!
-!     check_wallclock
 !
       return
 end function
@@ -1325,7 +1327,7 @@ subroutine wrap_it_up
 !
       if (iamp0) then
         write(*,*) ' '
-        write(*,*) 'Final 2D data written out to ', &
+        write(*,*) 'Final data written out to ', &
                      trim(output_map_root_filename)//'_final.h5'
 !
 !     output_final_restart?
@@ -3622,6 +3624,7 @@ subroutine update_source
       use input_parameters
       use sources
       use mesh
+      use globals, ONLY : time
 !
 !-----------------------------------------------------------------------
 !
@@ -3630,10 +3633,17 @@ subroutine update_source
 !-----------------------------------------------------------------------
 !
       integer :: i,j,k
+      real(r_typ) :: alpha,tmp1,tmp2
+!
+!-----------------------------------------------------------------------
+!
+! ****** Reset source array.
 !
       do concurrent (i=1:nr,k=1:npm,j=1:ntm)
         source(j,k,i) = 0.
       enddo
+!
+! ****** Add in source from file.
 !
       if (source_from_file) then
         do concurrent (i=1:nr,k=1:npm,j=1:ntm)
@@ -3641,14 +3651,31 @@ subroutine update_source
         enddo
       end if
 !
+! ****** Random flux emergence.
+!
       if (source_rfe_model.eq.1) then
 !
-!   This is currently static!
-!   Make option to re-load rfe here (every step)
-!   Tricky in parallel... slow in serial...
+        if (time .ge. time_of_next_source_rfe) then
+!
+          time_of_prev_source_rfe = time_of_next_source_rfe
+          time_of_next_source_rfe = time_of_prev_source_rfe + source_rfe_lifetime
+!
+          tmp2 = rfe2
+          tmp1 = rfe1
+          rfe1 = tmp2
+          rfe2 = tmp1
+
+          call generate_rfe (source_rfe(:,:,:,rfe2))
+!$omp target update to(source_rfe(:,:,:,rfe2))
+!
+        end if
+!
+        alpha = (time - time_of_prev_source_rfe)/source_rfe_lifetime
 !
         do concurrent (i=1:nr,k=1:npm,j=1:ntm)
-          source(j,k,i) = source(j,k,i) + source_rfe(j,k,i)
+          source(j,k,i) = source(j,k,i) +                       &
+                          (one-alpha)*source_rfe(j,k,i,rfe1) +  &
+                                alpha*source_rfe(j,k,i,rfe2)
         enddo
       end if
 !
@@ -3821,6 +3848,7 @@ subroutine update_field
       use read_3d_file_interface
       use assimilate_new_data_interface
       use data_assimilation
+      use sources
       use timing
 !
 !-----------------------------------------------------------------------
@@ -3957,6 +3985,7 @@ subroutine update_timestep
       use input_parameters
       use globals
       use output
+      use sources
       use data_assimilation
       use flows
       use sts
@@ -4050,7 +4079,7 @@ subroutine update_timestep
 !
 ! ****** Check for next flow input time, cut dt to match exactly.
 !
-      if (use_flow_from_files) then
+      if (advance_flow .and. use_flow_from_files) then
         if (time + dtime_global .ge. time_of_next_input_flow) then
           dtime_global = time_of_next_input_flow - time
           dtime_reason = 'flowfile'
@@ -4059,6 +4088,20 @@ subroutine update_timestep
           timestep_flow_needs_updating = .true.
           time_step_changed = .true.
           if (verbose) write(*,*) '   UPDATE_TIMESTEP: dtime_nxtflow = ',dtime_global
+        end if
+      end if
+!
+! ****** Check for next source rfe switch.
+!
+      if (advance_source .and. source_rfe_model.gt.0) then
+        if (time + dtime_global .ge. time_of_next_source_rfe) then
+          dtime_global = MIN(time_of_next_source_rfe - time,   &
+                             half*source_rfe_lifetime)
+          dtime_reason = 'rfeswap'
+          timestep_needs_updating = .true.
+          timestep_flow_needs_updating = .true.
+          time_step_changed = .true.
+          if (verbose) write(*,*) '   UPDATE_TIMESTEP: dtime_nxtrfe = ',dtime_global
         end if
       end if
 !
@@ -6531,6 +6574,7 @@ subroutine load_source
       use input_parameters
       use constants
       use read_2d_file_interface
+      use globals, ONLY : time
       use timing
 !
 !-----------------------------------------------------------------------
@@ -6540,13 +6584,12 @@ subroutine load_source
 !-----------------------------------------------------------------------
 !
       integer :: i,j,k,ierr
-      real(r_typ), dimension(:), allocatable :: fn1,fs1
 !
       integer :: nft,nfp,num_cells
-      real(r_typ), dimension(:), allocatable :: tf,pf
+      real(r_typ), dimension(:), allocatable :: tf,pf,rscale
       real(r_typ), dimension(:,:), allocatable :: sf
       real(r_typ), dimension(:,:), allocatable :: f_tmp2d
-      real(r_typ) :: uf_per_cell_per_hour,rnd_num,random_seed,get_gaussian
+      real(r_typ) :: random_seed,get_gaussian
 !
 !-----------------------------------------------------------------------
 !
@@ -6601,98 +6644,51 @@ subroutine load_source
         do i=1,nr
           source_from_file_data(:,:,i) = f_tmp2d(:,:)
         enddo
-!$omp target enter data map(to:source_from_file_data)
 !
         deallocate (sf)
         deallocate (tf)
         deallocate (pf)
         deallocate (f_tmp2d)
 !
+        if (verbose) then
+          write (*,*)
+          write (*,*) '   LOAD_SOURCE: A source term was read in from file: ', &
+                     trim(source_filename)
+          write (*,*) '   LOAD_SOURCE: Minimum value = ',minval(source_from_file_data(:,:,:))
+          write (*,*) '   LOAD_SOURCE: Maximum value = ',maxval(source_from_file_data(:,:,:))
+        end if
 !$omp target enter data map(to:source_from_file_data)
       end if
 !
       if (source_rfe_model.eq.1) then
 !
-        allocate (source_rfe(ntm,npm,nr))
-        source_rfe(:,:,:) = 0.
+        allocate (source_rfe(ntm,npm,nr,2))
+        source_rfe(:,:,:,:) = 0.
 !
-        call random_seed() !!! Add seed option to namelist?
+        if (source_rfe_seed .ne. -9999) then
+          call RANDOM_SEED (source_rfe_seed)
+        else
+          call RANDOM_SEED ()
+        end if
 !
-        num_cells = (ntm-2)*(npm-2)
+        num_cells = ntm*(npm-2)
 !
 ! ****** Get unsigned flux per hour per cell in code units.
 !
         uf_per_cell_per_hour = source_rfe_total_unsigned_flux_per_hour* &
                                input_flux_fac/(rsun_cm2*num_cells)
 !
-!       do i=1,nr   !!! Eventually, add option to have different random
-!                   !!! numbers per realization.
-          do k=2,npm-1
-            do j=2,ntm-1
-              rnd_num = (one/source_rfe_sigma)*sqrt(twopi)*half* &
-                        get_gaussian(zero,source_rfe_sigma)
-              source_rfe(j,k,:) = rnd_num*uf_per_cell_per_hour* &
-                                  dt_i(j)*dp_i(k)*st_i(j)
-            enddo
-          enddo
-!       enddo
+! ****** Generate both starting frames of the rfe.
 !
-! ****** Boundary conditions.
+        call generate_rfe (source_rfe(:,:,:,rfe1))
+        call generate_rfe (source_rfe(:,:,:,rfe2))
 !
-!       allocate (fn1(nr))
-!       allocate (fs1(nr))
+! ****** Set the time for the next rfe generation.
 !
-        do i=1,nr
+        time_of_next_source_rfe = time + source_rfe_lifetime
+        time_of_prev_source_rfe = time
 !
-! ****** Enforce periodicity.
-!
-          source_rfe(:,  1,i) = source_rfe(:,npm-1,i)
-          source_rfe(:,npm,i) = source_rfe(:,2,    i)
-!
-        enddo
-!
-!        For now, leave poles at zero value (which should be the average of the
-!        points around phi anyways?)
-!
-!        do i=1,nr
-!
-! ****** Set the polar values as average of inner points.
-!
-!          fn1(:)=0.
-!          fs1(:)=0.
-!          do k=1,npm-2
-!            fn1(i) = fn1(i) + source_rfe(    2,k,i)*dp(k)
-!            fs1(i) = fs1(i) + source_rfe(ntm-1,k,i)*dp(k)
-!          enddo
-!          fn1(i) = fn1(i)*twopi_i
-!          fs1(i) = fs1(i)*twopi_i
-!
-!          source_rfe(  1,:,i) = fn1(i)
-!          source_rfe(ntm,:,i) = fs1(i)
-!        enddo
-!
-!        deallocate (fn1)
-!        deallocate (fs1)
-!
-!        call write_2d_file ('source.h5',npm-1,ntm, &
-!                            TRANSPOSE(source_rfe(:,1:npm-1,1)),pout,t,ierr)
-
 !$omp target enter data map(to:source_rfe)
-      end if
-!
-      if (verbose) then
-        write (*,*)
-        if (source_from_file) then
-          write (*,*) '   LOAD_SOURCE: A source term was read in from file: ', &
-                     trim(source_filename)
-          write (*,*) '   LOAD_SOURCE: Minimum value = ',minval(source_from_file_data(:,:,:))
-          write (*,*) '   LOAD_SOURCE: Maximum value = ',maxval(source_from_file_data(:,:,:))
-        end if
-        if (source_from_file) then
-          write (*,*) '   LOAD_SOURCE: A RFE source term was generated: '
-          write (*,*) '   LOAD_SOURCE: Minimum value = ',minval(source_rfe(:,:,:))
-          write (*,*) '   LOAD_SOURCE: Maximum value = ',maxval(source_rfe(:,:,:))
-        end if
       end if
 !
 end subroutine
@@ -7870,7 +7866,8 @@ subroutine read_input_file
                source_filename,                                        &
                source_rfe_model,                                       &
                source_rfe_total_unsigned_flux_per_hour,                &
-               source_rfe_sigma
+               source_rfe_sigma,                                       &
+               source_rfe_lifetime
 !
 !-----------------------------------------------------------------------
 !
@@ -8125,6 +8122,247 @@ function get_gaussian(mu,sigma) result(fn_val)
 !
       return
 end function get_gaussian
+!#######################################################################
+subroutine get_flux (map,flux_p,flux_m)
+!
+!-----------------------------------------------------------------------
+!
+! ****** Get the flux of the input theta-phi Br map "map".
+! ****** This routine runs on the CPU only.
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use constants
+      use mesh
+      use input_parameters, ONLY : verbose
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      real(r_typ), dimension(ntm,npm) :: map
+      real(r_typ)  :: flux_p,flux_m
+!
+!-----------------------------------------------------------------------
+!
+      real(r_typ) :: tav,sn_t,d_t,da_t,da_p,sn_p,fv
+      integer :: k,j
+!
+!-----------------------------------------------------------------------
+!
+! ******* Get the positive and negative flux of the map.
+!
+      flux_p = zero
+      flux_m = zero
+!
+      do k=1,npm-1
+        do j=1,ntm
+!
+          if (j.eq.1) then
+            tav = half*(t(1) + t(2))
+            sn_t = sin(tav)
+            d_t = dth(2)
+            da_t = quarter*sn_t*d_t
+          else if (j.eq.ntm) then
+            tav=half*(t(ntm)+t(ntm-1))
+            sn_t = sin(tav)
+            d_t = dth(ntm)
+            da_t = quarter*sn_t*d_t
+          else
+            da_t = st(j)*dt(j)
+          end if
+!
+          if (k.eq.1) then
+            da_p = half*dph(1)
+          else if (k.eq.npm-1) then
+            da_p = half*dph(npm-1)
+          else
+            da_p = dp(k)
+          end if
+!
+          fv = map(j,k)*da_t*da_p
+!
+          if (fv.gt.zero) then
+            flux_p = flux_p + fv
+          else
+            flux_m = flux_m + fv
+          end if
+!
+        enddo
+      enddo
+!
+! ****** Report flux if in verbose mode.
+!
+      if (verbose) then
+        write(*,*)
+        write(*,*) '   GET_FLUX: Flux(+):       ',flux_p
+        write(*,*) '   GET_FLUX: Flux(-):       ',flux_m
+        write(*,*) '   GET_FLUX: Flux(signed):  ',flux_p +     flux_m
+        write(*,*) '   GET_FLUX: Flux(unsigned):',flux_p + ABS(flux_m)
+      end if
+!
+end subroutine get_flux
+!#######################################################################
+subroutine balance_flux (map)
+!
+!-----------------------------------------------------------------------
+!
+! ****** Flux balance the input theta-phi Br map "map" using
+! ****** multiplicative flux-balancing.
+! ****** The input map is overwriten with the flux-balanced version.
+! ****** This routine runs on the CPU only.
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use constants
+      use mesh
+      use input_parameters, ONLY : verbose
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      real(r_typ), dimension(ntm,npm) :: map
+!
+!-----------------------------------------------------------------------
+!
+      real(r_typ) :: flux_p,flux_m,ratio,br
+      integer :: k,j
+!
+!-----------------------------------------------------------------------
+!
+! ******* First, get the total positive and negative flux of the map.
+!
+      call get_flux (map,flux_p,flux_m)
+!
+! ****** Check if any flux balancing is required (only happens in trivial cases).
+!
+      if (flux_m + flux_p.eq.zero) return
+!
+! ******* Flux balance the map.
+!
+      ratio = SQRT(ABS(flux_p/flux_m))
+!
+      do k=1,npm
+        do j=1,ntm
+          br = map(j,k)
+          if (br.gt.0) then
+            map(j,k) = br/ratio
+          else
+            map(j,k) = br*ratio
+          end if
+        enddo
+      enddo
+!
+! ******* Check new flux if in verbose mode.
+!
+      if (verbose) call get_flux (map,flux_p,flux_m)
+!
+end subroutine balance_flux
+!#######################################################################
+subroutine generate_rfe (rfe)
+!
+!-----------------------------------------------------------------------
+!
+! ****** Generate random flux source term.
+!
+!-----------------------------------------------------------------------
+!
+      use number_types
+      use constants
+      use mesh
+      use sources
+      use input_parameters, ONLY : verbose, source_rfe_sigma
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      real(r_typ), dimension(ntm,npm,nr) :: rfe
+!
+!-----------------------------------------------------------------------
+!
+      integer :: i,j,k
+      real(r_typ) :: get_gaussian
+      real(r_typ) :: rnd_num,tav,sn_t,d_t,da_ti,fn1,fs1
+!
+!-----------------------------------------------------------------------
+!
+! [RC] Add options to have different random
+                 !      numbers, sigmas, and UF per realization.
+!      Be careful here about MPI ranks!  Need to make all realizations
+!      on proc 0 and broadcast??
+!
+!        do i=1,nr
+          do k=2,npm-1
+            do j=1,ntm
+              rnd_num = (one/source_rfe_sigma)*sqrt(twopi)*half* &
+                        get_gaussian(zero,source_rfe_sigma)
+!
+              if (j.eq.1) then
+                tav=half*(t(1)+t(2))
+                sn_t = sin(tav)
+                d_t = dth(2)
+                da_ti = one/(quarter*sn_t*d_t)
+              else if (j.eq.ntm) then
+                tav=half*(t(ntm)+t(ntm-1))
+                sn_t = sin(tav)
+                d_t = dth(ntm)
+                da_ti = one/(quarter*sn_t*d_t)
+              else
+                da_ti = st_i(j)*dt_i(j)
+              end if
+!
+              rfe(j,k,:) = rnd_num*uf_per_cell_per_hour*da_ti*dp_i(k)
+!
+            enddo
+          enddo
+!        enddo
+!
+! ****** Boundary conditions.
+!
+! ****** Enforce periodicity.
+!
+        do i=1,nr
+          rfe(:,  1,i) = rfe(:,npm-1,i)
+          rfe(:,npm,i) = rfe(:,2,    i)
+        enddo
+!
+! ****** Poles.
+!
+        do i=1,nr
+          fn1 = zero
+          fs1 = zero
+          do k=1,npm-2
+            fn1 = fn1 + rfe(  1,k,i)*dp(k)
+            fs1 = fs1 + rfe(ntm,k,i)*dp(k)
+          enddo
+          fn1 = fn1*twopi_i
+          fs1 = fs1*twopi_i
+          rfe(  1,:,i) = fn1
+          rfe(ntm,:,i) = fs1
+        enddo
+!
+! ****** Flux balance the source term.
+!
+        call balance_flux (rfe)
+!
+        if (verbose) then
+          write (*,*)
+          write (*,*) '   GENERATE_RFE: A RFE source term was generated: '
+          write (*,*) '   GENERATE_RFE: Minimum value = ',MINVAL(rfe(:,:,:))
+          write (*,*) '   GENERATE_RFE: Maximum value = ',MAXVAL(rfe(:,:,:))
+        end if
+!
+end subroutine generate_rfe
 !#######################################################################
 !
 !-----------------------------------------------------------------------
@@ -8473,7 +8711,24 @@ end function get_gaussian
 !     SOURCE_RFE_TOTAL_UNSIGNED_FLUX_PER_HOUR to use.
 !     Currently, the RFE mode uses a fixed random number sequence
 !     that is not updated each step (a planned future feature).
-!     The input unit for unsigned_flux_per_hour is 1e21 Mx/hour.
+!     The input unit for SOURCE_RFE_TOTAL_UNSIGNED_FLUX_PER_HOUR
+!     is 1e21 Mx/hour.
+!
+! 02/28/2024, RC, Version 1.4.0:
+!   - Improved random flux source term implementation.
+!   - Added routine to balance flux of a map and use it
+!     on random flux source term.
+!   - Added source_rfe_seed input parameter to set the random number
+!     generator seed.
+!   - RFE now generates two frames, interpolates in time between them,
+!     and generates a new one when needed.
+!   - The length of the time betwen frames is controlled by
+!     SOURCE_RFE_LIFETIME (in hours).
+!   - The timestep of the code is set to ensure rfe frame switching
+!     and is set to half the lifespan.
+!   - Note that the current RFE implementation may not be ideal 
+!     when using multiple realizations or MPI processes.
+!     A future update will fix this issue.
 !
 !-----------------------------------------------------------------------
 !
