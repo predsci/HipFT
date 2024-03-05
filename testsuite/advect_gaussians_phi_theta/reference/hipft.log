@@ -1,0 +1,2093 @@
+  
+    SET_REALIZATIONS: Realization distribution:
+    SET_REALIZATIONS: nr_arr            1
+    SET_REALIZATIONS: nr_disp_arr            0
+  
+    VALIDATION 3 TEST ENABLED.
+    WARNING:  Overriding FLOW_VT_CONST
+              from    0.000000000000000       to    0.4519156098913889     
+  
+    WARNING:  Overriding FLOW_VP_RIGID_OMEGA
+              from   -9999.000000000000       to     1.807662439565556     
+ 
+ 
+       _    _ _       ______ _______ 
+      | |  | (_)     |  ____|__   __|
+      | |__| |_ _ __ | |__     | |
+      |  __  | | '_ \|  __|    | |
+      | |  | | | |_) | |       | |
+      |_|  |_|_| .__/|_|       |_|
+               | |
+               |_|
+ 
+      Version: 1.5.0 of 03/04/2024
+ 
+  ****** HipFT: High Performance Flux Transport.
+ 
+         Authors:  Ronald M. Caplan
+                   Miko M. Stulajter
+                   Jon A. Linker
+                   Zoran Mikic
+ 
+         Predictive Science Inc.
+         www.predsci.com
+         San Diego, California, USA 92121
+ 
+ 
+ 
+ Run started at: 
+  4 March     2024  10:43:26.571 PM      
+ 
+ Setup complete.
+ 
+ 
+ >running
+ 
+ 
+    UPDATE_TIMESTEP: dtime_old =     0.000000000000000     
+    UPDATE_TIMESTEP: dtime_endrun =     672.0000000000000     
+    UPDATE_TIMESTEP: dtime_flow =     1.423411371237443     
+    UPDATE_TIMESTEP: dtime_dtmax =     1.000000000000000     
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:          1  Time:     1.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:          2  Time:     2.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:          3  Time:     3.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:          4  Time:     4.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:          5  Time:     5.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:          6  Time:     6.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:          7  Time:     7.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:          8  Time:     8.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:          9  Time:     9.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         10  Time:    10.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         11  Time:    11.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         12  Time:    12.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         13  Time:    13.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         14  Time:    14.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         15  Time:    15.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         16  Time:    16.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         17  Time:    17.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         18  Time:    18.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         19  Time:    19.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         20  Time:    20.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         21  Time:    21.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         22  Time:    22.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         23  Time:    23.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         24  Time:    24.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         25  Time:    25.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         26  Time:    26.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         27  Time:    27.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         28  Time:    28.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         29  Time:    29.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         30  Time:    30.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         31  Time:    31.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         32  Time:    32.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         33  Time:    33.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         34  Time:    34.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         35  Time:    35.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         36  Time:    36.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         37  Time:    37.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         38  Time:    38.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         39  Time:    39.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         40  Time:    40.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         41  Time:    41.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         42  Time:    42.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         43  Time:    43.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         44  Time:    44.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         45  Time:    45.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         46  Time:    46.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         47  Time:    47.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         48  Time:    48.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         49  Time:    49.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         50  Time:    50.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         51  Time:    51.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         52  Time:    52.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         53  Time:    53.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         54  Time:    54.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         55  Time:    55.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         56  Time:    56.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         57  Time:    57.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         58  Time:    58.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         59  Time:    59.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         60  Time:    60.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         61  Time:    61.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         62  Time:    62.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         63  Time:    63.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         64  Time:    64.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         65  Time:    65.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         66  Time:    66.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         67  Time:    67.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         68  Time:    68.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         69  Time:    69.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         70  Time:    70.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         71  Time:    71.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         72  Time:    72.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         73  Time:    73.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         74  Time:    74.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         75  Time:    75.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         76  Time:    76.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         77  Time:    77.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         78  Time:    78.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         79  Time:    79.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         80  Time:    80.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         81  Time:    81.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         82  Time:    82.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         83  Time:    83.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         84  Time:    84.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         85  Time:    85.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         86  Time:    86.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         87  Time:    87.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         88  Time:    88.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         89  Time:    89.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         90  Time:    90.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         91  Time:    91.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         92  Time:    92.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         93  Time:    93.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         94  Time:    94.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         95  Time:    95.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         96  Time:    96.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         97  Time:    97.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         98  Time:    98.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:         99  Time:    99.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        100  Time:   100.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        101  Time:   101.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        102  Time:   102.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        103  Time:   103.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        104  Time:   104.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        105  Time:   105.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        106  Time:   106.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        107  Time:   107.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        108  Time:   108.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        109  Time:   109.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        110  Time:   110.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        111  Time:   111.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        112  Time:   112.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        113  Time:   113.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        114  Time:   114.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        115  Time:   115.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        116  Time:   116.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        117  Time:   117.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        118  Time:   118.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        119  Time:   119.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        120  Time:   120.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        121  Time:   121.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        122  Time:   122.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        123  Time:   123.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        124  Time:   124.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        125  Time:   125.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        126  Time:   126.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        127  Time:   127.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        128  Time:   128.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        129  Time:   129.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        130  Time:   130.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        131  Time:   131.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        132  Time:   132.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        133  Time:   133.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        134  Time:   134.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        135  Time:   135.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        136  Time:   136.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        137  Time:   137.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        138  Time:   138.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        139  Time:   139.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        140  Time:   140.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        141  Time:   141.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        142  Time:   142.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        143  Time:   143.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        144  Time:   144.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        145  Time:   145.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        146  Time:   146.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        147  Time:   147.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        148  Time:   148.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        149  Time:   149.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        150  Time:   150.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        151  Time:   151.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        152  Time:   152.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        153  Time:   153.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        154  Time:   154.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        155  Time:   155.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        156  Time:   156.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        157  Time:   157.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        158  Time:   158.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        159  Time:   159.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        160  Time:   160.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        161  Time:   161.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        162  Time:   162.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        163  Time:   163.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        164  Time:   164.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        165  Time:   165.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        166  Time:   166.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        167  Time:   167.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        168  Time:   168.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        169  Time:   169.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        170  Time:   170.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        171  Time:   171.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        172  Time:   172.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        173  Time:   173.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        174  Time:   174.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        175  Time:   175.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        176  Time:   176.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        177  Time:   177.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        178  Time:   178.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        179  Time:   179.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        180  Time:   180.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        181  Time:   181.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        182  Time:   182.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        183  Time:   183.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        184  Time:   184.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        185  Time:   185.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        186  Time:   186.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        187  Time:   187.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        188  Time:   188.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        189  Time:   189.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        190  Time:   190.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        191  Time:   191.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        192  Time:   192.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        193  Time:   193.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        194  Time:   194.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        195  Time:   195.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        196  Time:   196.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        197  Time:   197.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        198  Time:   198.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        199  Time:   199.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        200  Time:   200.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        201  Time:   201.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        202  Time:   202.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        203  Time:   203.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        204  Time:   204.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        205  Time:   205.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        206  Time:   206.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        207  Time:   207.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        208  Time:   208.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        209  Time:   209.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        210  Time:   210.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        211  Time:   211.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        212  Time:   212.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        213  Time:   213.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        214  Time:   214.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        215  Time:   215.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        216  Time:   216.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        217  Time:   217.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        218  Time:   218.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        219  Time:   219.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        220  Time:   220.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        221  Time:   221.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        222  Time:   222.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        223  Time:   223.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        224  Time:   224.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        225  Time:   225.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        226  Time:   226.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        227  Time:   227.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        228  Time:   228.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        229  Time:   229.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        230  Time:   230.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        231  Time:   231.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        232  Time:   232.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        233  Time:   233.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        234  Time:   234.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        235  Time:   235.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        236  Time:   236.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        237  Time:   237.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        238  Time:   238.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        239  Time:   239.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        240  Time:   240.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        241  Time:   241.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        242  Time:   242.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        243  Time:   243.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        244  Time:   244.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        245  Time:   245.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        246  Time:   246.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        247  Time:   247.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        248  Time:   248.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        249  Time:   249.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        250  Time:   250.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        251  Time:   251.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        252  Time:   252.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        253  Time:   253.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        254  Time:   254.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        255  Time:   255.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        256  Time:   256.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        257  Time:   257.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        258  Time:   258.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        259  Time:   259.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        260  Time:   260.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        261  Time:   261.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        262  Time:   262.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        263  Time:   263.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        264  Time:   264.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        265  Time:   265.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        266  Time:   266.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        267  Time:   267.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        268  Time:   268.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        269  Time:   269.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        270  Time:   270.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        271  Time:   271.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        272  Time:   272.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        273  Time:   273.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        274  Time:   274.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        275  Time:   275.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        276  Time:   276.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        277  Time:   277.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        278  Time:   278.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        279  Time:   279.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        280  Time:   280.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        281  Time:   281.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        282  Time:   282.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        283  Time:   283.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        284  Time:   284.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        285  Time:   285.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        286  Time:   286.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        287  Time:   287.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        288  Time:   288.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        289  Time:   289.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        290  Time:   290.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        291  Time:   291.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        292  Time:   292.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        293  Time:   293.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        294  Time:   294.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        295  Time:   295.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        296  Time:   296.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        297  Time:   297.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        298  Time:   298.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        299  Time:   299.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        300  Time:   300.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        301  Time:   301.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        302  Time:   302.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        303  Time:   303.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        304  Time:   304.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        305  Time:   305.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        306  Time:   306.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        307  Time:   307.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        308  Time:   308.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        309  Time:   309.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        310  Time:   310.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        311  Time:   311.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        312  Time:   312.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        313  Time:   313.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        314  Time:   314.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        315  Time:   315.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        316  Time:   316.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        317  Time:   317.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        318  Time:   318.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        319  Time:   319.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        320  Time:   320.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        321  Time:   321.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        322  Time:   322.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        323  Time:   323.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        324  Time:   324.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        325  Time:   325.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        326  Time:   326.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        327  Time:   327.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        328  Time:   328.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        329  Time:   329.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        330  Time:   330.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        331  Time:   331.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        332  Time:   332.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        333  Time:   333.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        334  Time:   334.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        335  Time:   335.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        336  Time:   336.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        337  Time:   337.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        338  Time:   338.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        339  Time:   339.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        340  Time:   340.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        341  Time:   341.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        342  Time:   342.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        343  Time:   343.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        344  Time:   344.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        345  Time:   345.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        346  Time:   346.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        347  Time:   347.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        348  Time:   348.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        349  Time:   349.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        350  Time:   350.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        351  Time:   351.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        352  Time:   352.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        353  Time:   353.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        354  Time:   354.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        355  Time:   355.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        356  Time:   356.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        357  Time:   357.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        358  Time:   358.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        359  Time:   359.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        360  Time:   360.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        361  Time:   361.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        362  Time:   362.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        363  Time:   363.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        364  Time:   364.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        365  Time:   365.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        366  Time:   366.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        367  Time:   367.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        368  Time:   368.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        369  Time:   369.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        370  Time:   370.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        371  Time:   371.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        372  Time:   372.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        373  Time:   373.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        374  Time:   374.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        375  Time:   375.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        376  Time:   376.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        377  Time:   377.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        378  Time:   378.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        379  Time:   379.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        380  Time:   380.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        381  Time:   381.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        382  Time:   382.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        383  Time:   383.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        384  Time:   384.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        385  Time:   385.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        386  Time:   386.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        387  Time:   387.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        388  Time:   388.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        389  Time:   389.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        390  Time:   390.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        391  Time:   391.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        392  Time:   392.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        393  Time:   393.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        394  Time:   394.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        395  Time:   395.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        396  Time:   396.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        397  Time:   397.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        398  Time:   398.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        399  Time:   399.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        400  Time:   400.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        401  Time:   401.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        402  Time:   402.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        403  Time:   403.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        404  Time:   404.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        405  Time:   405.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        406  Time:   406.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        407  Time:   407.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        408  Time:   408.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        409  Time:   409.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        410  Time:   410.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        411  Time:   411.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        412  Time:   412.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        413  Time:   413.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        414  Time:   414.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        415  Time:   415.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        416  Time:   416.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        417  Time:   417.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        418  Time:   418.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        419  Time:   419.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        420  Time:   420.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        421  Time:   421.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        422  Time:   422.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        423  Time:   423.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        424  Time:   424.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        425  Time:   425.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        426  Time:   426.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        427  Time:   427.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        428  Time:   428.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        429  Time:   429.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        430  Time:   430.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        431  Time:   431.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        432  Time:   432.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        433  Time:   433.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        434  Time:   434.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        435  Time:   435.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        436  Time:   436.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        437  Time:   437.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        438  Time:   438.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        439  Time:   439.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        440  Time:   440.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        441  Time:   441.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        442  Time:   442.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        443  Time:   443.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        444  Time:   444.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        445  Time:   445.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        446  Time:   446.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        447  Time:   447.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        448  Time:   448.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        449  Time:   449.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        450  Time:   450.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        451  Time:   451.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        452  Time:   452.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        453  Time:   453.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        454  Time:   454.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        455  Time:   455.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        456  Time:   456.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        457  Time:   457.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        458  Time:   458.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        459  Time:   459.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        460  Time:   460.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        461  Time:   461.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        462  Time:   462.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        463  Time:   463.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        464  Time:   464.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        465  Time:   465.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        466  Time:   466.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        467  Time:   467.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        468  Time:   468.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        469  Time:   469.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        470  Time:   470.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        471  Time:   471.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        472  Time:   472.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        473  Time:   473.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        474  Time:   474.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        475  Time:   475.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        476  Time:   476.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        477  Time:   477.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        478  Time:   478.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        479  Time:   479.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        480  Time:   480.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        481  Time:   481.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        482  Time:   482.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        483  Time:   483.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        484  Time:   484.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        485  Time:   485.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        486  Time:   486.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        487  Time:   487.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        488  Time:   488.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        489  Time:   489.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        490  Time:   490.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        491  Time:   491.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        492  Time:   492.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        493  Time:   493.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        494  Time:   494.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        495  Time:   495.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        496  Time:   496.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        497  Time:   497.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        498  Time:   498.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        499  Time:   499.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        500  Time:   500.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        501  Time:   501.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        502  Time:   502.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        503  Time:   503.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        504  Time:   504.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        505  Time:   505.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        506  Time:   506.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        507  Time:   507.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        508  Time:   508.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        509  Time:   509.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        510  Time:   510.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        511  Time:   511.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        512  Time:   512.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        513  Time:   513.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        514  Time:   514.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        515  Time:   515.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        516  Time:   516.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        517  Time:   517.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        518  Time:   518.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        519  Time:   519.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        520  Time:   520.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        521  Time:   521.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        522  Time:   522.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        523  Time:   523.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        524  Time:   524.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        525  Time:   525.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        526  Time:   526.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        527  Time:   527.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        528  Time:   528.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        529  Time:   529.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        530  Time:   530.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        531  Time:   531.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        532  Time:   532.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        533  Time:   533.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        534  Time:   534.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        535  Time:   535.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        536  Time:   536.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        537  Time:   537.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        538  Time:   538.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        539  Time:   539.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        540  Time:   540.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        541  Time:   541.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        542  Time:   542.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        543  Time:   543.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        544  Time:   544.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        545  Time:   545.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        546  Time:   546.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        547  Time:   547.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        548  Time:   548.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        549  Time:   549.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        550  Time:   550.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        551  Time:   551.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        552  Time:   552.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        553  Time:   553.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        554  Time:   554.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        555  Time:   555.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        556  Time:   556.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        557  Time:   557.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        558  Time:   558.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        559  Time:   559.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        560  Time:   560.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        561  Time:   561.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        562  Time:   562.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        563  Time:   563.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        564  Time:   564.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        565  Time:   565.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        566  Time:   566.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        567  Time:   567.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        568  Time:   568.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        569  Time:   569.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        570  Time:   570.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        571  Time:   571.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        572  Time:   572.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        573  Time:   573.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        574  Time:   574.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        575  Time:   575.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        576  Time:   576.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        577  Time:   577.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        578  Time:   578.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        579  Time:   579.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        580  Time:   580.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        581  Time:   581.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        582  Time:   582.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        583  Time:   583.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        584  Time:   584.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        585  Time:   585.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        586  Time:   586.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        587  Time:   587.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        588  Time:   588.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        589  Time:   589.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        590  Time:   590.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        591  Time:   591.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        592  Time:   592.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        593  Time:   593.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        594  Time:   594.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        595  Time:   595.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        596  Time:   596.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        597  Time:   597.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        598  Time:   598.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        599  Time:   599.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        600  Time:   600.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        601  Time:   601.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        602  Time:   602.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        603  Time:   603.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        604  Time:   604.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        605  Time:   605.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        606  Time:   606.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        607  Time:   607.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        608  Time:   608.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        609  Time:   609.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        610  Time:   610.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        611  Time:   611.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        612  Time:   612.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        613  Time:   613.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        614  Time:   614.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        615  Time:   615.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        616  Time:   616.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        617  Time:   617.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        618  Time:   618.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        619  Time:   619.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        620  Time:   620.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        621  Time:   621.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        622  Time:   622.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        623  Time:   623.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        624  Time:   624.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        625  Time:   625.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        626  Time:   626.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        627  Time:   627.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        628  Time:   628.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        629  Time:   629.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        630  Time:   630.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        631  Time:   631.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        632  Time:   632.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        633  Time:   633.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        634  Time:   634.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        635  Time:   635.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        636  Time:   636.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        637  Time:   637.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        638  Time:   638.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        639  Time:   639.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        640  Time:   640.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        641  Time:   641.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        642  Time:   642.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        643  Time:   643.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        644  Time:   644.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        645  Time:   645.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        646  Time:   646.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        647  Time:   647.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        648  Time:   648.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        649  Time:   649.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        650  Time:   650.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        651  Time:   651.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        652  Time:   652.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        653  Time:   653.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        654  Time:   654.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        655  Time:   655.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        656  Time:   656.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        657  Time:   657.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        658  Time:   658.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        659  Time:   659.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        660  Time:   660.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        661  Time:   661.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        662  Time:   662.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        663  Time:   663.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        664  Time:   664.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        665  Time:   665.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        666  Time:   666.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        667  Time:   667.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        668  Time:   668.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        669  Time:   669.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        670  Time:   670.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        671  Time:   671.000000 /   672.000000  dt:     1.000000 (dtmax)
+    UPDATE_TIMESTEP: dtime_end =     1.000000000000000     
+    UPDATE_TIMESTEP: dtime_global =     1.000000000000000     
+  
+Completed step:        672  Time:   672.000000 /   672.000000  dt:     1.000000 (end)
+  
+ Final data written out to hipft_brmap_final.h5
+ 
+ Run completed at:
+  4 March     2024  10:43:27.051 PM      
+ 
+----------------------------------------
+ 
+ Run time summary:
+ -----------------
+ 
+                                  Avg         Min         Max      S. Dev
+                                  ---         ---         ---      ------
+ Wall clock time:               0.570       0.570       0.570       0.000
+ --> Setup:                     0.015       0.015       0.015       0.000
+ --> Update:                    0.001       0.001       0.001       0.000
+ --> Flux transport:            0.351       0.351       0.351       0.000
+     --> Advecton:              0.351       0.351       0.351       0.000
+     --> Diffusion              0.000       0.000       0.000       0.000
+     --> Source:                0.000       0.000       0.000       0.000
+ --> Analysis:                  0.119       0.119       0.119       0.000
+ --> I/O:                       0.011       0.011       0.011       0.000
+ --> MPI overhead:              0.074       0.074       0.074       0.000
+ 
+----------------------------------------
+ 

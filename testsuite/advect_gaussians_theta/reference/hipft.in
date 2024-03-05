@@ -6,7 +6,7 @@
   res_nt = 180
   res_np = 360
 !
-  validation_run = 2
+  validation_run = 3
 !
   time_end = 672.0
   dt_max = 1.0
@@ -20,13 +20,10 @@
 ! Gaussians Advection
 ! -------------------------------
 !
-! This run uses the built-in analytic validation mode of HipFT
-! to run two Guassians.
+! This run uses a built-in analytic validation mode of HipFT
+! to run two Guassians moving in theta.
 !
-! A ridged rotation velocity in the phi direction is set to 
-! rotate the solution exactly one revolution.
-!
-! Therefore, the final output should match the initial condition.
+! The analytic solution is output.
 !
 ! When the run is completed, you can plot the code's final
 ! output and the outputted analytic solution with:
@@ -36,9 +33,7 @@
 !
 ! To see the validation, run the history plotter as:
 !
-!    ${HIPFT_HOME}/bin/hipft_plot_histories.py -valrun
+!    ${HIPFT_HOME}/bin/hipft_plot_histories.py -val
 !
-! The resulting history_val.png will show the error increasing and then decreasing 
-! (since the solution only matches the initial condition after a full rotation.)
 !
 

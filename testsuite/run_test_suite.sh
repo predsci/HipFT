@@ -75,6 +75,8 @@ mpicall="mpirun -np"
 
 AVAIL_TEST_RUNS_LIST="
 advect_gaussians_phi
+advect_gaussians_theta
+advect_gaussians_phi_theta
 diffuse_soccer
 diffuse_advect_soccer
 diffuse_dipole
