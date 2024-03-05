@@ -672,7 +672,7 @@ module input_parameters
       integer :: source_rfe_model = 0
       real(r_typ) :: source_rfe_total_unsigned_flux_per_hour = 0.
       real(r_typ) :: source_rfe_sigma = one
-      integer*8   :: source_rfe_seed = -9999
+      integer     :: source_rfe_seed = -9999
       real(r_typ) :: source_rfe_lifetime = 0.3_r_typ
 !
       logical :: source_from_file = .false.
@@ -3655,6 +3655,9 @@ subroutine load_flow_from_files
       enddo
       flow_times_actual_ut_jd(:) = flow_times_actual_ut_jd0(:) &
                                    + time_start/twentyfour
+
+! [RMC]  NEED TO CHECK THIS FOR OVERFLOW AND LOOP AROUND WITH MODULUS!!!
+
       CLOSE (IO_DATA_IN)
 !
 ! ******* Initialize flow time.
@@ -8849,8 +8852,8 @@ end subroutine generate_rfe
 !
 ! 03/04/2024, RC, Version 1.6.0:
 !   - Fixed bugs preventing GCC compilation.
-!   - Added OUTPUT_MAP_IDX_START input parameter to allow runs to 
-!     begin map output at arbitrary indices.  This helps when 
+!   - Added OUTPUT_MAP_IDX_START input parameter to allow runs to
+!     begin map output at arbitrary indices.  This helps when
 !     restarting a pervious run in combinaton with TIME_START.
 !
 !-----------------------------------------------------------------------
