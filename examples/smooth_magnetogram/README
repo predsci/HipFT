@@ -5,4 +5,6 @@
 !  Br map.  The amount of diffusion 
 !  can be modified to be stronger or weaker by 
 !  changing "diffusion_coef_factor" to be higher or lower.
+!
+!  In this example we also flux balance the map before and after diffusing.
 

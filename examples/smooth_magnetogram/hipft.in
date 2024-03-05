@@ -1,8 +1,10 @@
 &hipft_input_parameters
 !
   initial_map_filename = 'hmi_synoptic_mr_polfil_720s_cr2255_pslt_pt_1024x512.h5'
+  initial_map_flux_balance = .true.
 !
   output_map_root_filename = 'hmi_synoptic_mr_polfil_720s_cr2255_pslt_pt_1024x512'
+  output_map_flux_balance = .true.
 !  
   diffusion_coef_factor = 3.0
 !

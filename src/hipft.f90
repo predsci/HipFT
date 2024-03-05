@@ -504,7 +504,7 @@ module input_parameters
 !
       integer, private :: i
 !
-      logical :: verbose = .false.
+      integer :: verbose = 0
 !
 ! ****** Resolution ********
 ! ****** These are autoset when reading in an initial_map_filename *****
@@ -512,6 +512,10 @@ module input_parameters
 !
       integer :: res_nt = 0
       integer :: res_np = 0
+!
+! ****** Number of realizations ********
+!
+      integer        :: n_realizations = 1
 !
 ! ****** Validation Mode ********
 !
@@ -537,10 +541,6 @@ module input_parameters
       logical        :: output_map_2d = .true.
       real(r_typ)    :: output_history_time_cadence = zero
       logical        :: output_single_precision = .true.
-!
-! ****** Number of realizations ********
-!
-      integer        :: n_realizations = 1
 !
 ! ****** Time ********
 !
@@ -682,6 +682,7 @@ module input_parameters
 ! ****** DATA ASSIMILATION ********
 !
       logical :: assimilate_data = .false.
+      logical :: assimilate_data_balance_flux = .false.
 !
       character(512) :: assimilate_data_map_list_filename = ' '
       character(512) :: assimilate_data_map_root_dir = '.'
@@ -909,7 +910,7 @@ program HIPFT
         call output_step
 !
         if (iamp0) then
-          if (verbose) write(*,*) ' '
+          if (verbose.gt.0) write(*,*) ' '
           write(*,MAINFMT)                                            &
             'Completed step: ',ntime,'  Time: ',time,' / ',           &
             time_end,'  dt: ',dtime_global,' (',TRIM(dtime_reason),')'
@@ -1024,7 +1025,7 @@ subroutine set_local_number_of_realizations
         idisp = idisp + nr_arr(i)
       enddo
 !
-      if (iamp0 .and. verbose) then
+      if (iamp0 .and. verbose.gt.0) then
         write(*,*) ' '
         write(*,*) '   SET_REALIZATIONS: Realization distribution:'
         write(*,*) '   SET_REALIZATIONS: nr_arr',nr_arr(:)
@@ -2108,6 +2109,8 @@ subroutine load_initial_condition
         f(ntm,:,i) = fs1(i)*twopi_i
       enddo
 !
+!$omp target enter data map(to:f)
+!
 ! ****** Balance the flux if desired (should not be used for validation runs!).
 !
       if (initial_map_flux_balance) then
@@ -2115,8 +2118,6 @@ subroutine load_initial_condition
           call balance_flux (f(:,:,i))
         enddo
       end if
-!
-!$omp target enter data map(to:f)
 !
 ! ****** Clean up memory.
 !
@@ -2767,14 +2768,26 @@ subroutine write_map (fname)
 !
       character(*) :: fname
       integer :: ierr = 0
-      integer :: i, lsbuf, irank
+      integer :: i,j,k,lsbuf,irank
       integer, dimension(:), allocatable :: displ,lbuf
       real(r_typ), dimension(:), allocatable :: gfout,tfout,rscale
-      real(r_typ), dimension(:,:,:), allocatable :: gout
+      real(r_typ), dimension(:,:,:), allocatable :: gout,ftmp
 !
 !-----------------------------------------------------------------------
 !
-!$omp target update from(f)
+      allocate (ftmp(ntm,npm,nr))
+!omp target enter data map(alloc:ftmp)
+!
+      do concurrent (k=1:nr,j=1:npm,i=1:ntm)
+        ftmp(i,j,k) = f(i,j,k)
+      enddo
+!
+      if (output_map_flux_balance) then
+        do i=1,nr
+          call balance_flux (ftmp(:,:,i))
+        enddo
+      end if
+!$omp target update from(ftmp)
 !
 ! ****** Write out file in pt format with single point overlap in phi.
 !
@@ -2786,11 +2799,11 @@ subroutine write_map (fname)
 !   For now, this should be computed on the CPU no matter what...
 !
       do i=1,nr
-        if (output_map_flux_balance) then
-          call balance_flux (f(:,:,i))
-        end if
-        fout(:,:,i) = TRANSPOSE(f(:,1:npm-1,i))
+        fout(:,:,i) = TRANSPOSE(ftmp(:,1:npm-1,i))
       enddo
+!
+      deallocate (ftmp)
+!$omp target exit data map(delete:ftmp)
 !
       if (output_map_2d.and.n_realizations.eq.1) then
         call write_2d_file (fname,npm-1,ntm,fout(:,:,1),pout,t,ierr)
@@ -3510,7 +3523,7 @@ subroutine add_flow_from_files
        if (flow_from_file_current_idx .gt. flow_from_files_num_flows) then
          flow_from_file_current_idx = 1
 
-         if (verbose) then
+         if (verbose.gt.0) then
            write(*,*) ' '
            write(*,*) '   ADD_FLOW_FROM_FILE: Resetting flow index to 1.'
          end if
@@ -3588,7 +3601,7 @@ subroutine add_flow_from_files
 !
        time_of_next_input_flow = time_of_current_input_flow + delta_time_flow
 !
-       if (verbose) then
+       if (verbose.gt.0) then
          write(*,*) ' '
          write(*,*) '   ADD_FLOW_FROM_FILE: Current flow index',flow_from_file_current_idx
         write (*,*) '   ADD_FLOW_FROM_FILE: Time of current flow:  ', &
@@ -3789,7 +3802,7 @@ subroutine load_flow_from_files
 !
 ! ******* Print some diagnostics.
 !
-      if (verbose) then
+      if (verbose.gt.0) then
         write (*,*)
         write (*,*) '   FLOWS_FROM_FILE: Number of flows in flow list: ', &
                      flow_from_files_num_flows
@@ -3865,6 +3878,12 @@ subroutine update_source
 
           call generate_rfe (source_rfe(:,:,:,rfe2))
 !$omp target update to(source_rfe(:,:,:,rfe2))
+!
+! ****** Flux balance the source term.
+!
+          do i=1,nr
+            call balance_flux (source_rfe(:,:,i,rfe2))
+          end do
 !
         end if
 !
@@ -3958,7 +3977,7 @@ subroutine load_data_assimilation
 !
 ! ******* Print some diagnostics.
 !
-      if (verbose) then
+      if (verbose.gt.0) then
         write (*,*)
         write (*,*) '   LOAD_DATA_ASSIMILATION: Number of maps in map list: ', &
                      num_maps_in_list
@@ -3996,7 +4015,8 @@ subroutine assimilate_new_data (new_data)
 !-----------------------------------------------------------------------
 !
 ! ****** Assimilate data.
-! ****** This assumes the uncertainty/weight is in the second slice
+! ****** This assumes the data is the 1st slice and the
+! ****** weight is in the second slice.
 !
 !-----------------------------------------------------------------------
 !
@@ -4015,17 +4035,32 @@ subroutine assimilate_new_data (new_data)
 !
       integer :: j,k,i
       real(r_typ), dimension(:,:,:,:), allocatable :: new_data
+      real(r_typ), dimension(:,:,:), allocatable :: deltaf
 !
 !-----------------------------------------------------------------------
 !
+      allocate(deltaf(ntm,npm,nr))
+!$omp target enter data map(alloc:deltaf)
+
       do concurrent (i=1:nr,k=1:npm1,j=1:ntm)
-         f(j,k,i) = (one - new_data(k,j,2,i))*         f(j,k,i) +  &
-                    (      new_data(k,j,2,i))*new_data(k,j,1,i)
+        deltaf(j,k,i) = new_data(k,j,2,i)*(new_data(k,j,1,i) - f(j,k,i))
       enddo
+      call set_periodic_bc_3d (deltaf,ntm,npm,nr)
 !
-! ****** Set periodicity (since k=np (npm) not set above).
+! ****** Balance the added flux if requested.
 !
+      if (assimilate_data_balance_flux) then
+        if (verbose.gt.0) write(*,*) '   ASSIMILATE_NEW_DATA: About to balance DBr'
+        call balance_flux (deltaf)
+      end if
+!
+      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
+        f(j,k,i) = f(j,k,i) + deltaf(j,k,i)
+      enddo
       call set_periodic_bc_3d (f,ntm,npm,nr)
+!
+!$omp target exit data map(delete:deltaf)
+      deallocate(deltaf)
 !
 end subroutine
 !#######################################################################
@@ -4067,7 +4102,7 @@ subroutine update_field
 ! ****** If it is time to load new data, read it from file.
 !
       if (time .ge. time_of_next_input_map) then
-        if (verbose) then
+        if (verbose.gt.0) then
           write(*,*)
           write(*,*) '   UPDATE_FIELD: Loading field index ',current_map_input_idx
           write(*,*) '   UPDATE_FIELD: Time of next input map: ',time_of_next_input_map
@@ -4162,7 +4197,7 @@ subroutine update_field
            - map_time_initial_hr
         end if
 
-        if (verbose) then
+        if (verbose.gt.0) then
           write(*,*) '   UPDATE_FIELD: Time of next input map: ', &
                       time_of_next_input_map
         end if
@@ -4206,7 +4241,7 @@ subroutine update_timestep
 ! ****** Save previous timestep.
 !
         dtime_old = dtime_global
-        if (verbose) then
+        if (verbose.gt.1) then
           write(*,*)
           write(*,*) '   UPDATE_TIMESTEP: dtime_old = ',dtime_old
         end if
@@ -4214,7 +4249,7 @@ subroutine update_timestep
 ! ****** Default timestep is one giant step for remaining time.
 !
         dtime_global = time_end - time
-        if (verbose) write(*,*) '   UPDATE_TIMESTEP: dtime_endrun = ',dtime_global
+        if (verbose.gt.1) write(*,*) '   UPDATE_TIMESTEP: dtime_endrun = ',dtime_global
         dtime_reason = 'endrun'
         time_step_changed = .true.
 !
@@ -4225,7 +4260,7 @@ subroutine update_timestep
           if (timestep_flow_needs_updating) then
             call get_flow_dtmax (dtmax_flow)
             timestep_flow_needs_updating = .false.
-            if (verbose) write(*,*) '   UPDATE_TIMESTEP: dtime_flow = ',dtmax_flow
+            if (verbose.gt.1) write(*,*) '   UPDATE_TIMESTEP: dtime_flow = ',dtmax_flow
           end if
           if (dtmax_flow .lt. dtime_global) then
             dtime_global = dtmax_flow
@@ -4238,7 +4273,7 @@ subroutine update_timestep
         if (dt_max .lt. dtime_global) then
           dtime_global = dt_max
           dtime_reason = 'dtmax'
-          if (verbose) write(*,*) '   UPDATE_TIMESTEP: dtime_dtmax = ',dtime_global
+          if (verbose.gt.1) write(*,*) '   UPDATE_TIMESTEP: dtime_dtmax = ',dtime_global
         end if
 !
         if (dtime_global .lt. dt_min) then
@@ -4261,7 +4296,7 @@ subroutine update_timestep
           timestep_needs_updating = .true.
           timestep_flow_needs_updating = .true.
           time_step_changed = .true.
-          if (verbose) write(*,*) '   UPDATE_TIMESTEP: dtime_output = ',dtime_global
+          if (verbose.gt.1) write(*,*) '   UPDATE_TIMESTEP: dtime_output = ',dtime_global
         end if
       end if
 !
@@ -4274,7 +4309,7 @@ subroutine update_timestep
           timestep_needs_updating = .true.
           timestep_flow_needs_updating = .true.
           time_step_changed = .true.
-          if (verbose) write(*,*) '   UPDATE_TIMESTEP: dtime_assim = ',dtime_global
+          if (verbose.gt.1) write(*,*) '   UPDATE_TIMESTEP: dtime_assim = ',dtime_global
         end if
       end if
 !
@@ -4288,7 +4323,7 @@ subroutine update_timestep
           flow_needs_updating = .true.
           timestep_flow_needs_updating = .true.
           time_step_changed = .true.
-          if (verbose) write(*,*) '   UPDATE_TIMESTEP: dtime_nxtflow = ',dtime_global
+          if (verbose.gt.1) write(*,*) '   UPDATE_TIMESTEP: dtime_nxtflow = ',dtime_global
         end if
       end if
 !
@@ -4302,7 +4337,7 @@ subroutine update_timestep
           timestep_needs_updating = .true.
           timestep_flow_needs_updating = .true.
           time_step_changed = .true.
-          if (verbose) write(*,*) '   UPDATE_TIMESTEP: dtime_nxtrfe = ',dtime_global
+          if (verbose.gt.1) write(*,*) '   UPDATE_TIMESTEP: dtime_nxtrfe = ',dtime_global
         end if
       end if
 !
@@ -4313,7 +4348,7 @@ subroutine update_timestep
         dtime_reason = 'end'
         timestep_needs_updating = .false.
         time_step_changed = .true.
-        if (verbose) write(*,*) '   UPDATE_TIMESTEP: dtime_end = ',dtime_global
+        if (verbose.gt.1) write(*,*) '   UPDATE_TIMESTEP: dtime_end = ',dtime_global
       end if
 !
 ! ****** Make sure STS is recomputed if timestep has changed.
@@ -4322,7 +4357,7 @@ subroutine update_timestep
         need_to_load_sts = .true.
       end if
 !
-      if (verbose) write(*,*) '   UPDATE_TIMESTEP: dtime_global = ',dtime_global
+      if (verbose.gt.1) write(*,*) '   UPDATE_TIMESTEP: dtime_global = ',dtime_global
 !
 end subroutine
 !#######################################################################
@@ -4501,7 +4536,7 @@ subroutine diffusion_step (dtime_local)
 ! ****** if we were to equal-step from this point to the end.
 ! ****** This is a DIAGNOSTIC only!  This is not used!
 !
-        if (auto_sc .and. verbose) then
+        if (auto_sc .and. verbose.gt.0) then
           diffusion_subcycles = CEILING((dtime_local - time_stepped)/dtime_local2)
         end if
 !
@@ -4522,7 +4557,7 @@ subroutine diffusion_step (dtime_local)
 !
         time_stepped = time_stepped + dtime_local2
 !
-        if (verbose) then
+        if (verbose.gt.1) then
           timetmp = time
           time = time + time_stepped
           call analysis_step
@@ -4552,7 +4587,7 @@ subroutine diffusion_step (dtime_local)
 !
       if (auto_sc) then
         diffusion_subcycles = i
-        if (verbose) write(*,*) '   DIFFUSION_STEP: Total number of cycles = ',diffusion_subcycles
+        if (verbose.gt.0) write(*,*) '   DIFFUSION_STEP: Total number of cycles = ',diffusion_subcycles
       end if
 !
       wtime_flux_transport_diffusion = wtime_flux_transport_diffusion &
@@ -4943,7 +4978,7 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
       dtime_in = dtime_ptl
       dtime_ptl = HUGE(one)
 !
-      if (verbose) then
+      if (verbose.gt.1) then
         write (*,*) ' '
         write (*,*) '   GET_DTIME_DIFFUSION_PTL: dtime_in          = ',dtime_in
       end if
@@ -4970,7 +5005,7 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
                           MPI_MAX,MPI_COMM_WORLD,ierr)
       wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
 !
-      if (verbose) write (*,*) '   GET_DTIME_DIFFUSION_PTL: MAX(|F|)          = ',axabsmax
+      if (verbose.gt.1) write (*,*) '   GET_DTIME_DIFFUSION_PTL: MAX(|F|)          = ',axabsmax
 !
       if (axabsmax .gt. zero) then
 !
@@ -5012,13 +5047,13 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
 !
         dtime_ptl = safe*dtime_ptl
 !
-        if (verbose) write (*,*) '   GET_DTIME_DIFFUSION_PTL: PTL timestep      = ',dtime_ptl
+        if (verbose.gt.1) write (*,*) '   GET_DTIME_DIFFUSION_PTL: PTL timestep      = ',dtime_ptl
 !
 ! ****** Don't let the new dt be smaller than the previous one.
 !
         if (dtime_ptl .lt. dtime_in) dtime_ptl = dtime_in
 !
-        if (verbose) write (*,*) '   GET_DTIME_DIFFUSION_PTL: PTL timestep used = ',dtime_ptl
+        if (verbose.gt.1) write (*,*) '   GET_DTIME_DIFFUSION_PTL: PTL timestep used = ',dtime_ptl
       end if
 !
 !$omp target exit data map(delete:Af)
@@ -5211,7 +5246,7 @@ subroutine load_sts_rkl2 (dtime_local)
 !
 !$omp target update to(sts_uj,sts_vj,sts_ubj,sts_gj)
 !
-      if (verbose) then
+      if (verbose.gt.1) then
         write (*,*) ' '
         write (*,*) '   LOAD_STS:  *** Diffusion: 2nd-order RKL2  ***'
         write (*,*) '   LOAD_STS:  Super-time-step used              = ',dtime_local
@@ -5327,7 +5362,7 @@ subroutine load_sts_rkg2 (dtime_local)
       enddo
 !$omp target update to(sts_uj,sts_vj,sts_ubj,sts_gj)
 !
-      if (verbose) then
+      if (verbose.gt.1) then
         write (*,*) ' '
         write (*,*) '   LOAD_STS:  *** Diffusion: 2nd-order RKG2  ***'
         write (*,*) '   LOAD_STS:  Super-time-step used              = ',dtime_local
@@ -6507,7 +6542,7 @@ subroutine load_diffusion
                                       - diffusion_coef_file(ntm1,:,i)
         enddo
 !
-        if (verbose) then
+        if (verbose.gt.0) then
           write (*,*)
           write (*,*) '   LOAD_DIFFUSION: Diffusion coef from file: ', &
                                            trim(diffusion_coef_filename)
@@ -6541,7 +6576,7 @@ subroutine load_diffusion
           enddo
         enddo
 
-        if (verbose) then
+        if (verbose.gt.0) then
           write (*,*)
           write (*,*) '   LOAD_DIFFUSION: Grid-based diffusion is activated.'
         end if
@@ -6851,7 +6886,7 @@ subroutine load_source
         deallocate (pf)
         deallocate (f_tmp2d)
 !
-        if (verbose) then
+        if (verbose.gt.0) then
           write (*,*)
           write (*,*) '   LOAD_SOURCE: A source term was read in from file: ', &
                      trim(source_filename)
@@ -8063,6 +8098,7 @@ subroutine read_input_file
                diffusion_coef_constant,                                &
                diffusion_coef_constants,                               &
                assimilate_data,                                        &
+               assimilate_data_balance_flux,                           &
                assimilate_data_map_list_filename,                      &
                assimilate_data_map_root_dir,                           &
                assimilate_data_custom_from_mu,                         &
@@ -8346,7 +8382,6 @@ subroutine get_flux (map,flux_p,flux_m)
 !-----------------------------------------------------------------------
 !
 ! ****** Get the flux of the input theta-phi Br map "map".
-! ****** This routine runs on the CPU only.
 !
 !-----------------------------------------------------------------------
 !
@@ -8362,7 +8397,7 @@ subroutine get_flux (map,flux_p,flux_m)
 !-----------------------------------------------------------------------
 !
       real(r_typ), dimension(ntm,npm) :: map
-      real(r_typ)  :: flux_p,flux_m
+      real(r_typ)  :: flux_p, flux_m
 !
 !-----------------------------------------------------------------------
 !
@@ -8376,45 +8411,43 @@ subroutine get_flux (map,flux_p,flux_m)
       flux_p = zero
       flux_m = zero
 !
-      do k=1,npm-1
-        do j=1,ntm
+      do concurrent (k=1:npm-1,j=1:ntm) reduce(+:flux_p,flux_m)
 !
-          if (j.eq.1) then
-            tav = half*(t(1) + t(2))
-            sn_t = sin(tav)
-            d_t = dth(2)
-            da_t = quarter*sn_t*d_t
-          else if (j.eq.ntm) then
-            tav=half*(t(ntm)+t(ntm-1))
-            sn_t = sin(tav)
-            d_t = dth(ntm)
-            da_t = quarter*sn_t*d_t
-          else
-            da_t = st(j)*dt(j)
-          end if
+        if (j.eq.1) then
+          tav = half*(t(1) + t(2))
+          sn_t = sin(tav)
+          d_t = dth(2)
+          da_t = quarter*sn_t*d_t
+        else if (j.eq.ntm) then
+          tav=half*(t(ntm)+t(ntm-1))
+          sn_t = sin(tav)
+          d_t = dth(ntm)
+          da_t = quarter*sn_t*d_t
+        else
+          da_t = st(j)*dt(j)
+        end if
 !
-          if (k.eq.1) then
-            da_p = half*dph(1)
-          else if (k.eq.npm-1) then
-            da_p = half*dph(npm-1)
-          else
-            da_p = dp(k)
-          end if
+        if (k.eq.1) then
+          da_p = half*dph(1)
+        else if (k.eq.npm-1) then
+          da_p = half*dph(npm-1)
+        else
+          da_p = dp(k)
+        end if
 !
-          fv = map(j,k)*da_t*da_p
+        fv = map(j,k)*da_t*da_p
 !
-          if (fv.gt.zero) then
-            flux_p = flux_p + fv
-          else
-            flux_m = flux_m + fv
-          end if
+        if (fv.gt.zero) then
+          flux_p = flux_p + fv
+        else
+          flux_m = flux_m + fv
+        end if
 !
-        enddo
       enddo
 !
 ! ****** Report flux if in verbose mode.
 !
-      if (verbose) then
+      if (verbose.gt.0) then
         write(*,*)
         write(*,*) '   GET_FLUX: Flux(+):       ',flux_p
         write(*,*) '   GET_FLUX: Flux(-):       ',flux_m
@@ -8431,7 +8464,6 @@ subroutine balance_flux (map)
 ! ****** Flux balance the input theta-phi Br map "map" using
 ! ****** multiplicative flux-balancing.
 ! ****** The input map is overwriten with the flux-balanced version.
-! ****** This routine runs on the CPU only.
 !
 !-----------------------------------------------------------------------
 !
@@ -8467,20 +8499,18 @@ subroutine balance_flux (map)
 !
       ratio = SQRT(ABS(flux_p/flux_m))
 !
-      do k=1,npm
-        do j=1,ntm
-          br = map(j,k)
-          if (br.gt.0) then
-            map(j,k) = br/ratio
-          else
-            map(j,k) = br*ratio
-          end if
-        enddo
+      do concurrent (k=1:npm,j=1:ntm)
+        br = map(j,k)
+        if (br.gt.0) then
+          map(j,k) = br/ratio
+        else
+          map(j,k) = br*ratio
+        end if
       enddo
 !
 ! ******* Check new flux if in verbose mode.
 !
-      if (verbose) call get_flux (map,flux_p,flux_m)
+      if (verbose.gt.0) call get_flux (map,flux_p,flux_m)
 !
 end subroutine balance_flux
 !#######################################################################
@@ -8569,11 +8599,7 @@ subroutine generate_rfe (rfe)
           rfe(ntm,:,i) = fs1
         enddo
 !
-! ****** Flux balance the source term.
-!
-        call balance_flux (rfe)
-!
-        if (verbose) then
+        if (verbose.gt.0) then
           write (*,*)
           write (*,*) '   GENERATE_RFE: A RFE source term was generated: '
           write (*,*) '   GENERATE_RFE: Minimum value = ',MINVAL(rfe(:,:,:))
@@ -8974,6 +9000,12 @@ end subroutine generate_rfe
 ! 03/05/2024, RC, Version 1.6.1:
 !   - Overhauled flows from file feature.  Now, it loops properly,
 !     respects the time_start parameter, and is more flexible.
+!
+! 03/05/2024, RC, Version 1.7.0:
+!   - COMPATIBILITY CHANGE: VERBOSE is now an integer.
+!     The higher the number, the more info printed (2 is max for now).
+!   - Added ability to flux balance the data assimilation window.
+!     Use ASSIMILATE_DATA_BALANCE_FLUX=.TRUE. to activate.
 !
 !-----------------------------------------------------------------------
 !

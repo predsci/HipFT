@@ -1,8 +1,9 @@
 &hipft_input_parameters
 !
-  verbose = .false.
+  verbose = 0
 !
-!       -----> Set this to output a lot of info for use with debugging.
+!       -----> Set this to output a info for use with debugging.
+!       -----> The higher the integer, the more info (2 is max as of now).
 !
   res_nt = 0
   res_np = 0
@@ -11,6 +12,10 @@
 !       -----> These are automatically set when reading in an initial map with "initial_map_filename"
 !       -----> They are currently only used for validation runs.
 !
+  n_realizations = 1
+!
+!       -----> Set number of realizations.
+!
   initial_map_filename = ''
 !
 !       -----> Initial map
@@ -18,6 +23,10 @@
 !       -----> This means all data assimilation maps must match the grid of the input map,
 !       -----> and input flows must match the correct staggered velocity meshes that correspond
 !       -----> to the input map grid.
+!
+  initial_map_flux_balance = .false.
+!
+!       -----> Toggle to flux balance (multiplicitive) the initial map.
 !
   validation_run = 0
 !
@@ -29,15 +38,22 @@
 !       ----->      One can also can combine this with a rigid rotation in phi and set the end time
 !       ----->      such that a full rotation is advected, and the errors in the history can be
 !       ----->      compared at the end of the run.
-!       ----->   2: Gaussian blobs:
-!       ----->      No errors reported in history file, but a theta-flipped hdf5 file is output
-!       ----->      for use with symmetric advection along theta tests.
-!       ----->      One can also set the end time such that a full rotation is advected in phi and
-!       ----->      can then be compared to the initial condition.
+!       ----->   2: Gaussian blobs phi rotation:
+!       ----->      Errors reported in history file are not quite right, 
+!       ----->      but the correct final_analytic hdf5 file is output.
+!       ----->      The rigid rotation phi velocity is automatically computed 
+!       ----->      based on the input time_end.
+!       ----->   3: Gaussian blobs theta advection and optional phi rotation:
+!       ----->      Similar initial profile to (2) but here, a constant theta
+!       ----->      velocity is set such that the blobs move pi/2 in the user's 
+!       ----->      time_end.  Setting flow_vp_rigid_omega to any value other than 
+!       ----->      zero will auto activate a full rigid rotation in phi as in (2)
+!       ----->      along with the theta movement.  If no phi rotation is set, 
+!       ----->      the history file's validation column is correct.
 !
-  n_realizations = 1
+  validation_run_width = 0.03
 !
-!       -----> Set number of realizations.
+!       -----> Set the width of the Gaussians for validation tests 2 and 3.
 !
   time_start = 0.0
   time_end = 1.0
@@ -270,6 +286,46 @@
 !       -----> both diffusion and advection (in an A-D-A sequence).
 !
 !-----------------------------------------------------------------------
+! ****** SOURCES ******
+!-----------------------------------------------------------------------
+!
+      advance_source = .false.
+!
+!       ----->  Advance source terms.     
+!
+      source_rfe_model = 0
+!
+!       ----->  Activate random flux emergence source term.  
+!       ----->  Currently, only option is model "1".
+!    
+      source_rfe_total_unsigned_flux_per_hour = 0.
+!
+!       ----->  Set the total unsigned flux (full map) per hour
+!       ----->  for the random flux source term.
+!
+      rsource_rfe_sigma = 1.0
+!
+!       ----->  Set the spread of Br values for the random flux source term.
+!
+      source_rfe_seed = -9999
+!
+!       ----->  Set the random seed for the random flux source term.  
+!
+      source_rfe_lifetime = 0.3
+!
+!       ----->  Set the lifetime of the random flux source terms.
+!       ----->  The source term is interpolated in time between two
+!       ----->  generated frames.  This sets the time gap between frames.
+!
+      source_from_file = .false.
+!
+!       ----->  Load a static source term from an HDF5 file.  
+!   
+      source_filename = ' '
+!
+!       ----->  Filename of the HDF5 static source term.
+!      
+!-----------------------------------------------------------------------
 ! ****** DATA ASSIMILATION ******
 !-----------------------------------------------------------------------
 !
@@ -277,6 +333,10 @@
 !
 !       -----> Activate data assimilation.
 !
+  assimilate_data_balance_flux = .false.
+!
+!       -----> Balance the flux of the added flux before adding.  
+!  
   assimilate_data_map_list_filename = ' '
 !
 !       -----> File name for CSV text file listing all data assimilation files and times.

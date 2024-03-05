@@ -1,6 +1,6 @@
 &hipft_input_parameters
 !
-  verbose = .true.
+  verbose = 2
   output_single_precision = .false.
 !
   res_nt = 180

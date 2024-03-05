@@ -1,6 +1,6 @@
 &hipft_input_parameters
 !
-  verbose=.true.
+  verbose = 2
 !
   initial_map_filename = 'br_input.h5'
 !
