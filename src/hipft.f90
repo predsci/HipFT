@@ -46,7 +46,7 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.5.0'
+      character(*), parameter :: cvers='1.6.0'
       character(*), parameter :: cdate='03/04/2024'
 !
 end module
@@ -529,6 +529,7 @@ module input_parameters
       character(512) :: output_map_root_filename = 'hipft_brmap'
       character(512) :: output_map_directory     = 'output_maps'
       logical        :: output_map_flux_balance = .false.
+      integer(8)     :: output_map_idx_start = 1
       logical        :: output_flows = .false.
       character(512) :: output_flows_root_filename = 'hipft_flow'
       character(512) :: output_flows_directory     = 'output_flows'
@@ -668,7 +669,7 @@ module input_parameters
 !
       logical :: advance_source = .false.
 !
-      logical :: source_rfe_model = 0
+      integer :: source_rfe_model = 0
       real(r_typ) :: source_rfe_total_unsigned_flux_per_hour = 0.
       real(r_typ) :: source_rfe_sigma = one
       integer*8   :: source_rfe_seed = -9999
@@ -2653,7 +2654,8 @@ subroutine output_map
       end if
 !
       if (output_map_time_cadence .gt. 0.0) then
-        if (time .ge. time_start+idx_out*output_map_time_cadence) then
+        if (time .ge. time_start+ &
+            (idx_out-(output_map_idx_start-1))*output_map_time_cadence) then
           output_current_map = .true.
         end if
       end if
@@ -4132,8 +4134,11 @@ subroutine update_timestep
 ! ****** Check for next output time, cut dt to match exactly.
 !
       if (output_map_time_cadence .gt. 0.0) then
-        if (time + dtime_global .ge. (time_start+idx_out*output_map_time_cadence)) then
-          dtime_global = (time_start+idx_out*output_map_time_cadence) - time
+        if (time + dtime_global .ge. time_start+ &
+            (idx_out-(output_map_idx_start-1))*output_map_time_cadence) then
+          dtime_global = (time_start+ &
+                         (idx_out-(output_map_idx_start-1))*output_map_time_cadence) &
+                         - time
           dtime_reason = 'output'
           timestep_needs_updating = .true.
           timestep_flow_needs_updating = .true.
@@ -6667,7 +6672,7 @@ subroutine load_source
       real(r_typ), dimension(:), allocatable :: tf,pf,rscale
       real(r_typ), dimension(:,:), allocatable :: sf
       real(r_typ), dimension(:,:), allocatable :: f_tmp2d
-      real(r_typ) :: random_seed,get_gaussian
+      real(r_typ) :: get_gaussian
 !
 !-----------------------------------------------------------------------
 !
@@ -7890,6 +7895,7 @@ subroutine read_input_file
                validation_run_width,                                   &
                time_start,                                             &
                time_end,                                               &
+               output_map_idx_start,                                   &
                output_map_directory,                                   &
                output_map_root_filename,                               &
                output_map_idx_cadence,                                 &
@@ -8018,6 +8024,7 @@ subroutine process_input_parameters
       use globals
       use mpidefs
       use flows
+      use output
 !
 !-----------------------------------------------------------------------
 !
@@ -8153,6 +8160,10 @@ subroutine process_input_parameters
         end if
         call endrun (.true.)
       end if
+!
+! ****** Set up starting output index.
+!
+      idx_out = output_map_idx_start - 1
 !
 end subroutine
 !#######################################################################
@@ -8835,6 +8846,12 @@ end subroutine generate_rfe
 !     time-time_start.  For test 3, if a phi rotation is desired,
 !     set FLOW_VP_RIGID_OMEGA to any value other than zero for the code
 !     to autoset a full rotation.
+!
+! 03/04/2024, RC, Version 1.6.0:
+!   - Fixed bugs preventing GCC compilation.
+!   - Added OUTPUT_MAP_IDX_START input parameter to allow runs to 
+!     begin map output at arbitrary indices.  This helps when 
+!     restarting a pervious run in combinaton with TIME_START.
 !
 !-----------------------------------------------------------------------
 !
