@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.6.0'
-      character(*), parameter :: cdate='03/04/2024'
+      character(*), parameter :: cvers='1.6.1'
+      character(*), parameter :: cdate='03/05/2024'
 !
 end module
 !#######################################################################
@@ -372,20 +372,19 @@ module flows
 !
 ! ****** Flow from files.
 !
-      integer :: num_flows_in_list = 0
-      integer :: current_flow_input_idx = 1
+      integer :: flow_from_files_num_flows = 0
+      integer :: flow_from_file_current_idx = 1
       real(r_typ) :: time_of_next_input_flow = 0.
+      real(r_typ) :: time_of_current_input_flow = 0.
+      real(r_typ) :: flow_from_files_dt_of_last_flows = 0.
 !
-      real(r_typ) :: flow_time_initial_hr
+      real(r_typ), dimension(:), allocatable :: flow_from_files_times
 !
-      real(r_typ), dimension(:), allocatable :: flow_times_actual_ut_jd
-      real(r_typ), dimension(:), allocatable :: flow_times_actual_ut_jd0
+      character(512), dimension(:), allocatable :: flow_from_files_rel_path_t
+      character(512), dimension(:), allocatable :: flow_from_files_rel_path_p
 !
-      character(512), dimension(:), allocatable :: flow_files_rel_path_t
-      character(512), dimension(:), allocatable :: flow_files_rel_path_p
-!
-      real(r_typ), dimension(:,:,:),allocatable :: flow_from_file_vt_old
-      real(r_typ), dimension(:,:,:),allocatable :: flow_from_file_vp_old
+      real(r_typ), dimension(:,:,:),allocatable :: flow_from_files_current_vt
+      real(r_typ), dimension(:,:,:),allocatable :: flow_from_files_current_vp
 !
 ! ****** Numerical methods for flow advance.
 !
@@ -1153,16 +1152,23 @@ subroutine setup
 !
       wtime_tmp = MPI_Wtime()
 !
+      if (iamp0) then
+        call write_welcome_message
+      end if
+!
+      if (iamp0) write(*,*) '--> Reading input file...'
       call read_input_file
 !
 ! ****** Initialize realization arrays.
 !
+      if (iamp0) write(*,*) '--> Initializing realization parameters...'
       call set_realization_parameters
 !
 ! ****** Set up output directory.
 !
       if (output_map_idx_cadence.gt.0 .or.     &
           output_map_time_cadence.gt.0.) then
+        if (iamp0) write(*,*) '--> Setting up output directories...'
 !
         if (iamp0) then
           cmd = 'mkdir -p '//trim(output_map_directory)
@@ -1187,28 +1193,43 @@ subroutine setup
 !
       end if
 !
+      if (iamp0) write(*,*) '--> Loading initial condition...'
       call load_initial_condition
 !
       time = time_start
 !
-      if (advance_flow)      call load_flows
+      if (advance_flow) then
+        if (iamp0) write(*,*) '--> Loading flows...'
+        call load_flows
+      end if
 !
-      if (advance_diffusion) call load_diffusion
+      if (advance_diffusion) then
+        if (iamp0) write(*,*) '--> Loading diffusion...'
+        call load_diffusion
+      end if
 !
-      if (advance_source)    call load_source
+      if (advance_source) then
+        if (iamp0) write(*,*) '--> Loading sources...'
+        call load_source
+      end if
 !
-      if (assimilate_data)   call load_data_assimilation
+      if (assimilate_data)  then
+        if (iamp0) write(*,*) '--> Loading data assimilation...'
+        call load_data_assimilation
+      end if
 !
+      if (iamp0) write(*,*) '--> Creating history and log files...'
       call create_and_open_output_log_files
 !
+      if (iamp0) write(*,*) '--> Analyzing initial condition...'
       call analysis_step
 !
+      if (iamp0) write(*,*) '--> Initial output...'
       call output_step
 !
       if (iamp0) then
-        call write_welcome_message
         write (*,*)
-        write (*,*) 'Setup complete.'
+        write (*,*) '--> Setup complete!'
         write (*,*)
       end if
 !
@@ -3470,6 +3491,7 @@ subroutine add_flow_from_files
       integer :: ierr = 0
       real(r_typ), dimension(:,:), allocatable :: new_flow_t,new_flow_p
       real(r_typ), dimension(:), allocatable :: s1,s2
+      real(r_typ) :: delta_time_flow
       integer :: ln1,ln2,i,j,k
       character(1024) :: flowfile_t = ' '
       character(1024) :: flowfile_p = ' '
@@ -3478,17 +3500,29 @@ subroutine add_flow_from_files
 !
      if (time .ge. time_of_next_input_flow) then
 !
-! ****** Read the flow data.
-!
-       flowfile_t = TRIM(flow_root_dir)//"/"&
-                  //TRIM(flow_files_rel_path_t(current_flow_input_idx))
+! ****** Set flow idx to flows about to be read.
 
-       flowfile_p = TRIM(flow_root_dir)//"/"&
-                  //TRIM(flow_files_rel_path_p(current_flow_input_idx))
+       flow_from_file_current_idx = flow_from_file_current_idx + 1
+!
+! ****** Check if we have reached the end of the file list.
+! ****** If so, reset index to the beginning.
+!
+       if (flow_from_file_current_idx .gt. flow_from_files_num_flows) then
+         flow_from_file_current_idx = 1
+
+         if (verbose) then
+           write(*,*) ' '
+           write(*,*) '   ADD_FLOW_FROM_FILE: Resetting flow index to 1.'
+         end if
+       end if
+!
+! ****** Read the flow data.
 !
 ! ****** VT (NT,NPM) ******
 !
        if (iamp0) then
+         flowfile_t = TRIM(flow_root_dir)//"/"&
+                    //TRIM(flow_from_files_rel_path_t(flow_from_file_current_idx))
          call read_2d_file (flowfile_t,ln1,ln2,new_flow_t,s1,s2,ierr)
          deallocate(s1)
          deallocate(s2)
@@ -3505,11 +3539,11 @@ subroutine add_flow_from_files
 ! ****** copy, transpose, and convert units.
 !
        do concurrent (k=1:nr,j=1:npm1,i=1:nt)
-         vt(i,j,k) = m_s_to_rs_hr*new_flow_t(j,i)
+         flow_from_files_current_vt(i,j,k) = m_s_to_rs_hr*new_flow_t(j,i)
        enddo
        ! Set phi ghost cell.
        do concurrent (k=1:nr,i=1:nt)
-         vt(i,npm,k) = vt(i,2,k)
+         flow_from_files_current_vt(i,npm,k) = flow_from_files_current_vt(i,2,k)
        enddo
 !$omp target exit data map(delete:new_flow_t)
        deallocate(new_flow_t)
@@ -3517,6 +3551,8 @@ subroutine add_flow_from_files
 ! ****** VP (NTM,NP)
 !
        if (iamp0) then
+         flowfile_p = TRIM(flow_root_dir)//"/"&
+                    //TRIM(flow_from_files_rel_path_p(flow_from_file_current_idx))
          call read_2d_file (flowfile_p,ln1,ln2,new_flow_p,s1,s2,ierr)
          deallocate(s1)
          deallocate(s2)
@@ -3533,65 +3569,45 @@ subroutine add_flow_from_files
 ! ****** copy, transpose, and convert units.
 !.
        do concurrent (k=1:nr,j=1:np,i=1:ntm)
-         vp(i,j,k) = m_s_to_rs_hr*new_flow_p(j,i)
+         flow_from_files_current_vp(i,j,k) = m_s_to_rs_hr*new_flow_p(j,i)
        enddo
 !$omp target exit data map(delete:new_flow_p)
        deallocate(new_flow_p)
 !
-! ******  TODO:  Add error checking here (make sure scales match run
-!                until interp is added)
+! ****** Update next map time.
 !
-! ****** Update position in map list and next map time.
+!      Save current input flow time.
+       time_of_current_input_flow = time_of_next_input_flow
 !
-       current_flow_input_idx = current_flow_input_idx + 1
+       if (flow_from_file_current_idx+1 .gt. flow_from_files_num_flows) then
+         delta_time_flow = flow_from_files_dt_of_last_flows
+       else
+         delta_time_flow = flow_from_files_times(flow_from_file_current_idx+1) - &
+                           flow_from_files_times(flow_from_file_current_idx)
+       end if
+!
+       time_of_next_input_flow = time_of_current_input_flow + delta_time_flow
+!
        if (verbose) then
          write(*,*) ' '
-         write(*,*) '   ADD_FLOW_FROM_FILE: Current Flow Index',current_flow_input_idx
+         write(*,*) '   ADD_FLOW_FROM_FILE: Current flow index',flow_from_file_current_idx
+        write (*,*) '   ADD_FLOW_FROM_FILE: Time of current flow:  ', &
+                     time_of_current_input_flow
+        write (*,*) '   ADD_FLOW_FROM_FILE: Time of next flow:  ', &
+                     time_of_next_input_flow
        end if
-!
-! ****** If there are no more flow files to load, loop back to
-!        the beginning (use index 2 to avoid dt=0 situation).
-!
-       if (current_flow_input_idx .gt. num_flows_in_list) then
-         if (verbose) then
-           write(*,*) ' '
-           write(*,*) '   ADD_FLOW_FROM_FILE: Resetting Flow Index to 2'
-         end if
-         current_flow_input_idx = 2
-         flow_times_actual_ut_jd(:) = flow_times_actual_ut_jd0(:) &
-                                      + time/twentyfour
-       end if
-!
-       time_of_next_input_flow = twentyfour * &
-                       flow_times_actual_ut_jd(current_flow_input_idx) &
-                     - flow_time_initial_hr
-!
-! ****** Save read flows.  This is needed because one might be
-! ****** attenuating velocity when its not yet time to read a new file.
-! ****** In that case, v[tp] would be set to 0.  Instead, set to
-! ****** old value below.
-!
-       do concurrent (k=1:nr,j=1:npm,i=1:nt)
-         flow_from_file_vt_old(i,j,k) = vt(i,j,k)
-       enddo
-!
-       do concurrent (k=1:nr,j=1:np,i=1:ntm)
-         flow_from_file_vp_old(i,j,k) = vp(i,j,k)
-       enddo
-!
-     else
-!
-! ****** Set to last read in flow since its not time to change.
-!
-       do concurrent (k=1:nr,j=1:npm,i=1:nt)
-         vt(i,j,k) = flow_from_file_vt_old(i,j,k)
-       enddo
-!
-       do concurrent (k=1:nr,j=1:np,i=1:ntm)
-         vp(i,j,k) = flow_from_file_vp_old(i,j,k)
-       enddo
 !
      end if
+!
+! ****** Add the last read flow.
+!
+     do concurrent (k=1:nr,j=1:npm,i=1:nt)
+       vt(i,j,k) = vt(i,j,k) + flow_from_files_current_vt(i,j,k)
+     enddo
+!
+     do concurrent (k=1:nr,j=1:np,i=1:ntm)
+       vp(i,j,k) = vp(i,j,k) + flow_from_files_current_vp(i,j,k)
+     enddo
 !
 end subroutine
 !#######################################################################
@@ -3609,6 +3625,9 @@ subroutine load_flow_from_files
       use output
       use mesh
       use flows
+      use mpidefs
+      use timing
+      use read_2d_file_interface
 !
 !-----------------------------------------------------------------------
 !
@@ -3617,9 +3636,16 @@ subroutine load_flow_from_files
 !-----------------------------------------------------------------------
 !
       integer :: io = 0
-      integer :: i,j,k
+      integer :: i,j,k,ln1,ln2
+      integer :: ierr = 0
+      real(r_typ) :: flow_from_files_jd_time, time_start_flows
+      real(r_typ) :: flow_from_files_time_span, delta_time_flow
       character(*), parameter :: &
                     FMT = '(F11.5,1X,A11,1X,A11)'
+      character(1024) :: flowfile_t = ' '
+      character(1024) :: flowfile_p = ' '
+      real(r_typ), dimension(:,:), allocatable :: flow_t,flow_p
+      real(r_typ), dimension(:), allocatable :: s1,s2
 !
 !-----------------------------------------------------------------------
 !
@@ -3630,68 +3656,157 @@ subroutine load_flow_from_files
 !
 ! ****** Get the number of entries in the list (skip first row)
 !
-      num_flows_in_list = -1
+      flow_from_files_num_flows = -1
       do
         READ (IO_DATA_IN,'(a)',iostat=io)
         if (io/=0) exit
-        num_flows_in_list = num_flows_in_list + 1
+        flow_from_files_num_flows = flow_from_files_num_flows + 1
       enddo
       REWIND (IO_DATA_IN)
 !
 ! ****** Allocate space to store the list.
 !
-      allocate(flow_times_actual_ut_jd     (num_flows_in_list))
-      allocate(flow_times_actual_ut_jd0    (num_flows_in_list))
-      allocate(flow_files_rel_path_t       (num_flows_in_list))
-      allocate(flow_files_rel_path_p       (num_flows_in_list))
+      allocate(flow_from_files_times      (flow_from_files_num_flows))
+      allocate(flow_from_files_rel_path_t (flow_from_files_num_flows))
+      allocate(flow_from_files_rel_path_p (flow_from_files_num_flows))
 !
 ! ****** Read the list (skip first row).
 !
       READ (IO_DATA_IN,*)
-      do i=1,num_flows_in_list
-        READ (IO_DATA_IN,FMT) flow_times_actual_ut_jd0(i),    &
-                              flow_files_rel_path_t(i),       &
-                              flow_files_rel_path_p(i)
+      do i=1,flow_from_files_num_flows
+        READ (IO_DATA_IN,FMT) flow_from_files_jd_time,       &
+                              flow_from_files_rel_path_t(i), &
+                              flow_from_files_rel_path_p(i)
+!
+! ****** Make list of times.
+!
+        flow_from_files_times(i) = twentyfour*(flow_from_files_jd_time)
       enddo
-      flow_times_actual_ut_jd(:) = flow_times_actual_ut_jd0(:) &
-                                   + time_start/twentyfour
-
-! [RMC]  NEED TO CHECK THIS FOR OVERFLOW AND LOOP AROUND WITH MODULUS!!!
-
       CLOSE (IO_DATA_IN)
 !
-! ******* Initialize flow time.
+! ****** Make list of times start at zero (usually the case anyways).
 !
-      flow_time_initial_hr = twentyfour*flow_times_actual_ut_jd0(1)
-!
-      current_flow_input_idx = 1
-!
-      time_of_next_input_flow = time_start
-!
-! ****** Allocate arrays to store old flows.
-!
-      allocate (flow_from_file_vt_old(nt,npm,nr))
-      allocate (flow_from_file_vp_old(ntm,np,nr))
-!$omp target enter data map(alloc:flow_from_file_vt_old,&
-!$omp flow_from_file_vp_old)
-!
-      do concurrent (i=1:nr,k=1:npm,j=1:nt)
-        flow_from_file_vt_old(j,k,i) = 0.
+      do i=1,flow_from_files_num_flows
+        flow_from_files_times(i) = flow_from_files_times(i) &
+                                   - flow_from_files_times(1)
       enddo
-      do concurrent (i=1:nr,k=1:np,j=1:ntm)
-        flow_from_file_vp_old(j,k,i) = 0.
-      enddo
+!
+! ****** Get time span of full list of flows.
+!
+      flow_from_files_time_span = flow_from_files_times(flow_from_files_num_flows) &
+                                  - flow_from_files_times(1)
+!
+! ****** Get start time within flows.
+!
+      time_start_flows = MODULO(time_start,flow_from_files_time_span)
+!
+! ****** Get currently active flow file index.
+!
+      flow_from_file_current_idx = MINLOC(ABS(flow_from_files_times(:) - &
+                                              time_start_flows),1)
+      if (flow_from_files_times(flow_from_file_current_idx) &
+          .gt. time_start_flows) then
+        flow_from_file_current_idx = flow_from_file_current_idx-1
+      end if
+!
+! ****** Allocate and read current flows.
+!
+      allocate (flow_from_files_current_vt(nt,npm,nr))
+      allocate (flow_from_files_current_vp(ntm,np,nr))
+!
+! ****** VT (NT,NPM) ******
+!
+       if (iamp0) then
+         flowfile_t = TRIM(flow_root_dir)//"/" &
+                    //TRIM(flow_from_files_rel_path_t(flow_from_file_current_idx))
+         call read_2d_file (flowfile_t,ln1,ln2,flow_t,s1,s2,ierr)
+         deallocate(s1)
+         deallocate(s2)
+       endif
+!
+       wtime_tmp_mpi = MPI_Wtime()
+       if (.not.iamp0) then
+        allocate (flow_t(npm1,nt))
+       endif
+       call MPI_Bcast (flow_t,flow_t_size,ntype_real,0,MPI_COMM_WORLD,ierr)
+       wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+!
+       do j=1,npm1
+         do i=1,nt
+           flow_from_files_current_vt(i,j,:) = m_s_to_rs_hr*flow_t(j,i)
+         enddo
+       enddo
+       ! Set phi ghost cell.
+       flow_from_files_current_vt(:,npm,:) = flow_from_files_current_vt(:,2,:)
+       deallocate(flow_t)
+!$omp target enter data map(to:flow_from_files_current_vt)
+!
+!
+! ****** VP (NTM,NP)
+!
+       if (iamp0) then
+         flowfile_p = TRIM(flow_root_dir)//"/"&
+                    //TRIM(flow_from_files_rel_path_p(flow_from_file_current_idx))
+         call read_2d_file (flowfile_p,ln1,ln2,flow_p,s1,s2,ierr)
+         deallocate(s1)
+         deallocate(s2)
+       endif
+!
+       wtime_tmp_mpi = MPI_Wtime()
+       if (.not.iamp0) then
+        allocate (flow_p(np,ntm1))
+       endif
+       call MPI_Bcast (flow_p,flow_p_size,ntype_real,0,MPI_COMM_WORLD,ierr)
+       wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+!
+       do j=1,np
+         do i=1,ntm
+           flow_from_files_current_vp(i,j,:) = m_s_to_rs_hr*flow_p(j,i)
+         enddo
+       enddo
+       deallocate(flow_p)
+!$omp target enter data map(to:flow_from_files_current_vp)
+!
+! ****** Assume delta time from last conflow to first is the same as the
+! ****** delta time of the last two files.
+!
+      flow_from_files_dt_of_last_flows = flow_from_files_times(flow_from_files_num_flows) - &
+                                         flow_from_files_times(flow_from_files_num_flows-1)
+!
+! ****** Get simulation time of currently loaded flow (not the same as time_start!)
+!
+      time_of_current_input_flow =  time_start - time_start_flows   &
+                                  + flow_from_files_times(flow_from_file_current_idx)
+!
+      if (flow_from_file_current_idx+1 .gt. flow_from_files_num_flows) then
+        delta_time_flow = flow_from_files_dt_of_last_flows
+      else
+        delta_time_flow = flow_from_files_times(flow_from_file_current_idx+1) - &
+                          flow_from_files_times(flow_from_file_current_idx)
+      end if
+!
+      time_of_next_input_flow = time_of_current_input_flow + delta_time_flow
 !
 ! ******* Print some diagnostics.
 !
       if (verbose) then
         write (*,*)
-        write (*,*) '   FLOWS FROM FILE: Number of flows in flow list: ', &
-                     num_flows_in_list
-        write (*,*) '   FLOWS FROM FILE: File name of first theta flow file:     ', &
-                     trim(flow_files_rel_path_t(1))
-        write (*,*) '   FLOWS FROM FILE: File name of first phi flow file:     ', &
-                     trim(flow_files_rel_path_p(1))
+        write (*,*) '   FLOWS_FROM_FILE: Number of flows in flow list: ', &
+                     flow_from_files_num_flows
+        write (*,*) '   FLOWS_FROM_FILE: File name of first theta flow file:     ', &
+                     trim(flow_from_files_rel_path_t(1))
+        write (*,*) '   FLOWS_FROM_FILE: File name of first phi flow file:     ', &
+                     trim(flow_from_files_rel_path_p(1))
+        write (*,*) '   FLOWS_FROM_FILE: Time span of all flows:  ', &
+                     flow_from_files_time_span
+        write (*,*) '   FLOWS_FROM_FILE: Start time within flows:  ', &
+                     time_start_flows
+        write (*,*) '   FLOWS_FROM_FILE: DT of last two flows:  ', &
+                     flow_from_files_dt_of_last_flows
+        write (*,*) '   FLOWS_FROM_FILE: Time of current flow:  ', &
+                     time_of_current_input_flow
+        write (*,*) '   FLOWS_FROM_FILE: Time of next flow:  ', &
+                     time_of_next_input_flow
       end if
 !
 end subroutine
@@ -8855,6 +8970,10 @@ end subroutine generate_rfe
 !   - Added OUTPUT_MAP_IDX_START input parameter to allow runs to
 !     begin map output at arbitrary indices.  This helps when
 !     restarting a pervious run in combinaton with TIME_START.
+!
+! 03/05/2024, RC, Version 1.6.1:
+!   - Overhauled flows from file feature.  Now, it loops properly,
+!     respects the time_start parameter, and is more flexible.
 !
 !-----------------------------------------------------------------------
 !
