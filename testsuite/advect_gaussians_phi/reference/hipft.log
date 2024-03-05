@@ -2,6 +2,10 @@
     SET_REALIZATIONS: Realization distribution:
     SET_REALIZATIONS: nr_arr            1
     SET_REALIZATIONS: nr_disp_arr            0
+  
+    VALIDATION 2 TEST ENABLED.
+    WARNING:  Overriding FLOW_VP_RIGID_OMEGA
+              from    1.807662439565556       to     1.807662439565556     
  
  
        _    _ _       ______ _______ 
@@ -13,7 +17,7 @@
                | |
                |_|
  
-      Version: 1.2.1 of 02/02/2024
+      Version: 1.5.0 of 03/04/2024
  
   ****** HipFT: High Performance Flux Transport.
  
@@ -29,7 +33,7 @@
  
  
  Run started at: 
-  2 February  2024  12:21:54.927 PM      
+  4 March     2024   5:04:16.537 PM      
  
  Setup complete.
  
@@ -2059,10 +2063,10 @@ Completed step:        671  Time:   671.000000 /   672.000000  dt:     1.000000 
   
 Completed step:        672  Time:   672.000000 /   672.000000  dt:     1.000000 (end)
   
- Final 2D data written out to hipft_brmap_final.h5
+ Final data written out to hipft_brmap_final.h5
  
  Run completed at:
-  2 February  2024  12:21:55.403 PM      
+  4 March     2024   5:04:17.013 PM      
  
 ----------------------------------------
  
@@ -2071,16 +2075,16 @@ Completed step:        672  Time:   672.000000 /   672.000000  dt:     1.000000 
  
                                   Avg         Min         Max      S. Dev
                                   ---         ---         ---      ------
- Wall clock time:               0.551       0.551       0.551       0.000
+ Wall clock time:               0.552       0.552       0.552       0.000
  --> Setup:                     0.014       0.014       0.014       0.000
  --> Update:                    0.001       0.001       0.001       0.000
- --> Flux transport:            0.362       0.362       0.362       0.000
-     --> Advecton:              0.362       0.362       0.362       0.000
+ --> Flux transport:            0.348       0.348       0.348       0.000
+     --> Advecton:              0.348       0.348       0.348       0.000
      --> Diffusion              0.000       0.000       0.000       0.000
      --> Source:                0.000       0.000       0.000       0.000
- --> Analysis:                  0.102       0.102       0.102       0.000
+ --> Analysis:                  0.117       0.117       0.117       0.000
  --> I/O:                       0.011       0.011       0.011       0.000
- --> MPI overhead:              0.062       0.062       0.062       0.000
+ --> MPI overhead:              0.061       0.061       0.061       0.000
  
 ----------------------------------------
  

@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.4.0'
-      character(*), parameter :: cdate='02/28/2024'
+      character(*), parameter :: cvers='1.5.0'
+      character(*), parameter :: cdate='03/04/2024'
 !
 end module
 !#######################################################################
@@ -517,15 +517,18 @@ module input_parameters
 ! ****** Validation Mode ********
 !
       integer        :: validation_run = 0
+      real(r_typ)    :: validation_run_width = 0.03_r_typ
 !
 ! ****** Initial map ********
 !
       character(512) :: initial_map_filename = ''
+      logical :: initial_map_flux_balance = .false.
 !
 ! ****** Output options ********
 !
       character(512) :: output_map_root_filename = 'hipft_brmap'
       character(512) :: output_map_directory     = 'output_maps'
+      logical        :: output_map_flux_balance = .false.
       logical        :: output_flows = .false.
       character(512) :: output_flows_root_filename = 'hipft_flow'
       character(512) :: output_flows_directory     = 'output_flows'
@@ -1707,13 +1710,9 @@ subroutine load_initial_condition
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ) :: val2_g_width
-!
-!-----------------------------------------------------------------------
-!
-      integer :: n1,n2,n3,ierr,i,j,k,lsbuf, irank
+      integer :: n1, n2, n3, ierr, i, j, k, lsbuf, irank
       integer, dimension(:), allocatable :: displ,lbuf
-      real(r_typ) :: d1,d2
+      real(r_typ) :: d1,d2, st_i_val
       real(r_typ), dimension(:), allocatable :: fn1,fs1,fn2,fs2
       real(r_typ), dimension(:,:,:), allocatable :: f_local,gout
       real(r_typ), dimension(:,:), allocatable :: f_tmp2d
@@ -1733,7 +1732,7 @@ subroutine load_initial_condition
 ! [RMC] Eventaully, we will allow interpolation, so can set res and
 !       have a filename.
 !
-      if (initial_map_filename .eq. '' .and. res_np*res_nt .ge. 9) then
+      if (initial_map_filename .eq. '') then
 
         n1 = res_np
         d1 = twopi/(n1-1)
@@ -1943,23 +1942,36 @@ subroutine load_initial_condition
 !
       elseif (validation_run .eq. 2) then
 !
-! ****** Make initial solution f and output.
 !
-        val2_g_width = 0.03_r_typ
+! ****** Use time to set constant phi velocity so final output is exact solution.
+! ****** for a constant phi rigid rotation velocity.
+!
+        if (iamp0) then
+          write(*,*) ' '
+          write(*,*) '   VALIDATION 2 TEST ENABLED.'
+          write(*,*) '   WARNING:  Overriding FLOW_VP_RIGID_OMEGA'
+          write(*,*) '             from',flow_vp_rigid_omega,' to ', &
+                              (twopi/(time_end-time_start))/km_s_to_rs_hr
+        end if
+        flow_vp_rigid_omega = (twopi/(time_end-time_start))/km_s_to_rs_hr
+!
+! ****** Make initial solution f and output.
 !
         do k=1,n3
           do j=1,n2
             do i=1,n1
-              f_local(i,j,k) = -EXP(-(s2(j) - pi_four     )**2/val2_g_width - &
-                                     (s1(i) - pi_two      )**2/val2_g_width)  &
-                               +EXP(-(s2(j) - pi_four     )**2/val2_g_width - &
-                                     (s1(i) - threepi_two )**2/val2_g_width)
+              f_local(i,j,k) = -EXP(-(s2(j) - pi_four     )**2/validation_run_width - &
+                                     (s1(i) - pi_two      )**2/validation_run_width)  &
+                               +EXP(-(s2(j) - pi_four     )**2/validation_run_width - &
+                                     (s1(i) - threepi_two )**2/validation_run_width)
             enddo
           enddo
         enddo
 !
-        call write_2d_file((trim(output_map_root_filename)//'_final_analytic.h5') &
-                            ,n1,n2,f_local(:,:,1),s1,s2,ierr)
+        if (iamp0) then
+          call write_2d_file((trim(output_map_root_filename)//'_final_analytic.h5') &
+                              ,n1,n2,f_local(:,:,1),s1,s2,ierr)
+        end if
 !
       elseif (validation_run .eq. 3) then
 !
@@ -1967,26 +1979,54 @@ subroutine load_initial_condition
 !
         allocate (fout(n1,n2,1))
 !
-        val2_g_width = 0.03_r_typ
+! ****** Use time to set constant theta velocity so final output is exact solution.
+! ****** for a constant theta velocity.
+!
+        if (iamp0) then
+          write(*,*) ' '
+          write(*,*) '   VALIDATION 3 TEST ENABLED.'
+          write(*,*) '   WARNING:  Overriding FLOW_VT_CONST'
+          write(*,*) '             from',flow_vt_const,' to ', &
+                        (pi_two/(time_end-time_start))/km_s_to_rs_hr
+        end if
+        flow_vt_const = (pi_two/(time_end-time_start))/km_s_to_rs_hr
+!
+        if (ABS(flow_vp_rigid_omega).gt.zero) then
+          if (iamp0) then
+            write(*,*) ' '
+            write(*,*) '   WARNING:  Overriding FLOW_VP_RIGID_OMEGA'
+            write(*,*) '             from',flow_vp_rigid_omega,' to ', &
+                              (twopi/(time_end-time_start))/km_s_to_rs_hr
+          end if
+          flow_vp_rigid_omega = (twopi/(time_end-time_start))/km_s_to_rs_hr
+        end if
 !
         do k=1,n3
           do j=1,n2
+            if (j.gt.1 .and. j.lt.n2) then
+                st_i_val = one/SIN(s2(j))
+            else
+                st_i_val = zero
+            end if
             do i=1,n1
-              f_local(i,j,k) = -EXP(-(s2(j) - pi_four     )**2/val2_g_width - &
-                                     (s1(i) - pi_two      )**2/val2_g_width)  &
-                               +EXP(-(s2(j) - pi_four     )**2/val2_g_width - &
-                                     (s1(i) - threepi_two )**2/val2_g_width)
+              f_local(i,j,k) = -st_i_val*EXP(-(s2(j) - pi_four     )**2/validation_run_width - &
+                                              (s1(i) - pi_two      )**2/validation_run_width)  &
+                               +st_i_val*EXP(-(s2(j) - pi_four     )**2/validation_run_width - &
+                                              (s1(i) - threepi_two )**2/validation_run_width)
 !
-              fout(i,j,k)    = -EXP(-(s2(j) - threepi_four)**2/val2_g_width - &
-                                     (s1(i) - pi_two      )**2/val2_g_width)  &
-                               +EXP(-(s2(j) - threepi_four)**2/val2_g_width - &
-                                     (s1(i) - threepi_two )**2/val2_g_width)
+              fout(i,j,k)    = -st_i_val*EXP(-(s2(j) - threepi_four)**2/validation_run_width - &
+                                              (s1(i) - pi_two      )**2/validation_run_width)  &
+                               +st_i_val*EXP(-(s2(j) - threepi_four)**2/validation_run_width - &
+                                              (s1(i) - threepi_two )**2/validation_run_width)
             enddo
           enddo
         enddo
 !
-        call write_2d_file((trim(output_map_root_filename)//'_final_analytic.h5') &
-                            ,n1,n2,fout(:,:,1),s1,s2,ierr)
+        if (iamp0) then
+          call write_2d_file((trim(output_map_root_filename)//'_final_analytic.h5') &
+                              ,n1,n2,fout(:,:,1),s1,s2,ierr)
+        end if
+!
         deallocate (fout)
 !
       end if
@@ -2045,6 +2085,14 @@ subroutine load_initial_condition
         f(1,:,i)   = fn1(i)*twopi_i
         f(ntm,:,i) = fs1(i)*twopi_i
       enddo
+!
+! ****** Balance the flux if desired (should not be used for validation runs!).
+!
+      if (initial_map_flux_balance) then
+        do i=1,nr
+          call balance_flux (f(:,:,i))
+        enddo
+      end if
 !
 !$omp target enter data map(to:f)
 !
@@ -2680,7 +2728,7 @@ subroutine write_map (fname)
 !
 !-----------------------------------------------------------------------
 !
-      use input_parameters, ONLY : output_map_2d,n_realizations
+      use input_parameters
       use number_types
       use output
       use mpidefs
@@ -2715,6 +2763,9 @@ subroutine write_map (fname)
 !   For now, this should be computed on the CPU no matter what...
 !
       do i=1,nr
+        if (output_map_flux_balance) then
+          call balance_flux (f(:,:,i))
+        end if
         fout(:,:,i) = TRANSPOSE(f(:,1:npm-1,i))
       enddo
 !
@@ -2976,8 +3027,8 @@ subroutine analysis_step
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ) :: t1
-      real(r_typ) :: sumfval2, fv, fv2, eqd1, eqd2
+      real(r_typ) :: t1,p1,p2
+      real(r_typ) :: sumfval2, fv, fv2, eqd1, eqd2, vtt, vpt
       real(r_typ) :: tav, da_t, da_p, sn_t, d_t, cs_t, cs_p, sn_p
       real(r_typ), dimension(:,:,:), allocatable :: fval
       integer :: i, j, k
@@ -3003,18 +3054,51 @@ subroutine analysis_step
 !
       if (output_current_history) then
 !
-! ****** If running validation, compute current exact solution.
+! ****** If compute current exact solution for validation tests.
 !
-      if (validation_run .eq. 1) then
-        allocate (fval(npm-1,ntm,nr))
+      allocate (fval(npm-1,ntm,nr))
 !$omp target enter data map(alloc:fval)
 !
+! ****** [RC] NOTE!  The phi-shift validation error over time is not
+!                    correct due to periodic domain. TBD later.
+!
+      if (validation_run .eq. 1) then
         do concurrent (k=1:nr,j=1:ntm,i=1:npm-1)
           fval(i,j,k) = fval_u0(i,j,k)*                                  &
                         exp(-42.0_r_typ*diffusion_coef_constant_rvec(k)* &
-                            diffusion_coef_factor*time)
+                            diffusion_coef_factor*(time-time_start))
         enddo
+      elseif (validation_run .eq. 2) then
+        do concurrent (k=1:nr,j=1:ntm,i=1:npm-1)
 !
+          vpt = flow_vp_rigid_omega*km_s_to_rs_hr*(time-time_start)
+!
+          p1 = MODULO(pi_two+vpt,      twopi)
+          p2 = MODULO(threepi_two+vpt, twopi)
+!
+          fval(i,j,k) = -EXP(-(t(j) - pi_four)**2/validation_run_width - &
+                                     (p(i)-p1)**2/validation_run_width)  &
+                        +EXP(-(t(j) - pi_four)**2/validation_run_width - &
+                                     (p(i)-p2)**2/validation_run_width)
+        enddo
+      elseif (validation_run .eq. 3) then
+        do concurrent (k=1:nr,j=1:ntm,i=1:npm-1)
+!
+          vtt =       flow_vt_const*km_s_to_rs_hr*(time-time_start)
+          vpt = flow_vp_rigid_omega*km_s_to_rs_hr*(time-time_start)
+!
+          p1 = MODULO(pi_two+vpt,      twopi)
+          p2 = MODULO(threepi_two+vpt, twopi)
+!
+          fval(i,j,k) = -st_i(j)*EXP(-(t(j) - pi_four - vtt)**2/validation_run_width - &
+                                                   (p(i)-p1)**2/validation_run_width)  &
+                        +st_i(j)*EXP(-(t(j) - pi_four - vtt)**2/validation_run_width - &
+                                                   (p(i)-p2)**2/validation_run_width)
+        enddo
+      else
+        do concurrent (k=1:nr,j=1:ntm,i=1:npm-1)
+          fval(i,j,k) = f(j,i,k)
+        enddo
       end if
 !
 ! ***** Get max and min metrics.
@@ -3023,8 +3107,8 @@ subroutine analysis_step
         h_minbr_tmp    = large_value
         h_maxbr_tmp    = small_value
         h_minabsbr_tmp = large_value
-        h_valerr_tmp   = 0.
-        sumfval2       = 0.
+        h_valerr_tmp   = zero
+        sumfval2       = zero
 !
         do concurrent (j=1:npm-2,i=1:ntm) reduce(+:sumfval2,h_valerr_tmp) &
                                           reduce(max:h_maxbr_tmp)         &
@@ -3032,13 +3116,8 @@ subroutine analysis_step
           h_minbr_tmp = min(f(i,j,k),h_minbr_tmp)
           h_maxbr_tmp = max(f(i,j,k),h_maxbr_tmp)
           h_minabsbr_tmp = min(abs(f(i,j,k)),h_minabsbr_tmp)
-          if (validation_run .eq. 1) then
-            fv = (f(i,j,k) - fval(j,i,k))**2
-            fv2 = fval(j,i,k)**2
-          else
-            fv = 0.
-            fv2 = 0.
-          end if
+          fv = (f(i,j,k) - fval(j,i,k))**2
+          fv2 = fval(j,i,k)**2
           h_valerr_tmp = h_valerr_tmp + fv
           sumfval2 = sumfval2 + fv2
         enddo
@@ -3047,12 +3126,11 @@ subroutine analysis_step
         h_maxbr(k)    = h_maxbr_tmp
         h_minabsbr(k) = h_minabsbr_tmp
         h_valerr(k)   = h_valerr_tmp
-        if (validation_run .eq. 1) h_valerr(k) = sqrt(h_valerr_tmp/sumfval2)
+        h_valerr(k) = sqrt(h_valerr_tmp/sumfval2)
       enddo
 !
-      if (validation_run .eq. 1) then
 !$omp target exit data map(delete:fval)
-      end if
+      deallocate (fval)
 !
 ! ****** Get integrated metrics.
 !
@@ -3166,7 +3244,7 @@ subroutine analysis_step
       enddo
 !
 ! ****** Reset this even though the same logic will set it in
-! ****** the output_histories( )subroutine.
+! ****** the output_histories() subroutine.
 !
       output_current_history = .false.
 !
@@ -7805,16 +7883,26 @@ subroutine read_input_file
                verbose,                                                &
                res_nt,                                                 &
                res_np,                                                 &
+               n_realizations,                                         &
                initial_map_filename,                                   &
-               output_map_root_filename,                               &
+               initial_map_flux_balance,                               &
+               validation_run,                                         &
+               validation_run_width,                                   &
                time_start,                                             &
-               output_map_directory,n_realizations,validation_run,     &
-               output_map_idx_cadence,output_map_time_cadence,         &
-               output_map_2d,time_end,                                 &
+               time_end,                                               &
+               output_map_directory,                                   &
+               output_map_root_filename,                               &
+               output_map_idx_cadence,                                 &
+               output_map_time_cadence,                                &
+               output_map_2d,                                          &
+               output_map_flux_balance,                                &
+               output_flows,                                           &
                output_flows_directory,                                 &
                output_history_time_cadence,                            &
                output_single_precision,                                &
-               dt_min,dt_max,strang_splitting,                         &
+               dt_min,                                                 &
+               dt_max,                                                 &
+               strang_splitting,                                       &
                pole_flux_lat_limit,                                    &
                advance_flow,                                           &
                flow_vp_rigid_omega,                                    &
@@ -7841,7 +7929,6 @@ subroutine read_input_file
                flow_list_filename,                                     &
                flow_root_dir,                                          &
                flow_num_method,                                        &
-               output_flows,                                           &
                upwind,                                                 &
                advance_diffusion,                                      &
                diffusion_coef_filename,                                &
@@ -7973,18 +8060,20 @@ subroutine process_input_parameters
         call endrun (.true.)
       end if
 !
-      if (initial_map_filename .eq. '' .and. res_np*res_nt .lt. 9) then
-        if (iamp0) then
-          write (*,*)
-          write (*,*) '### ERROR in SETUP:'
-          write (*,*) '### Must specify input map or proper res for initial map.'
-          write (*,*) 'Input map name = ',initial_map_filename
-          write (*,*) 'res_nt,res_np:  ',res_nt,res_np
+      if (initial_map_filename .eq. '') then
+        if (res_np .lt. 3 .or. res_nt .lt. 3) then
+          if (iamp0) then
+            write (*,*)
+            write (*,*) '### ERROR in SETUP:'
+            write (*,*) '### Must specify input map or proper res for initial map.'
+            write (*,*) 'Input map name = ',initial_map_filename
+            write (*,*) 'res_nt,res_np:  ',res_nt,res_np
+          end if
+          call endrun (.true.)
         end if
-        call endrun (.true.)
       end if
 !
-      if (initial_map_filename .ne. '' .and. res_np*res_nt .ge. 9) then
+      if (initial_map_filename .ne. '' .and. res_np*res_nt .gt. 0) then
         if (iamp0) then
           write (*,*)
           write (*,*) '### WARNING in SETUP:'
@@ -7994,7 +8083,7 @@ subroutine process_input_parameters
           write (*,*) 'Input map name = ',initial_map_filename
           write (*,*) 'res_nt,res_np:  ',res_nt,res_np
         end if
-        res_np = 0
+        res_nt = 0
         res_np = 0
       end if
 !
@@ -8726,9 +8815,26 @@ end subroutine generate_rfe
 !     SOURCE_RFE_LIFETIME (in hours).
 !   - The timestep of the code is set to ensure rfe frame switching
 !     and is set to half the lifespan.
-!   - Note that the current RFE implementation may not be ideal 
+!   - Note that the current RFE implementation may not be ideal
 !     when using multiple realizations or MPI processes.
 !     A future update will fix this issue.
+!
+! 03/04/2024, RC, Version 1.5.0:
+!   - Added ability to flux balance the initial map, and/or
+!     the output maps.  This is especilly useful when running
+!     in a map smoothing/processing mode.
+!     to activate set INITIAL_MAP_FLUX_BALANCE=.TRUE.
+!     and/or          OUTPUT_MAP_FLUX_BALANCE=.TRUE.
+!   - Updated validation test 3 function to exact solution to constant
+!     theta velocity.
+!   - Updated validation tests 2 and 3 to output errors in history
+!     file when used with constant vt and vp velocities.
+!   - Added VALIDATION_RUN_WIDTH to input parameters to specify
+!     the width of the Gaussians in validation tests 2 and 3.
+!   - Validation runs 2 and 3 now auto-set the velocities based on the
+!     time-time_start.  For test 3, if a phi rotation is desired,
+!     set FLOW_VP_RIGID_OMEGA to any value other than zero for the code
+!     to autoset a full rotation.
 !
 !-----------------------------------------------------------------------
 !
