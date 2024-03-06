@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.6.1'
-      character(*), parameter :: cdate='03/05/2024'
+      character(*), parameter :: cvers='1.6.2'
+      character(*), parameter :: cdate='03/06/2024'
 !
 end module
 !#######################################################################
@@ -6918,13 +6918,20 @@ subroutine load_source
 !
         call generate_rfe (source_rfe(:,:,:,rfe1))
         call generate_rfe (source_rfe(:,:,:,rfe2))
+!$omp target enter data map(to:source_rfe)
+!
+! ****** Flux balance the source term.
+!
+        do i=1,nr
+          call balance_flux (source_rfe(:,:,i,rfe1))
+          call balance_flux (source_rfe(:,:,i,rfe2))
+        end do
 !
 ! ****** Set the time for the next rfe generation.
 !
         time_of_next_source_rfe = time + source_rfe_lifetime
         time_of_prev_source_rfe = time
 !
-!$omp target enter data map(to:source_rfe)
       end if
 !
 end subroutine
@@ -8114,7 +8121,8 @@ subroutine read_input_file
                source_rfe_model,                                       &
                source_rfe_total_unsigned_flux_per_hour,                &
                source_rfe_sigma,                                       &
-               source_rfe_lifetime
+               source_rfe_lifetime,                                    &
+               source_rfe_seed
 !
 !-----------------------------------------------------------------------
 !
@@ -9006,6 +9014,11 @@ end subroutine generate_rfe
 !     The higher the number, the more info printed (2 is max for now).
 !   - Added ability to flux balance the data assimilation window.
 !     Use ASSIMILATE_DATA_BALANCE_FLUX=.TRUE. to activate.
+!
+! 03/06/2024, RC, Version 1.7.1:
+!   - Fixed issue with RFE.  The first set of values during setup were
+!     not being flux balanced.
+!   - Added missing SOURCE_RFE_SEED to the namelist.
 !
 !-----------------------------------------------------------------------
 !
