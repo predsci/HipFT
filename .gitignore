@@ -32,12 +32,16 @@
 
 # Other
 *~
-bin/hipft
-src/hipft
-src/Makefile
-src/Makefile_*
-bin/__pycache__
-testsuite/*/run/*
-!testsuite/*/run/.gitkeep
+/bin/hipft
+/src/hipft
+/src/Makefile
+/src/Makefile_*
+/bin/__pycache__
+/testsuite/*/run/*
+!/testsuite/*/run/.gitkeep
+/src/build.err
+/src/build.log
+/src/hipft_gcc.f90
+/*.sh
 
 
