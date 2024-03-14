@@ -14,7 +14,7 @@ import psipals
 import psimath
 
 ############################
-#  PLOT2D:  Version 1.3.6  #
+#  PLOT2D:  Version 1.4.0  #
 ############################
 # To do: 
 #  - Add horizontal line (-y_hline)
@@ -315,11 +315,24 @@ def argParsing():
             required=False)
 
   parser.add_argument('-v',
-                      help='Print details as script runs.',
-                      dest='verbose',
-                      action='store_true',
-                      default=False,
-                      required=False)
+            help='Print details as script runs.',
+            dest='verbose',
+            action='store_true',
+            default=False,
+            required=False)
+
+  parser.add_argument('-sliceidx',
+            help='Index in slicedim to plot (1-indexed)',
+            dest='sliceidx',
+            type=int,
+            required=False)
+
+  parser.add_argument('-slicedim',
+            help='Dimension to slice (1-indexed)',
+            dest='slicedim',
+            type=int,
+            required=False)
+
 
   return parser.parse_args()
 
@@ -355,7 +368,36 @@ def run(args):
   psipals.load()
 
   # Read the data:
-  xvec, yvec, data = ps.rdhdf_2d(args.iFile)
+  
+  # Check for 3D file
+  __,__,t3,__ = ps.rdhdf(args.iFile)
+  if (len(t3)!=0):
+    is3d=True
+  else: 
+    is3d=False
+
+  if (is3d):
+    if (args.slicedim and args.sliceidx):
+      #Read the file.
+      t1,t2,t3,data = ps.rdhdf_3d(args.iFile)
+
+      if (args.slicedim == 3):
+        data=np.squeeze(data[args.sliceidx-1,:,:])
+        xvec=t1
+        yvec=t2
+      elif (args.slicedim == 2):
+        data=np.squeeze(data[:,args.sliceidx-1,:])
+        xvec=t1
+        yvec=t3
+      elif (args.slicedim == 1):
+        data=np.squeeze(data[:,:,args.sliceidx-1])
+        xvec=t2
+        yvec=t3
+    else:
+      print('Error: 3D file provided and -slicedim and -sliceidx are not set')
+      return
+  else:
+    xvec,yvec,data = ps.rdhdf_2d(args.iFile)
 
   if (len(xvec) == 0):
     if (args.tp):
@@ -748,11 +790,19 @@ def run(args):
     else:
       tagstr = ""
 
+    if is3d:
+      idSlice = format(args.sliceidx, '#06d')
+      idDim = format(args.slicedim, '#02d')
+      tag3d='_d'+idDim+'i'+idSlice
+    else:
+      tag3d = ""
+
+
     if (str(args.iFile).endswith('h5')):
       n = 3
     else:
       n = 4
-    oFile = args.iFile[0:len(args.iFile) - n] + tagstr + ".png"
+    oFile = args.iFile[0:len(args.iFile) - n] + tag3d +tagstr + ".png"
   else:
     oFile = args.oFile
 
