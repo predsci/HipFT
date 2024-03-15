@@ -20,7 +20,7 @@ def argParsing():
     parser.add_argument('-bfile',
         help='Base file name.',
         dest='bfile',
-        default='hipft_brmap',
+        default='hipft_brmap_idx',
         required=False)
 
     parser.add_argument('-t0',
@@ -56,7 +56,7 @@ def run(args):
     cadence = float(args.cadence)
 
     #Calculation constants
-    io_hist_sol_filename = 'history_sol_r000001.out' # Make this an input parameter!
+    io_hist_sol_filename = 'hipft_history_sol_r000001.out' # Make this an input parameter!
     pole_flux_lat_limit = 30.  # Make this an input parameter!
     d2r = 0.017453292519943295
     pi = 3.1415926535897932
@@ -76,7 +76,7 @@ def run(args):
 
     #Loop through files in folder from start to stop time.
     for idx in range(int(args.t0),int(args.tf)+1):
-        filename=args.folder+"/"+args.bfile+"_idx"+"{:06d}".format(idx)+".h5"
+        filename=args.folder+"/"+args.bfile+"{:06d}".format(idx)+".h5"
     
         #Initialize variables
         h_minbr = 3.40282347e38
