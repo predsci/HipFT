@@ -6,11 +6,7 @@ import h5py
 import glob
 from datetime import datetime, timezone
 
-# Need to add start time and cadence options so time is real.
-# ntime is set to the file index here, but is not plotted in the history plotter.
-# A new option in the history plotter to use it instead of time should be made.
-
-# Version 1.0.1
+# Version 1.0.2
 
 def argParsing():
 
@@ -24,39 +20,30 @@ def argParsing():
     parser.add_argument('-bfile',
         help='Base file name.',
         dest='bfile',
-        required=True)
+        default='hipft_brmap',
+        required=False)
 
     parser.add_argument('-t0',
         help='Sequence start index.',
         dest='t0',
-        required=True)
+        default=1,
+        required=False)
 
     parser.add_argument('-tf',
         help='Sequence stop index.',
         dest='tf',
         required=True)
 
-    parser.add_argument('-utstart',
-        help='Start Date in UT: YYYY-MM-DDTHH:MM:SS (default time in seconds: 0)',
-        dest='utstart',
-        required=False)
-
     parser.add_argument('-cadence',
         help='Cadence for time in hours (default: 1).',
         dest='cadence',
-        default=1,
+        default=1.0,
         required=False)
     
-    parser.add_argument('-tstart',
-        help='Start time in hours',
-        dest='tstart',
-        default=0.0,
-        required=False)
-
     return parser.parse_args()
     
 
-# hipft_analysis_step: Version 1.1.0 (MS 10/17/22)
+# hipft_analysis_step
 #
 # Compute analysis of HIPFT run.
 # Takes in a folder name, base file name, and sequence start and stop indexes.
@@ -65,16 +52,8 @@ def argParsing():
 
 def run(args):
 
-    if (args.utstart):
-        hours = 3600
-        sDate = datetime.strptime(args.utstart, '%Y-%m-%dT%H:%M:%S')
-        time = int(sDate.replace(tzinfo=timezone.utc).timestamp())    
-    else:
-        time = 0
-
-    time=float(args.tstart)
+    time=0.0
     cadence = float(args.cadence)
-
 
     #Calculation constants
     io_hist_sol_filename = 'history_sol_r000001.out' # Make this an input parameter!
@@ -145,7 +124,9 @@ def run(args):
             dp[npm-1] = dp[1]
             
             first_file = False
+            print('First step done - grid calculated.')
         else:
+            print('Time '+str(time)+' IDX: '+str(idx)+' completed.')
             time = time + cadence
 
         ntime = int(filename[-9:-3])-1
