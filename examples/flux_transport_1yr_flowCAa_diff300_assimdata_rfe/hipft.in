@@ -16,7 +16,8 @@
 !
 ! ****** Time ********
 !
-  time_end = 8766.0
+  time_start = 0.0
+  time_end   = 8766.0
 !
 ! ****** Timestep ********
 !
@@ -55,7 +56,7 @@
 ! ****** DIFFUSION ********
 !
   advance_diffusion = .true.
-  diffusion_coef_constant = 175.0
+  diffusion_coef_constant = 300.0
 !
 !-----------------------------------------------------------------------
 !
@@ -64,11 +65,15 @@
   assimilate_data = .true.
   assimilate_data_map_list_filename = 'zenodo_hipft/map_files_2022.csv'
   assimilate_data_map_root_dir = 'zenodo_hipft/.'
+  assimilate_data_balance_flux = .true.
+!
+! ****** RANDOM FLUX ********
+!
+  advance_source = .true.
+  source_rfe_model = 1
+  source_rfe_total_unsigned_flux_per_hour = 105.0
+  source_rfe_sigma = 35.0
+  source_rfe_lifetime = 0.3
+  
 /
-!
-!
-!
-!
-!
-!
 !
