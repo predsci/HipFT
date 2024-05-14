@@ -5,8 +5,9 @@ import h5py
 import re
 import signal
 import sys
+from pathlib import Path
 
-# Version 2.1.1
+# Version 2.2.0
 
 def handle_int(signum, frame):
     print('You pressed Ctrl+C! Stopping!')
@@ -82,9 +83,11 @@ def argParsing():
 
 def run(args):
   if args.odir:
-    odir=args.odir
+    odir=str(Path(args.odir).resolve())
   else:
     odir=os.getcwd()
+
+  args.datadir = str(Path(args.datadir).resolve())
 
   title_str=[]
 
