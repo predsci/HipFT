@@ -3,6 +3,7 @@ import os
 import matplotlib.cm as cm
 #from matplotlib.colors import ListedColormap
 from matplotlib.colors import LinearSegmentedColormap
+import sys
 
 def load(N=1024):
     # Check for tools or corhel directory and set path root accordingly.
@@ -17,8 +18,8 @@ def load(N=1024):
             rgbdir="/tools/ps_rsrc/rgb_color_palettes/rgb/"
             ierr=1
         else:
-            rootdir="."
-            rgbdir="psi_color_palettes/"
+            rootdir=sys.path[0]
+            rgbdir="/psi_color_palettes/"
             ierr=1
     
     if(ierr==0):
