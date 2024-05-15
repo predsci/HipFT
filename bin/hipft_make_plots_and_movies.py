@@ -7,7 +7,7 @@ import signal
 import sys
 from pathlib import Path
 
-# Version 2.2.0
+# Version 2.3.0
 
 def handle_int(signum, frame):
     print('You pressed Ctrl+C! Stopping!')
@@ -78,6 +78,13 @@ def argParsing():
     required=False,
     help='Name of the HipFT map text file with dates.')
 
+  parser.add_argument('-nomovie',
+    help='Do not make mov movie.',
+    dest='nomovie',
+    default=False,
+    action='store_true',
+    required=False)
+
   return parser.parse_args()
 
 
@@ -110,7 +117,7 @@ def run(args):
       idx=0
       for filetmp in os.listdir(args.datadir):
           idx+=1
-          title_str.append("File index: {%06d}".format(idx))
+          title_str.append("File number: {:06d}".format(idx))
 
   if not os.path.exists(args.datadir+'/plots'):
     os.makedirs(args.datadir+'/plots')
@@ -122,8 +129,8 @@ def run(args):
     file=args.datadir+'/'+filetmp
     if filetmp.endswith('.h5'):
       idxx=int(re.search("[0-9]+",re.search("idx[0-9]+",filetmp).group()).group())
-      TITLE=date_fmt+title_str[idxx-1]
       idx+=1
+      TITLE=date_fmt+title_str[idx-1]
       with h5py.File(file,'r') as f1:
         twoD=True
         if 'dim3' in list(f1.keys()):
@@ -149,21 +156,22 @@ def run(args):
 
   os.chdir(args.datadir+'/plots/tmp')
 
-
-  if twoD:
-    for filetmp in os.listdir(args.datadir+'/plots'):
-      file=args.datadir+'/plots/'+filetmp
-      if filetmp.endswith('.png'):
-        linkFile(file,filetmp)
-    ffmpefMovie(args,odir,args.outfile)
-  elif (args.s):
-    if (args.s > dim3):
-      makeMovie(args,odir,file,dim3)
+  if not args.nomovie:
+    if twoD:
+      for filetmp in os.listdir(args.datadir+'/plots'):
+        file=args.datadir+'/plots/'+filetmp
+        if filetmp.endswith('.png'):
+          linkFile(file,filetmp)
+      ffmpefMovie(args,odir,args.outfile)
+    elif (args.s):
+      if (args.s > dim3):
+        makeMovie(args,odir,file,dim3)
+      else:
+        makeMovie(args,odir,file,args.s)
     else:
-      makeMovie(args,odir,file,args.s)
-  else:
-    for i in range(1,dim3):
-      makeMovie(args,odir,file,i)
+      for i in range(1,dim3):
+        makeMovie(args,odir,file,i)
+
   for filetmp in os.listdir(args.datadir+'/plots/tmp'):
     os.remove(filetmp)
   os.chdir(args.datadir+'/plots')
