@@ -160,7 +160,7 @@ sorted_listdir = sorted(os.listdir(args.datadir))
 
   if not args.nomovie:
     if twoD:
-      for filetmp in os.listdir(args.datadir+'/plots'):
+      for filetmp in sorted(os.listdir(args.datadir+'/plots')):
         file=args.datadir+'/plots/'+filetmp
         if filetmp.endswith('.png'):
           linkFile(file,filetmp)
@@ -174,7 +174,7 @@ sorted_listdir = sorted(os.listdir(args.datadir))
       for i in range(1,dim3):
         makeMovie(args,odir,file,i)
 
-  for filetmp in os.listdir(args.datadir+'/plots/tmp'):
+  for filetmp in sorted(os.listdir(args.datadir+'/plots/tmp')):
     os.remove(filetmp)
   os.chdir(args.datadir+'/plots')
   os.rmdir(args.datadir+'/plots/tmp')
@@ -182,7 +182,7 @@ sorted_listdir = sorted(os.listdir(args.datadir))
 
 def makeMovie(args,odir,file,r):
   fslice="%06d" % r
-  for filetmp in os.listdir(args.datadir+'/plots'):
+  for filetmp in sorted(os.listdir(args.datadir+'/plots')):
     file=args.datadir+'/plots/'+filetmp
     if filetmp.endswith('_r'+ fslice +'.png'):
       linkFile(file,filetmp)
