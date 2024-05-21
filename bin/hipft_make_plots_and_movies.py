@@ -100,7 +100,7 @@ def run(args):
 
   date_fmt = ''
 
-sorted_listdir = sorted(os.listdir(args.datadir))
+  sorted_listdir = sorted(os.listdir(args.datadir))
 
   if os.path.exists(args.mldfile):
     with open(args.mldfile, "r") as ftmp:
