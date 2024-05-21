@@ -100,6 +100,8 @@ def run(args):
 
   date_fmt = ''
 
+sorted_listdir = sorted(os.listdir(args.datadir))
+
   if os.path.exists(args.mldfile):
     with open(args.mldfile, "r") as ftmp:
       next(ftmp)
@@ -115,7 +117,7 @@ def run(args):
         title_str.append(str(float(line.split()[1]))+' hours')
   else:
       idx=0
-      for filetmp in os.listdir(args.datadir):
+      for filetmp in sorted_listdir:
           idx+=1
           title_str.append("File number: {:06d}".format(idx))
 
@@ -125,7 +127,7 @@ def run(args):
   os.chdir(args.datadir+'/plots')
 
   idx=0
-  for filetmp in os.listdir(args.datadir):
+  for filetmp in sorted_listdir:
     file=args.datadir+'/'+filetmp
     if filetmp.endswith('.h5'):
       idxx=int(re.search("[0-9]+",re.search("idx[0-9]+",filetmp).group()).group())
