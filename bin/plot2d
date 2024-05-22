@@ -13,16 +13,29 @@ import psihdf as ps
 import psipals
 import psimath
 
-############################
-#  PLOT2D:  Version 1.4.0  #
-############################
-# To do: 
-#  - Add horizontal line (-y_hline)
-#  - Add contour legend + label option.
-#  - Add multiple contour option (single values into lists).
-#  - Add 3D disk-ball option to tp plots given a ball radius and view-point in (r,t,p).
-#  - Add dual rp and/or rt plot option (e.g. for coronal+helio plots). 
-############################
+################################
+#  PSI_PLOT2D:  Version 1.4.0  #
+################################
+########################################################################
+#          Predictive Science Inc.
+#          www.predsci.com
+#          San Diego, California, USA 92121
+########################################################################
+# Copyright 2024 Predictive Science Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+########################################################################
 
 def signal_handler(signal, frame):
   print('You pressed Ctrl+C! Stopping!')
