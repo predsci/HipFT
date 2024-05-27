@@ -70,11 +70,9 @@ then
   exit 1
 fi
 
-HIPFT_HOME=$PWD
-
 ${echo} "${cG}=== STARTING HIPFT BUILD ===${cX}"
 ${echo} "==> Entering src directory..."
-pushd ${HIPFT_HOME}/src >> /dev/null
+pushd ${HIPFT_HOME}/src > /dev/null
 ${echo} "==> Removing old Makefile..."
 if [ -e Makefile ]; then
   \rm Makefile
