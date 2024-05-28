@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.6.2'
-      character(*), parameter :: cdate='03/06/2024'
+      character(*), parameter :: cvers='1.8.0'
+      character(*), parameter :: cdate='05/27/2024'
 !
 end module
 !#######################################################################
@@ -298,6 +298,7 @@ module sources
       real(r_typ) :: time_of_next_source_rfe
       real(r_typ) :: time_of_prev_source_rfe
       real(r_typ) :: uf_per_cell_per_hour
+      real(r_typ) :: uf_per_area_per_hour
 !
 end module
 !#######################################################################
@@ -315,17 +316,13 @@ module data_assimilation
       integer, dimension(:), allocatable :: assimilate_data_lat_limit_tidx1_rvec
 !
       real(r_typ), dimension(:), allocatable :: assimilate_data_lat_limit_rvec
-!
       real(r_typ), dimension(:), allocatable :: assimilate_data_mu_limit_rvec
       real(r_typ), dimension(:), allocatable :: assimilate_data_mu_power_rvec
 !
       real(r_typ) :: map_time_initial_hr
-!
       real(r_typ), dimension(:), allocatable :: map_times_actual_ut_jd
-!
       character(19), dimension(:), allocatable :: &
                      map_times_requested_ut_str, map_times_actual_ut_str
-!
       character(512), dimension(:), allocatable :: map_files_rel_path
 !
 end module
@@ -478,6 +475,7 @@ module timing
       real(r_typ) :: wtime_flux_transport_advection = 0.
       real(r_typ) :: wtime_flux_transport_diffusion = 0.
       real(r_typ) :: wtime_source = 0.
+      real(r_typ) :: wtime_data_assimilation = 0.
       real(r_typ) :: wtime_analysis = 0.
       real(r_typ) :: wtime_io = 0.
       real(r_typ) :: wtime_mpi_overhead = 0.
@@ -668,7 +666,7 @@ module input_parameters
 !
       logical :: advance_source = .false.
 !
-      integer :: source_rfe_model = 0
+      integer     :: source_rfe_model = 0
       real(r_typ) :: source_rfe_total_unsigned_flux_per_hour = 0.
       real(r_typ) :: source_rfe_sigma = one
       integer     :: source_rfe_seed = -9999
@@ -900,6 +898,12 @@ program HIPFT
 ! ****** Update the time now that we have taken the step.
 !
         time = time + dtime_global
+!
+! ****** Apply data assimilation. Since this step replaces data directly,
+! ****** we apply is at the end of the step advance.
+! ****** This avoids double random flux (model RFE + data RFE).
+!
+        call apply_data_assimilation
 !
 ! ****** Perform analysis.
 !
@@ -1393,7 +1397,7 @@ subroutine write_timing
 !
 ! ****** Timing buffers.
 !
-      integer, parameter :: lbuf=10
+      integer, parameter :: lbuf=11
       real(r_typ), dimension(lbuf) :: sbuf
       real(r_typ), dimension(lbuf,0:nproc-1) :: tbuf
 !
@@ -1421,6 +1425,7 @@ subroutine write_timing
       sbuf(8) = wtime_analysis
       sbuf(9) = wtime_io
       sbuf(10) = wtime_mpi_overhead
+      sbuf(11) = wtime_data_assimilation
 !
       call MPI_Allgather (sbuf,lbuf,ntype_real,       &
                           tbuf,lbuf,ntype_real,MPI_COMM_WORLD,ierr)
@@ -1453,6 +1458,7 @@ subroutine write_timing
           write(8,"(a40)") repeat("-", 40)
           write(8,FMT) "--> Setup:         ",tbuf(2,irank)
           write(8,FMT) "--> Update:        ",tbuf(3,irank)
+          write(8,FMT) "--> Data Assim:    ",tbuf(11,irank)
           write(8,FMT) "--> Flux transport:",tbuf(4,irank)
           write(8,FMT) "    --> Advecton:  ",tbuf(5,irank)
           write(8,FMT) "    --> Diffusion  ",tbuf(6,irank)
@@ -1475,6 +1481,8 @@ subroutine write_timing
                      tavg(2),tmin(2),tmax(2),tsdev(2)
         write (8,400) '--> Update:             ', &
                      tavg(3),tmin(3),tmax(3),tsdev(3)
+        write (8,400) '--> Data Assimilation:  ', &
+                     tavg(11),tmin(11),tmax(11),tsdev(11)
         write (8,400) '--> Flux transport:     ', &
                      tavg(4),tmin(4),tmax(4),tsdev(4)
         write (8,400) '    --> Advecton:       ', &
@@ -1508,6 +1516,8 @@ subroutine write_timing
                      tavg(2),tmin(2),tmax(2),tsdev(2)
         write (*,400) '--> Update:             ', &
                      tavg(3),tmin(3),tmax(3),tsdev(3)
+        write (*,400) '--> Data Assimilation:  ', &
+                     tavg(11),tmin(11),tmax(11),tsdev(11)
         write (*,400) '--> Flux transport:     ', &
                      tavg(4),tmin(4),tmax(4),tsdev(4)
         write (*,400) '    --> Advecton:       ', &
@@ -3316,7 +3326,6 @@ subroutine update_step
 !
       if (advance_flow)    call update_flow
       if (advance_source)  call update_source
-      if (assimilate_data) call update_field
 !
       call update_timestep
 !
@@ -3864,7 +3873,7 @@ subroutine update_source
 !
 ! ****** Random flux emergence.
 !
-      if (source_rfe_model.eq.1) then
+      if (source_rfe_model.gt.0) then
 !
         if (time .ge. time_of_next_source_rfe) then
 !
@@ -4064,11 +4073,11 @@ subroutine assimilate_new_data (new_data)
 !
 end subroutine
 !#######################################################################
-subroutine update_field
+subroutine apply_data_assimilation
 !
 !-----------------------------------------------------------------------
 !
-! ****** Update field through data assimilation.
+! ****** Apply data assimilation.
 !
 !-----------------------------------------------------------------------
 !
@@ -4099,20 +4108,25 @@ subroutine update_field
 !
 !-----------------------------------------------------------------------
 !
+      wtime_tmp = MPI_Wtime()
+!
 ! ****** If it is time to load new data, read it from file.
 !
-      if (time .ge. time_of_next_input_map) then
-        if (verbose.gt.0) then
-          write(*,*)
-          write(*,*) '   UPDATE_FIELD: Loading field index ',current_map_input_idx
-          write(*,*) '   UPDATE_FIELD: Time of next input map: ',time_of_next_input_map
-        end if
+      if (assimilate_data.and.time.ge.time_of_next_input_map) then
 !
         if (iamp0) then
+          if (verbose.gt.0) then
+            write(*,*)
+            write(*,*) '   UPDATE_FIELD: Loading field index ',current_map_input_idx
+            write(*,*) '   UPDATE_FIELD: Time of next input map: ',time_of_next_input_map
+          end if
+!
           mapfile = TRIM(assimilate_data_map_root_dir)//"/"&
                     //TRIM(map_files_rel_path(current_map_input_idx))
 !
           call read_3d_file (mapfile,npm_nd,ntm_nd,nslices,new_data2d,s1,s2,s3,ierr)
+! ******  TODO:  Add error checking here
+!               (make sure scales match run until interp is added)
           deallocate(s1)
           deallocate(s2)
           deallocate(s3)
@@ -4128,8 +4142,8 @@ subroutine update_field
         call MPI_Bcast (new_data2d,npm_nd*ntm_nd*nslices,ntype_real,0,MPI_COMM_WORLD,ierr)
         wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
 !
-! ******  TODO:  Add error checking here
-!               (make sure scales match run until interp is added)
+! ****** Allocate and set rank-local array across realizations
+! ****** of assimilation data based on read-in 2D values.
 !
 !$omp target enter data map(to:new_data2d)
         allocate(new_data(npm_nd,ntm_nd,nslices,nr))
@@ -4197,12 +4211,14 @@ subroutine update_field
            - map_time_initial_hr
         end if
 
-        if (verbose.gt.0) then
+        if (iamp0.and.verbose.gt.0) then
           write(*,*) '   UPDATE_FIELD: Time of next input map: ', &
                       time_of_next_input_map
         end if
 !
       end if
+!
+      wtime_data_assimilation = wtime_data_assimilation + MPI_Wtime() - wtime_tmp
 !
 end subroutine
 !#######################################################################
@@ -6896,7 +6912,7 @@ subroutine load_source
 !$omp target enter data map(to:source_from_file_data)
       end if
 !
-      if (source_rfe_model.eq.1) then
+      if (source_rfe_model.gt.0) then
 !
         allocate (source_rfe(ntm,npm,nr,2))
         source_rfe(:,:,:,:) = 0.
@@ -6909,10 +6925,15 @@ subroutine load_source
 !
         num_cells = ntm*(npm-2)
 !
-! ****** Get unsigned flux per hour per cell in code units.
+! ****** Get unsigned flux per hour per cell/hour in code units.
 !
-        uf_per_cell_per_hour = source_rfe_total_unsigned_flux_per_hour* &
-                               input_flux_fac/(rsun_cm2*num_cells)
+        if (source_rfe_model.eq.1) then
+          uf_per_cell_per_hour = source_rfe_total_unsigned_flux_per_hour* &
+                                 input_flux_fac/(rsun_cm2*num_cells)
+        elseif (source_rfe_model.eq.2) then
+          uf_per_area_per_hour = source_rfe_total_unsigned_flux_per_hour* &
+                                 input_flux_fac/(rsun_cm2*four*pi)
+        end if
 !
 ! ****** Generate both starting frames of the rfe.
 !
@@ -8534,7 +8555,8 @@ subroutine generate_rfe (rfe)
       use constants
       use mesh
       use sources
-      use input_parameters, ONLY : verbose, source_rfe_sigma
+      use mpidefs, ONLY: iamp0
+      use input_parameters, ONLY: verbose,source_rfe_sigma,source_rfe_model
 !
 !-----------------------------------------------------------------------
 !
@@ -8548,21 +8570,18 @@ subroutine generate_rfe (rfe)
 !
       integer :: i,j,k
       real(r_typ) :: get_gaussian
-      real(r_typ) :: rnd_num,tav,sn_t,d_t,da_ti,fn1,fs1
+      real(r_typ) :: rnd_num,tav,sn_t,d_t,da_ti,fn1,fs1,normfac
 !
 !-----------------------------------------------------------------------
 !
-! [RC] Add options to have different random
-                 !      numbers, sigmas, and UF per realization.
-!      Be careful here about MPI ranks!  Need to make all realizations
-!      on proc 0 and broadcast??
+      normfac = pi/(sqrt(twopi)*source_rfe_sigma)
+!     do i=1,nr
+        do k=2,npm-1
+          do j=1,ntm
 !
-!        do i=1,nr
-          do k=2,npm-1
-            do j=1,ntm
-              rnd_num = (one/source_rfe_sigma)*sqrt(twopi)*half* &
-                        get_gaussian(zero,source_rfe_sigma)
+            rnd_num = normfac*get_gaussian(zero,source_rfe_sigma)
 !
+            if (source_rfe_model.eq.1) then
               if (j.eq.1) then
                 tav=half*(t(1)+t(2))
                 sn_t = sin(tav)
@@ -8579,40 +8598,49 @@ subroutine generate_rfe (rfe)
 !
               rfe(j,k,:) = rnd_num*uf_per_cell_per_hour*da_ti*dp_i(k)
 !
-            enddo
+            elseif (source_rfe_model .eq. 2) then
+!
+! ****** Since uf_per_cell = uf_per_area*dA and Br = uf/dA,
+! ****** no need for any metric here.
+!
+              rfe(j,k,:) = rnd_num*uf_per_area_per_hour
+            end if
+!
           enddo
-!        enddo
+        enddo
+!     enddo
 !
 ! ****** Boundary conditions.
 !
 ! ****** Enforce periodicity.
 !
-        do i=1,nr
-          rfe(:,  1,i) = rfe(:,npm-1,i)
-          rfe(:,npm,i) = rfe(:,2,    i)
-        enddo
+      do i=1,nr
+        rfe(:,  1,i) = rfe(:,npm-1,i)
+        rfe(:,npm,i) = rfe(:,2,    i)
+      enddo
 !
 ! ****** Poles.
 !
-        do i=1,nr
-          fn1 = zero
-          fs1 = zero
-          do k=1,npm-2
-            fn1 = fn1 + rfe(  1,k,i)*dp(k)
-            fs1 = fs1 + rfe(ntm,k,i)*dp(k)
-          enddo
-          fn1 = fn1*twopi_i
-          fs1 = fs1*twopi_i
-          rfe(  1,:,i) = fn1
-          rfe(ntm,:,i) = fs1
+      do i=1,nr
+        fn1 = zero
+        fs1 = zero
+        do k=1,npm-2
+          fn1 = fn1 + rfe(  1,k,i)*dp(k)
+          fs1 = fs1 + rfe(ntm,k,i)*dp(k)
         enddo
+        fn1 = fn1*twopi_i
+        fs1 = fs1*twopi_i
+        rfe(  1,:,i) = fn1
+        rfe(ntm,:,i) = fs1
+      enddo
 !
-        if (verbose.gt.0) then
-          write (*,*)
-          write (*,*) '   GENERATE_RFE: A RFE source term was generated: '
-          write (*,*) '   GENERATE_RFE: Minimum value = ',MINVAL(rfe(:,:,:))
-          write (*,*) '   GENERATE_RFE: Maximum value = ',MAXVAL(rfe(:,:,:))
-        end if
+      if (iamp0.and.verbose.gt.0) then
+        write (*,*)
+        write (*,*) '   GENERATE_RFE: A RFE source term was generated: '
+        write (*,*) '   GENERATE_RFE: RFE Model = ',source_rfe_model
+        write (*,*) '   GENERATE_RFE: Minimum value = ',MINVAL(rfe(:,:,:))
+        write (*,*) '   GENERATE_RFE: Maximum value = ',MAXVAL(rfe(:,:,:))
+      end if
 !
 end subroutine generate_rfe
 !#######################################################################
@@ -9019,6 +9047,21 @@ end subroutine generate_rfe
 !   - Fixed issue with RFE.  The first set of values during setup were
 !     not being flux balanced.
 !   - Added missing SOURCE_RFE_SEED to the namelist.
+!
+! 05/27/2024, RC, Version 1.8.0:
+!   - Changed when data assimilation takes place and renamed routine.
+!     Now, data assimilation takes place at the end of the current step.
+!     This is more consistent with the way the time step is set based on
+!     data assimilation, avoids double random flux (model+data), and
+!     if the output map time is synchronized, makes the data
+!     written to the map not have a step applied to it.
+!   - Added new RFE model (source_rfe_model=2).  This is similar to
+!     the first model, but uses unsigned flux per area per hour instead
+!     of unsigned flux per cell per hour for the random sampling.
+!     This causes it to have a more unified Br distribution across the
+!     map, irrespective of cell size, and the Br is distributed across
+!     the sigma much more closely.
+!   - Added data assimilation timer.
 !
 !-----------------------------------------------------------------------
 !
