@@ -296,14 +296,15 @@
       source_rfe_model = 0
 !
 !       ----->  Activate random flux emergence source term.  
-!       ----->  Currently, only option is model "1".
+!       ----->  1: Spread UF evenly over cells, set cell Br=(UF/Ncells)(1/dA)
+!       ----->  2: Spread UF evenly over area,  set cell Br=(UF/4pi)(dA)/(dA)
 !    
       source_rfe_total_unsigned_flux_per_hour = 0.
 !
 !       ----->  Set the total unsigned flux (full map) per hour
 !       ----->  for the random flux source term.
 !
-      rsource_rfe_sigma = 1.0
+      source_rfe_sigma = 1.0
 !
 !       ----->  Set the spread of Br values for the random flux source term.
 !
