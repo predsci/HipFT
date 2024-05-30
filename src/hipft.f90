@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.8.0'
-      character(*), parameter :: cdate='05/27/2024'
+      character(*), parameter :: cvers='1.9.0'
+      character(*), parameter :: cdate='05/29/2024'
 !
 end module
 !#######################################################################
@@ -212,7 +212,7 @@ module globals
 ! ****** Main terminal output format string.
 !
       character(*), parameter :: &
-        MAINFMT = '(a,i10,a,f12.6,a,f12.6,a,f12.6,a,a,a)'
+        MAINFMT = '(a,i10,a,f14.3,a,f14.3,a,f12.6,a,a,a)'
 !
 ! ****** Current time.
 !
@@ -297,8 +297,8 @@ module sources
 !
       real(r_typ) :: time_of_next_source_rfe
       real(r_typ) :: time_of_prev_source_rfe
-      real(r_typ) :: uf_per_cell_per_hour
-      real(r_typ) :: uf_per_area_per_hour
+      real(r_typ), dimension(:), allocatable :: uf_per_cell_per_hour_rvec
+      real(r_typ), dimension(:), allocatable :: uf_per_area_per_hour_rvec
 !
 end module
 !#######################################################################
@@ -668,7 +668,8 @@ module input_parameters
 !
       integer     :: source_rfe_model = 0
       real(r_typ) :: source_rfe_total_unsigned_flux_per_hour = 0.
-      real(r_typ) :: source_rfe_sigma = one
+      real(r_typ), dimension(MAX_REALIZATIONS) :: source_rfe_total_unsigned_flux_per_hours
+      data (source_rfe_total_unsigned_flux_per_hours(i),i=1,MAX_REALIZATIONS) /MAX_REALIZATIONS*-1./
       integer     :: source_rfe_seed = -9999
       real(r_typ) :: source_rfe_lifetime = 0.3_r_typ
 !
@@ -2786,7 +2787,7 @@ subroutine write_map (fname)
 !-----------------------------------------------------------------------
 !
       allocate (ftmp(ntm,npm,nr))
-!omp target enter data map(alloc:ftmp)
+!$omp target enter data map(alloc:ftmp)
 !
       do concurrent (k=1:nr,j=1:npm,i=1:ntm)
         ftmp(i,j,k) = f(i,j,k)
@@ -2812,8 +2813,8 @@ subroutine write_map (fname)
         fout(:,:,i) = TRANSPOSE(ftmp(:,1:npm-1,i))
       enddo
 !
-      deallocate (ftmp)
 !$omp target exit data map(delete:ftmp)
+      deallocate (ftmp)
 !
       if (output_map_2d.and.n_realizations.eq.1) then
         call write_2d_file (fname,npm-1,ntm,fout(:,:,1),pout,t,ierr)
@@ -6826,7 +6827,7 @@ subroutine load_source
       use input_parameters
       use constants
       use read_2d_file_interface
-      use globals, ONLY : time
+      use globals, ONLY : time,local_realization_indices
       use timing
 !
 !-----------------------------------------------------------------------
@@ -6925,14 +6926,31 @@ subroutine load_source
 !
         num_cells = ntm*(npm-2)
 !
-! ****** Get unsigned flux per hour per cell/hour in code units.
+! ****** Get unsigned flux per hour per cell/hour in code units
+! ****** and set up realization arrays.
 !
         if (source_rfe_model.eq.1) then
-          uf_per_cell_per_hour = source_rfe_total_unsigned_flux_per_hour* &
+!
+          allocate (uf_per_cell_per_hour_rvec(nr))
+          do i=1,nr
+            uf_per_cell_per_hour_rvec(i) = &
+            source_rfe_total_unsigned_flux_per_hours(     &
+                                 local_realization_indices(i))* &
                                  input_flux_fac/(rsun_cm2*num_cells)
+          enddo
+!$omp target enter data map(to:uf_per_cell_per_hour_rvec)
+!
         elseif (source_rfe_model.eq.2) then
-          uf_per_area_per_hour = source_rfe_total_unsigned_flux_per_hour* &
-                                 input_flux_fac/(rsun_cm2*four*pi)
+!
+          allocate (uf_per_area_per_hour_rvec(nr))
+          do i=1,nr
+            uf_per_area_per_hour_rvec(i) = &
+            source_rfe_total_unsigned_flux_per_hours(     &
+                                 local_realization_indices(i))* &
+                                   input_flux_fac/(rsun_cm2*four*pi)
+          enddo
+!$omp target enter data map(to:uf_per_area_per_hour_rvec)
+!
         end if
 !
 ! ****** Generate both starting frames of the rfe.
@@ -8141,7 +8159,7 @@ subroutine read_input_file
                source_filename,                                        &
                source_rfe_model,                                       &
                source_rfe_total_unsigned_flux_per_hour,                &
-               source_rfe_sigma,                                       &
+               source_rfe_total_unsigned_flux_per_hours,               &
                source_rfe_lifetime,                                    &
                source_rfe_seed
 !
@@ -8313,6 +8331,9 @@ subroutine process_input_parameters
         if (diffusion_coef_constants(i) .lt. 0.) then
           diffusion_coef_constants(i) = diffusion_coef_constant
         end if
+        if (source_rfe_total_unsigned_flux_per_hours(i) .lt. 0.) then
+          source_rfe_total_unsigned_flux_per_hours(i) = source_rfe_total_unsigned_flux_per_hour
+        end if
       enddo
 !
 ! ****** Set numerical method presets.
@@ -8350,7 +8371,7 @@ subroutine process_input_parameters
 !
 end subroutine
 !#######################################################################
-function get_gaussian(mu,sigma) result(fn_val)
+function get_gaussian() result(fn_val)
 !
 !-----------------------------------------------------------------------
 !
@@ -8372,7 +8393,7 @@ function get_gaussian(mu,sigma) result(fn_val)
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ) :: fn_val,mu,sigma
+      real(r_typ) :: fn_val
 !
 !-----------------------------------------------------------------------
 !
@@ -8385,7 +8406,7 @@ function get_gaussian(mu,sigma) result(fn_val)
 ! ****** If second, use the second random number generated on last call.
 !
         second = .false.
-        fn_val = mu + sigma*v*sln
+        fn_val = v*sln
       else
 !
 ! ****** First call; generate a pair of random normals.
@@ -8400,7 +8421,7 @@ function get_gaussian(mu,sigma) result(fn_val)
           if (s.lt.one .and. s.gt.0.) exit
         enddo
         sln = SQRT(-SCALE(LOG(s),1)/s)
-        fn_val = mu + sigma*u*sln
+        fn_val = u*sln
       end if
 !
       return
@@ -8555,8 +8576,8 @@ subroutine generate_rfe (rfe)
       use constants
       use mesh
       use sources
-      use mpidefs, ONLY: iamp0
-      use input_parameters, ONLY: verbose,source_rfe_sigma,source_rfe_model
+      use mpidefs
+      use input_parameters, ONLY: verbose,source_rfe_model
 !
 !-----------------------------------------------------------------------
 !
@@ -8565,50 +8586,63 @@ subroutine generate_rfe (rfe)
 !-----------------------------------------------------------------------
 !
       real(r_typ), dimension(ntm,npm,nr) :: rfe
+      real(r_typ), dimension(ntm,npm)    :: rnd_nums
 !
 !-----------------------------------------------------------------------
 !
-      integer :: i,j,k
+      integer :: i,j,k,ierr
       real(r_typ) :: get_gaussian
       real(r_typ) :: rnd_num,tav,sn_t,d_t,da_ti,fn1,fs1,normfac
 !
 !-----------------------------------------------------------------------
 !
-      normfac = pi/(sqrt(twopi)*source_rfe_sigma)
-!     do i=1,nr
+! ****** Set random number map on rank 0.  We use the same random numbers
+! ****** for all realizations since parallel random numbers are tricky to
+! ****** set right.  We could use different numbers for each realization
+! ****** across 1 rank, but that can be a later update if requested.
+!
+      if (iamp0) then
+        normfac = pi/sqrt(twopi)
         do k=2,npm-1
           do j=1,ntm
-!
-            rnd_num = normfac*get_gaussian(zero,source_rfe_sigma)
-!
-            if (source_rfe_model.eq.1) then
-              if (j.eq.1) then
-                tav=half*(t(1)+t(2))
-                sn_t = sin(tav)
-                d_t = dth(2)
-                da_ti = one/(quarter*sn_t*d_t)
-              else if (j.eq.ntm) then
-                tav=half*(t(ntm)+t(ntm-1))
-                sn_t = sin(tav)
-                d_t = dth(ntm)
-                da_ti = one/(quarter*sn_t*d_t)
-              else
-                da_ti = st_i(j)*dt_i(j)
-              end if
-!
-              rfe(j,k,:) = rnd_num*uf_per_cell_per_hour*da_ti*dp_i(k)
-!
-            elseif (source_rfe_model .eq. 2) then
-!
-! ****** Since uf_per_cell = uf_per_area*dA and Br = uf/dA,
-! ****** no need for any metric here.
-!
-              rfe(j,k,:) = rnd_num*uf_per_area_per_hour
-            end if
-!
+            rnd_nums(j,k) = normfac*get_gaussian()
           enddo
         enddo
-!     enddo
+      end if
+!
+! ****** Broadcast random number map to all ranks.
+!
+      call MPI_Bcast (rnd_nums,ntm*npm,ntype_real,0,MPI_COMM_WORLD,ierr)
+!
+      do k=2,npm-1
+        do j=1,ntm
+!
+          if (source_rfe_model.eq.1) then
+            if (j.eq.1) then
+              tav=half*(t(1)+t(2))
+              sn_t = sin(tav)
+              d_t = dth(2)
+              da_ti = one/(quarter*sn_t*d_t)
+            else if (j.eq.ntm) then
+              tav=half*(t(ntm)+t(ntm-1))
+              sn_t = sin(tav)
+              d_t = dth(ntm)
+              da_ti = one/(quarter*sn_t*d_t)
+            else
+              da_ti = st_i(j)*dt_i(j)
+            end if
+          end if
+!
+          do i=1,nr
+            if (source_rfe_model.eq.1) then
+              rfe(j,k,i) = rnd_nums(j,k)*uf_per_cell_per_hour_rvec(i)*da_ti*dp_i(k)
+            elseif (source_rfe_model .eq. 2) then
+              rfe(j,k,i) = rnd_nums(j,k)*uf_per_area_per_hour_rvec(i)
+            end if
+          enddo
+!
+        enddo
+      enddo
 !
 ! ****** Boundary conditions.
 !
@@ -9062,6 +9096,13 @@ end subroutine generate_rfe
 !     map, irrespective of cell size, and the Br is distributed across
 !     the sigma much more closely.
 !   - Added data assimilation timer.
+!
+! 05/29/2024, RC/MS/BKJ, Version 1.9.0:
+!   - Added RFE unsigned flux as a realization parameter.
+!     Use SOURCE_RFE_TOTAL_UNSIGNED_FLUX_PER_HOURS to set.
+!   - SOURCE_RFE_SIGMA is deprecated since it was not being applied.
+!   - Small OpenMP target bug fix (thanks BKJ!).
+!   - Removed mu and sigma from get_gaussian().
 !
 !-----------------------------------------------------------------------
 !

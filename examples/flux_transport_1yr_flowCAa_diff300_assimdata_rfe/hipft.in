@@ -72,7 +72,6 @@
   advance_source = .true.
   source_rfe_model = 1
   source_rfe_total_unsigned_flux_per_hour = 105.0
-  source_rfe_sigma = 35.0
   source_rfe_lifetime = 0.3
   
 /

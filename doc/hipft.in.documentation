@@ -289,40 +289,41 @@
 ! ****** SOURCES ******
 !-----------------------------------------------------------------------
 !
-      advance_source = .false.
+  advance_source = .false.
 !
 !       ----->  Advance source terms.     
 !
-      source_rfe_model = 0
+  source_rfe_model = 0
 !
 !       ----->  Activate random flux emergence source term.  
 !       ----->  1: Spread UF evenly over cells, set cell Br=(UF/Ncells)(1/dA)
 !       ----->  2: Spread UF evenly over area,  set cell Br=(UF/4pi)(dA)/(dA)
 !    
-      source_rfe_total_unsigned_flux_per_hour = 0.
+  source_rfe_total_unsigned_flux_per_hour = 0.
 !
 !       ----->  Set the total unsigned flux (full map) per hour
 !       ----->  for the random flux source term.
 !
-      source_rfe_sigma = 1.0
+  !source_rfe_total_unsigned_flux_per_hours = <List of comma-separated values equal to # of realizations>
 !
-!       ----->  Set the spread of Br values for the random flux source term.
+!       -----> Uncomment and modify this line to set the total unsigned flux (full map) per hour across
+!       -----> the chosen number of realizations.
 !
-      source_rfe_seed = -9999
+  source_rfe_seed = -9999
 !
 !       ----->  Set the random seed for the random flux source term.  
 !
-      source_rfe_lifetime = 0.3
+  source_rfe_lifetime = 0.3
 !
 !       ----->  Set the lifetime of the random flux source terms.
 !       ----->  The source term is interpolated in time between two
 !       ----->  generated frames.  This sets the time gap between frames.
 !
-      source_from_file = .false.
+  source_from_file = .false.
 !
 !       ----->  Load a static source term from an HDF5 file.  
 !   
-      source_filename = ' '
+  source_filename = ' '
 !
 !       ----->  Filename of the HDF5 static source term.
 !      
@@ -385,36 +386,6 @@
 !       -----> Uncomment and modify these lines to set the mu limit for the custom
 !       -----> assimilation window/function across realizations.
 !
-  advance_source = .false.
-!
-!       -----> Activate the source advance.
-!
-  source_from_file = .false.
-!
-!       -----> Activate reading a source term from HDF5 file.
-!
-  source_filename = ' '
-!
-!       -----> Filename of HDF5 2D file containing the source term over the grid.
-!       -----> This is added to the other sources.
-!
-  source_rfe_model = 0
-!
-!       -----> Activate a random flux emergence (RFE) model.
-!       ----->   1: Gaussian-based total unsigned flux per time
-!       ----->      spread evenly across cells, Br calculated based on dA.
-!       ----->      Currently only set once at the beginning and used
-!       ----->      at each step.  Recalulating at each step is a planned feature.
-!
-  source_rfe_total_unsigned_flux_per_hour = 0.
-!
-!       -----> Set total unsinged flux per hour for the source term.
-!       -----> This should be in units of 1e21 Mx/hour.
-!
-  source_rfe_sigma = 1.0
-!
-!       -----> Set standard deviation for random flux emergence.
-!       -----> This roughly sets the scale for the resulting Br values?
 !
 /
 !-----------------------------------------------------------------------

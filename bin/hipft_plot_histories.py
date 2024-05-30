@@ -62,7 +62,7 @@ def argParsing():
     required=False)
 
   parser.add_argument('-utstart',
-    help='Start Date in UT: YYYY-MM-DDTHH:MM:SS',
+    help='Start Date of full data assimilation csv file (not start date of run) in UT: YYYY-MM-DDTHH:MM:SS',
     dest='utstart',
     required=False)
     
