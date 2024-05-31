@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.9.0'
-      character(*), parameter :: cdate='05/29/2024'
+      character(*), parameter :: cvers='1.9.1'
+      character(*), parameter :: cdate='05/30/2024'
 !
 end module
 !#######################################################################
@@ -6838,8 +6838,9 @@ subroutine load_source
 !
       integer :: i,j,k,ierr
 !
-      integer :: nft,nfp,num_cells
-      real(r_typ), dimension(:), allocatable :: tf,pf,rscale
+      integer :: nft,nfp,num_cells,seed_n
+      integer,     dimension(:),   allocatable :: seed_new
+      real(r_typ), dimension(:),   allocatable :: tf,pf,rscale
       real(r_typ), dimension(:,:), allocatable :: sf
       real(r_typ), dimension(:,:), allocatable :: f_tmp2d
       real(r_typ) :: get_gaussian
@@ -6919,7 +6920,11 @@ subroutine load_source
         source_rfe(:,:,:,:) = 0.
 !
         if (source_rfe_seed .ne. -9999) then
-          call RANDOM_SEED (source_rfe_seed)
+          call RANDOM_SEED (size=seed_n)
+          allocate (seed_new(seed_n))
+          seed_new(:)=source_rfe_seed
+          call RANDOM_SEED (put=seed_new)
+          deallocate (seed_new)
         else
           call RANDOM_SEED ()
         end if
@@ -9103,6 +9108,9 @@ end subroutine generate_rfe
 !   - SOURCE_RFE_SIGMA is deprecated since it was not being applied.
 !   - Small OpenMP target bug fix (thanks BKJ!).
 !   - Removed mu and sigma from get_gaussian().
+!
+! 05/30/2024, RC, Version 1.9.1:
+!   - Small fix to setting the random number seed.
 !
 !-----------------------------------------------------------------------
 !
