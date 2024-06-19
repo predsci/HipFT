@@ -6,7 +6,7 @@
   res_nt = 180
   res_np = 360
 !
-  validation_run = 3
+  validation_run = 2
 !
   time_end = 672.0
   dt_max = 1.0
@@ -16,6 +16,7 @@
   advance_flow = .true.
 !
   flow_vp_rigid_omega = -9999.0
+  flow_vt_const = -9999.0
 !
 /
 !

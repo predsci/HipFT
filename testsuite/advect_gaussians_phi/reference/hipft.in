@@ -1,6 +1,6 @@
 &hipft_input_parameters
 !
-  verbose = .true.
+  verbose = 2
   output_single_precision = .false.
 !
   res_nt = 180
@@ -15,9 +15,7 @@
 !
   advance_flow = .true.
 !
-! ****** Add a rigid rotation vp velocity (km/s) of omega*sin(theta).
-!
-  flow_vp_rigid_omega = 1.8076624395655556
+  flow_vp_rigid_omega = -9999.0
 !
 /
 !

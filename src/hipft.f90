@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.9.1'
-      character(*), parameter :: cdate='05/30/2024'
+      character(*), parameter :: cvers='1.10.0'
+      character(*), parameter :: cdate='06/19/2024'
 !
 end module
 !#######################################################################
@@ -1747,6 +1747,7 @@ subroutine load_initial_condition
       integer :: n1, n2, n3, ierr, i, j, k, lsbuf, irank
       integer, dimension(:), allocatable :: displ,lbuf
       real(r_typ) :: d1,d2, st_i_val
+      real(r_typ) :: vt_end_loc
       real(r_typ), dimension(:), allocatable :: fn1,fs1,fn2,fs2
       real(r_typ), dimension(:,:,:), allocatable :: f_local,gout
       real(r_typ), dimension(:,:), allocatable :: f_tmp2d
@@ -1976,54 +1977,33 @@ subroutine load_initial_condition
 !
       elseif (validation_run .eq. 2) then
 !
-!
-! ****** Use time to set constant phi velocity so final output is exact solution.
-! ****** for a constant phi rigid rotation velocity.
-!
-        if (iamp0) then
-          write(*,*) ' '
-          write(*,*) '   VALIDATION 2 TEST ENABLED.'
-          write(*,*) '   WARNING:  Overriding FLOW_VP_RIGID_OMEGA'
-          write(*,*) '             from',flow_vp_rigid_omega,' to ', &
-                              (twopi/(time_end-time_start))/km_s_to_rs_hr
-        end if
-        flow_vp_rigid_omega = (twopi/(time_end-time_start))/km_s_to_rs_hr
-!
-! ****** Make initial solution f and output.
-!
-        do k=1,n3
-          do j=1,n2
-            do i=1,n1
-              f_local(i,j,k) = -EXP(-(s2(j) - pi_four     )**2/validation_run_width - &
-                                     (s1(i) - pi_two      )**2/validation_run_width)  &
-                               +EXP(-(s2(j) - pi_four     )**2/validation_run_width - &
-                                     (s1(i) - threepi_two )**2/validation_run_width)
-            enddo
-          enddo
-        enddo
-!
-        if (iamp0) then
-          call write_2d_file((trim(output_map_root_filename)//'_final_analytic.h5') &
-                              ,n1,n2,f_local(:,:,1),s1,s2,ierr)
-        end if
-!
-      elseif (validation_run .eq. 3) then
-!
 ! ****** Make initial solution f and output.
 !
         allocate (fout(n1,n2,1))
 !
+        if (iamp0) then
+          write(*,*) ' '
+          write(*,*) '   VALIDATION 2 TEST ENABLED.'
+        end if
+!
 ! ****** Use time to set constant theta velocity so final output is exact solution.
 ! ****** for a constant theta velocity.
 !
-        if (iamp0) then
-          write(*,*) ' '
-          write(*,*) '   VALIDATION 3 TEST ENABLED.'
-          write(*,*) '   WARNING:  Overriding FLOW_VT_CONST'
-          write(*,*) '             from',flow_vt_const,' to ', &
+        if (ABS(flow_vt_const).gt.zero) then
+          if (iamp0) then
+            write(*,*) ' '
+            write(*,*) '   WARNING:  Overriding FLOW_VT_CONST'
+            write(*,*) '             from',flow_vt_const,' to ', &
                         (pi_two/(time_end-time_start))/km_s_to_rs_hr
-        end if
-        flow_vt_const = (pi_two/(time_end-time_start))/km_s_to_rs_hr
+          end if
+          flow_vt_const = (pi_two/(time_end-time_start))/km_s_to_rs_hr
+          vt_end_loc = threepi_four
+        else
+          vt_end_loc = pi_four
+        end if  
+!
+! ****** Use time to set constant phi velocity so final output is exact solution.
+! ****** for a constant phi rigid rotation velocity.
 !
         if (ABS(flow_vp_rigid_omega).gt.zero) then
           if (iamp0) then
@@ -2048,9 +2028,9 @@ subroutine load_initial_condition
                                +st_i_val*EXP(-(s2(j) - pi_four     )**2/validation_run_width - &
                                               (s1(i) - threepi_two )**2/validation_run_width)
 !
-              fout(i,j,k)    = -st_i_val*EXP(-(s2(j) - threepi_four)**2/validation_run_width - &
+              fout(i,j,k)    = -st_i_val*EXP(-(s2(j) - vt_end_loc  )**2/validation_run_width - &
                                               (s1(i) - pi_two      )**2/validation_run_width)  &
-                               +st_i_val*EXP(-(s2(j) - threepi_four)**2/validation_run_width - &
+                               +st_i_val*EXP(-(s2(j) - vt_end_loc  )**2/validation_run_width - &
                                               (s1(i) - threepi_two )**2/validation_run_width)
             enddo
           enddo
@@ -3116,19 +3096,6 @@ subroutine analysis_step
                             diffusion_coef_factor*(time-time_start))
         enddo
       elseif (validation_run .eq. 2) then
-        do concurrent (k=1:nr,j=1:ntm,i=1:npm-1)
-!
-          vpt = flow_vp_rigid_omega*km_s_to_rs_hr*(time-time_start)
-!
-          p1 = MODULO(pi_two+vpt,      twopi)
-          p2 = MODULO(threepi_two+vpt, twopi)
-!
-          fval(i,j,k) = -EXP(-(t(j) - pi_four)**2/validation_run_width - &
-                                     (p(i)-p1)**2/validation_run_width)  &
-                        +EXP(-(t(j) - pi_four)**2/validation_run_width - &
-                                     (p(i)-p2)**2/validation_run_width)
-        enddo
-      elseif (validation_run .eq. 3) then
         do concurrent (k=1:nr,j=1:ntm,i=1:npm-1)
 !
           vtt =       flow_vt_const*km_s_to_rs_hr*(time-time_start)
@@ -9112,6 +9079,14 @@ end subroutine generate_rfe
 ! 05/30/2024, RC, Version 1.9.1:
 !   - Small fix to setting the random number seed.
 !
+! 06/19/2024, MS/RC, Version 1.10.0:
+!   - Removed validation test 2 and replaced it with a more general 
+!     version of test 3.  Now there are only 2 validation tests.
+!     For validation test 2, one can set any nonzero value for
+!     the constant Vt and/or constant rigid Vp velocities to auto set 
+!     the velocities for the preset distances over the run time.
+!
 !-----------------------------------------------------------------------
 !
 !#######################################################################
+

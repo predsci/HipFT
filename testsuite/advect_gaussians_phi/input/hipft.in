@@ -15,6 +15,8 @@
 !
   advance_flow = .true.
 !
+  flow_vp_rigid_omega = -9999.0
+!
 /
 !
 ! Gaussians Advection
