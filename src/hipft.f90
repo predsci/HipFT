@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.10.0'
-      character(*), parameter :: cdate='06/19/2024'
+      character(*), parameter :: cvers='1.11.0'
+      character(*), parameter :: cdate='07/05/2024'
 !
 end module
 !#######################################################################
@@ -1692,28 +1692,17 @@ subroutine write_welcome_message
       write (*,*) '        Predictive Science Inc.'
       write (*,*) '        www.predsci.com'
       write (*,*) '        San Diego, California, USA 92121'
-      write (*,*)''
-      write (*,*)''
-!
-! ****** [RMC] Update this with relevent info in a nice way.
-!
-!      write (*,*) 'Start time = ',time
-!      write (*,*) 'End time = ',time_end
-!      write (*,*)
-!      write (*,*) 'Number of t mesh points = ',ntm
-!      write (*,*) 'Number of p mesh points = ',npm-1
-!      write (*,*)
-!      if (advance_diffusion) then
-!        write (*,'(a,f12.6,a)') ' Uniform diffusion = ', &
-!                                       diffusion_coef_constant,' km^2/s'
-!        write (*,*) ' Diffusion coefficient: '
-!        write (*,'(a,f12.6,a)') '   Minimum value = ', &
-!                  MINVAL(diffusion_coef/diffusion_coef_factor),' km^2/s'
-!        write (*,'(a,f12.6,a)') '   Maximum value = ', &
-!                  MAXVAL(diffusion_coef/diffusion_coef_factor),' km^2/s'
-!      end if
-      write(*,*)
-      write(*,*) "Run started at: "
+      write (*,*) ''
+      write (*,*) ''
+      write (*,*) 'Start time: ',time
+      write (*,*) 'End time:   ',time_end
+      write (*,*) ''
+      write (*,*) 'Grid Nt: ',ntm
+      write (*,*) 'Grid Np: ',npm-1
+      write (*,*) ''
+      write (*,*) 'Number of realizations: ',nr
+      write (*,*) ''
+      write (*,*) "Run started at: "
       call timestamp
       flush(OUTPUT_UNIT)
 !
@@ -4955,7 +4944,7 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
       real(r_typ) :: axabsmax, dtime_in, deltau, deltaf
       real(r_typ), dimension(:,:,:), allocatable :: Af
       real(r_typ), parameter :: safe = 0.95_r_typ
-      real(r_typ), parameter :: fmin = 1e-16_r_typ
+      real(r_typ), parameter :: fmin = 1e-14_r_typ
 !
 !-----------------------------------------------------------------------
 !
@@ -5003,19 +4992,19 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
 !
             deltau =  f(j,k,i) -  f(j-1,k,i)
             deltaf = Af(j,k,i) - Af(j-1,k,i)
-            if (deltau*deltaf.lt.0) dtime_ptl = MIN(-deltau/deltaf,dtime_ptl)
+            if (deltau*deltaf.lt.-fmin) dtime_ptl = MIN(-deltau/deltaf,dtime_ptl)
 !
             deltau =  f(j,k,i) -  f(j+1,k,i)
             deltaf = Af(j,k,i) - Af(j+1,k,i)
-            if (deltau*deltaf.lt.0) dtime_ptl = MIN(-deltau/deltaf,dtime_ptl)
+            if (deltau*deltaf.lt.-fmin) dtime_ptl = MIN(-deltau/deltaf,dtime_ptl)
 !
             deltau =  f(j,k,i) -  f(j,k-1,i)
             deltaf = Af(j,k,i) - Af(j,k-1,i)
-            if (deltau*deltaf.lt.0) dtime_ptl = MIN(-deltau/deltaf,dtime_ptl)
+            if (deltau*deltaf.lt.-fmin) dtime_ptl = MIN(-deltau/deltaf,dtime_ptl)
 !
             deltau =  f(j,k,i) -  f(j,k+1,i)
             deltaf = Af(j,k,i) - Af(j,k+1,i)
-            if (deltau*deltaf.lt.0) dtime_ptl = MIN(-deltau/deltaf,dtime_ptl)
+            if (deltau*deltaf.lt.-fmin) dtime_ptl = MIN(-deltau/deltaf,dtime_ptl)
           end if
 !
         enddo
@@ -7415,15 +7404,15 @@ subroutine advection_operator_upwind (ftemp,aop)
 ! ****** Get the advection operator at the poles.
 !
       do concurrent (i=1:nr)
-        fn = 0.
-        fs = 0.
-        do k=2,npm-1
+        fn = zero
+        fs = zero
+        do concurrent(k=2:npm-1) reduce(+:fn,fs)
           fn = fn + flux_t(   2,k,i)*dp(k)
           fs = fs + flux_t(ntm1,k,i)*dp(k)
         enddo
 ! ****** Note that the south pole needs a sign change since the
 ! ****** theta flux direction is reversed.
-        do k=2,npm-1
+        do concurrent(k=2:npm-1)
           aop(  1,k,i) =  fn*bc_flow_npole_fac
           aop(ntm,k,i) = -fs*bc_flow_spole_fac
         enddo
@@ -7636,13 +7625,13 @@ subroutine advection_operator_weno3 (ftemp,aop)
       do concurrent (i=1:nr)
         fn = zero
         fs = zero
-        do k=2,npm-1
+        do concurrent(k=2:npm-1) reduce(+:fn,fs)
           fn = fn + flux_t(   2,k,i)*dp(k)
           fs = fs + flux_t(ntm1,k,i)*dp(k)
         enddo
 ! ****** Note that the south pole needs a sign change since the
 ! ****** theta flux direction is reversed.
-        do k=2,npm-1
+        do concurrent(k=2:npm-1)
           aop(  1,k,i) =  fn*bc_flow_npole_fac
           aop(ntm,k,i) = -fs*bc_flow_spole_fac
         enddo
@@ -7703,7 +7692,7 @@ subroutine diffusion_operator_cd (x,y)
       do concurrent(i=1:nr)
         fn2_fn1 = zero
         fs2_fs1 = zero
-        do k=2,npm-1
+        do concurrent(k=2:npm-1) reduce(+:fn2_fn1,fs2_fs1)
           fn2_fn1 = fn2_fn1 + (diffusion_coef(1    ,k,i)        &
                             +  diffusion_coef(2    ,k,i))       &
                              * (x(2    ,k,i) - x(1  ,k,i))*dp(k)
@@ -7711,7 +7700,7 @@ subroutine diffusion_operator_cd (x,y)
                             +  diffusion_coef(nt   ,k,i))       &
                              * (x(ntm-1,k,i) - x(ntm,k,i))*dp(k)
         enddo
-        do k=1,npm
+        do concurrent(k=1:npm)
           y(  1,k,i) = fn2_fn1*dt_i(  1)*dt_i(  1)*pi_i
           y(ntm,k,i) = fs2_fs1*dt_i(ntm)*dt_i(ntm)*pi_i
         enddo
@@ -9085,6 +9074,15 @@ end subroutine generate_rfe
 !     For validation test 2, one can set any nonzero value for
 !     the constant Vt and/or constant rigid Vp velocities to auto set 
 !     the velocities for the preset distances over the run time.
+!
+! 07/05/2024, RC, Version 1.11.0:
+!   - Added back DC to inner boundary condition loops 
+!     since the Intel compiler has been fixed
+!     (see 0.31.0 of 12/05/2023 for details).
+!   - Changed PTL numerical check value to 1e-14 instead of 1e-16.
+!     Also added it for the delta check below zero.
+!     The PTL was failing (giving tiny dt) for HipFT runs
+!     at super high resolutions.
 !
 !-----------------------------------------------------------------------
 !
