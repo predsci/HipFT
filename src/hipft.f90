@@ -1204,6 +1204,20 @@ subroutine setup
 !
       time = time_start
 !
+! ****** Write out some basic run info.
+!
+      if (iamp0.and.verbose.gt.0) then
+        write (*,*) ''
+        write (*,*) '    Start time: ',time
+        write (*,*) '    End time:   ',time_end
+        write (*,*) ''
+        write (*,*) '    Grid Nt: ',ntm
+        write (*,*) '    Grid Np: ',npm-1
+        write (*,*) ''
+        write (*,*) '    Number of realizations: ',nr
+        write (*,*) ''
+      endif
+
       if (advance_flow) then
         if (iamp0) write(*,*) '--> Loading flows...'
         call load_flows
@@ -1693,16 +1707,8 @@ subroutine write_welcome_message
       write (*,*) '        www.predsci.com'
       write (*,*) '        San Diego, California, USA 92121'
       write (*,*) ''
-      write (*,*) ''
-      write (*,*) 'Start time: ',time
-      write (*,*) 'End time:   ',time_end
-      write (*,*) ''
-      write (*,*) 'Grid Nt: ',ntm
-      write (*,*) 'Grid Np: ',npm-1
-      write (*,*) ''
-      write (*,*) 'Number of realizations: ',nr
-      write (*,*) ''
       write (*,*) "Run started at: "
+      write (*,*) ''
       call timestamp
       flush(OUTPUT_UNIT)
 !
