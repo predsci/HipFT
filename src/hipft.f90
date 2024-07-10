@@ -1995,7 +1995,7 @@ subroutine load_initial_condition
           vt_end_loc = threepi_four
         else
           vt_end_loc = pi_four
-        end if  
+        end if
 !
 ! ****** Use time to set constant phi velocity so final output is exact solution.
 ! ****** for a constant phi rigid rotation velocity.
@@ -3119,9 +3119,15 @@ subroutine analysis_step
         h_valerr_tmp   = zero
         sumfval2       = zero
 !
-        do concurrent (j=1:npm-2,i=1:ntm) reduce(+:sumfval2,h_valerr_tmp) &
-                                          reduce(max:h_maxbr_tmp)         &
-                                          reduce(min:h_minbr_tmp,h_minabsbr_tmp)
+!        do concurrent (j=1:npm-2,i=1:ntm) reduce(+:sumfval2,h_valerr_tmp) &
+!                                          reduce(max:h_maxbr_tmp)         &
+!                                          reduce(min:h_minbr_tmp,h_minabsbr_tmp)
+!
+!$omp target teams distribute parallel do collapse(2) reduction(+:sumfval2,h_valerr_tmp) &
+!$omp&                                                reduction(max:h_maxbr_tmp) &
+!$omp&                                                reduction(min:h_minbr_tmp,h_minabsbr_tmp)
+       do j=1,npm-2
+         do i=1,ntm
           h_minbr_tmp = min(f(i,j,k),h_minbr_tmp)
           h_maxbr_tmp = max(f(i,j,k),h_maxbr_tmp)
           h_minabsbr_tmp = min(abs(f(i,j,k)),h_minabsbr_tmp)
@@ -3129,6 +3135,7 @@ subroutine analysis_step
           fv2 = fval(j,i,k)**2
           h_valerr_tmp = h_valerr_tmp + fv
           sumfval2 = sumfval2 + fv2
+          enddo
         enddo
 !
         h_minbr(k)    = h_minbr_tmp
@@ -4896,12 +4903,18 @@ subroutine get_dtime_diffusion_euler (dtime_exp)
 !
       max_eig = 0.
 !
-      do concurrent (i=1:nr,k=2:npm-1,j=2:ntm-1) reduce(max:max_eig)
+!      do concurrent (i=1:nr,k=2:npm-1,j=2:ntm-1) reduce(max:max_eig)
+!$omp target teams distribute parallel do collapse(3) reduction(max:max_eig)
+       do i=1,nr
+         do k=2,npm-1
+           do j=2,ntm-1
         gersh_rad = zero
         do d=1,5
           gersh_rad = gersh_rad+ABS(coef(j,k,d,i))
         enddo
         max_eig = MAX(gersh_rad,max_eig)
+          enddo
+        enddo
       enddo
 !
 ! *** Compute the Euler time-step bound.
@@ -4971,10 +4984,16 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
 !
       axabsmax = -one
 !
-      do concurrent (i=1:nr,k=1:npm,j=1:ntm) reduce(max:axabsmax)
+!      do concurrent (i=1:nr,k=1:npm,j=1:ntm) reduce(max:axabsmax)
+!$omp target teams distribute parallel do collapse(3) reduction(max:axabsmax)
+       do i=1,nr
+         do k=1,npm
+           do j=1,ntm
         if (ABS(f(j,k,i)) .gt. fmin) then
           axabsmax = MAX(ABS(Af(j,k,i)),axabsmax)
         end if
+          enddo
+        enddo
       enddo
 !
 ! ****** Get maximum over all MPI ranks.
@@ -4988,7 +5007,11 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
 !
       if (axabsmax .gt. zero) then
 !
-        do concurrent (i=1:nr,k=2:npm-1,j=2:ntm-1) reduce(min:dtime_ptl)
+!        do concurrent (i=1:nr,k=2:npm-1,j=2:ntm-1) reduce(min:dtime_ptl)
+!$omp target teams distribute parallel do collapse(3) reduction(min:dtime_ptl)
+         do i=1,nr
+           do k=2,npm-1
+             do j=2,ntm-1
 !
 ! ****** If we are at the location of max(|F|), calculate the PTL.
 ! ****** If there are multiple locations of |F|=max(|F|), take min(PTL).
@@ -5013,6 +5036,8 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
             if (deltau*deltaf.lt.-fmin) dtime_ptl = MIN(-deltau/deltaf,dtime_ptl)
           end if
 !
+            enddo
+          enddo
         enddo
 !
 ! ****** Get global minimum across all MPI ranks.
@@ -7044,12 +7069,18 @@ subroutine get_flow_dtmax (dtmaxflow)
 !
       dtmax = huge(one)
 !
-      do concurrent (i=1:nr,k=2:npm-1,j=2:ntm-1) reduce(min:dtmax)
+!      do concurrent (i=1:nr,k=2:npm-1,j=2:ntm-1) reduce(min:dtmax)
+!$omp target teams distribute parallel do collapse(3) reduction(min:dtmax)
+       do i=1,nr
+         do k=2,npm-1
+           do j=2,ntm-1
         kdotv = MAX(ABS(vt(j,k,i)),ABS(vt(j+1,k,i)))*dt_i(j) &
               + MAX(ABS(vp(j,k,i)),ABS(vp(j,k+1,i)))*st_i(j)*dp_i(k)
 !        deltat = (one/sqrt(two))/MAX(kdotv,small_value)
         deltat = half/MAX(kdotv,small_value)
         dtmax = MIN(dtmax,deltat)
+          enddo
+        enddo
       enddo
 !
       dtmaxflow = safety*dtmax
@@ -7409,16 +7440,19 @@ subroutine advection_operator_upwind (ftemp,aop)
 !
 ! ****** Get the advection operator at the poles.
 !
-      do concurrent (i=1:nr)
+!$omp target teams distribute private(fn,fs)
+      do i=1,nr
         fn = zero
         fs = zero
-        do concurrent(k=2:npm-1) reduce(+:fn,fs)
+!$omp parallel do reduction(+:fn,fs)
+        do k=2,npm-1
           fn = fn + flux_t(   2,k,i)*dp(k)
           fs = fs + flux_t(ntm1,k,i)*dp(k)
         enddo
 ! ****** Note that the south pole needs a sign change since the
 ! ****** theta flux direction is reversed.
-        do concurrent(k=2:npm-1)
+!$omp parallel do
+        do k=2,npm-1
           aop(  1,k,i) =  fn*bc_flow_npole_fac
           aop(ntm,k,i) = -fs*bc_flow_spole_fac
         enddo
@@ -7628,16 +7662,19 @@ subroutine advection_operator_weno3 (ftemp,aop)
 !
 ! ****** Get the advection operator at the poles.
 !
-      do concurrent (i=1:nr)
+!$omp target teams distribute private(fn,fs)
+      do i=1,nr
         fn = zero
         fs = zero
-        do concurrent(k=2:npm-1) reduce(+:fn,fs)
+!$omp parallel do reduction(+:fn,fs)
+        do k=2,npm-1
           fn = fn + flux_t(   2,k,i)*dp(k)
           fs = fs + flux_t(ntm1,k,i)*dp(k)
         enddo
 ! ****** Note that the south pole needs a sign change since the
 ! ****** theta flux direction is reversed.
-        do concurrent(k=2:npm-1)
+!$omp parallel do
+        do k=2,npm-1
           aop(  1,k,i) =  fn*bc_flow_npole_fac
           aop(ntm,k,i) = -fs*bc_flow_spole_fac
         enddo
@@ -7695,10 +7732,12 @@ subroutine diffusion_operator_cd (x,y)
 !
 ! ****** Compute boundary points.
 !
-      do concurrent(i=1:nr)
+!$omp target teams distribute private(fn2_fn1,fs2_fs1)
+      do i=1,nr
         fn2_fn1 = zero
         fs2_fs1 = zero
-        do concurrent(k=2:npm-1) reduce(+:fn2_fn1,fs2_fs1)
+!$omp parallel do reduction(+:fn2_fn1,fs2_fs1)
+        do k=2,npm-1
           fn2_fn1 = fn2_fn1 + (diffusion_coef(1    ,k,i)        &
                             +  diffusion_coef(2    ,k,i))       &
                              * (x(2    ,k,i) - x(1  ,k,i))*dp(k)
@@ -7706,7 +7745,8 @@ subroutine diffusion_operator_cd (x,y)
                             +  diffusion_coef(nt   ,k,i))       &
                              * (x(ntm-1,k,i) - x(ntm,k,i))*dp(k)
         enddo
-        do concurrent(k=1:npm)
+!$omp parallel do
+        do k=1,npm
           y(  1,k,i) = fn2_fn1*dt_i(  1)*dt_i(  1)*pi_i
           y(ntm,k,i) = fs2_fs1*dt_i(ntm)*dt_i(ntm)*pi_i
         enddo
@@ -9075,14 +9115,14 @@ end subroutine generate_rfe
 !   - Small fix to setting the random number seed.
 !
 ! 06/19/2024, MS/RC, Version 1.10.0:
-!   - Removed validation test 2 and replaced it with a more general 
+!   - Removed validation test 2 and replaced it with a more general
 !     version of test 3.  Now there are only 2 validation tests.
 !     For validation test 2, one can set any nonzero value for
-!     the constant Vt and/or constant rigid Vp velocities to auto set 
+!     the constant Vt and/or constant rigid Vp velocities to auto set
 !     the velocities for the preset distances over the run time.
 !
 ! 07/05/2024, RC, Version 1.11.0:
-!   - Added back DC to inner boundary condition loops 
+!   - Added back DC to inner boundary condition loops
 !     since the Intel compiler has been fixed
 !     (see 0.31.0 of 12/05/2023 for details).
 !   - Changed PTL numerical check value to 1e-14 instead of 1e-16.
