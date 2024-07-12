@@ -9081,14 +9081,14 @@ end subroutine generate_rfe
 !   - Small fix to setting the random number seed.
 !
 ! 06/19/2024, MS/RC, Version 1.10.0:
-!   - Removed validation test 2 and replaced it with a more general 
+!   - Removed validation test 2 and replaced it with a more general
 !     version of test 3.  Now there are only 2 validation tests.
 !     For validation test 2, one can set any nonzero value for
-!     the constant Vt and/or constant rigid Vp velocities to auto set 
+!     the constant Vt and/or constant rigid Vp velocities to auto set
 !     the velocities for the preset distances over the run time.
 !
 ! 07/05/2024, RC, Version 1.11.0:
-!   - Added back DC to inner boundary condition loops 
+!   - Added back DC to inner boundary condition loops
 !     since the Intel compiler has been fixed
 !     (see 0.31.0 of 12/05/2023 for details).
 !   - Changed PTL numerical check value to 1e-14 instead of 1e-16.
