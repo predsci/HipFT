@@ -45,9 +45,14 @@ module ident
 ! ****** Set the name, version, and date of code.
 !-----------------------------------------------------------------------
 !
-      character(*), parameter :: cname='HipFT'
+      character(*), parameter :: cname='HipFT_INTEL_TMP'
       character(*), parameter :: cvers='1.19.0'
       character(*), parameter :: cdate='02/08/2025'
+!     BRANCH INFO:
+!     Added omp parallel loops to nested DC loops.
+!     This allows the intel compiler to parallelize those loops on the
+!     gpus much better.  This branch will go away once the compiler is
+!     updated to handle the situation automatically.
 !
 end module
 !#######################################################################
@@ -6127,9 +6132,9 @@ subroutine check_2d_or_3d (fname,is_2d,ierr)
 ! ****** Check if the dataset is 2D or 3D.
 !
       if (s_ndim == 2) then
-        is_2d = .true.  
+        is_2d = .true.
       else if (s_ndim == 3) then
-        is_2d = .false.  
+        is_2d = .false.
       else
         write (*,*) 'Error: Unsupported number of dimensions.'
         call h5Dclose_f (dset_id,ierr)
@@ -7686,12 +7691,14 @@ subroutine advection_operator_upwind (ftemp,aop)
       do concurrent (i=1:nr)
         fn = zero
         fs = zero
+!$omp parallel loop
         do concurrent(k=2:npm-1) reduce(+:fn,fs)
           fn = fn + flux_t(   2,k,i)*dp(k)
           fs = fs + flux_t(ntm1,k,i)*dp(k)
         enddo
 ! ****** Note that the south pole needs a sign change since the
 ! ****** theta flux direction is reversed.
+!$omp parallel loop
         do concurrent(k=2:npm-1)
           aop(  1,k,i) =  fn*bc_flow_npole_fac
           aop(ntm,k,i) = -fs*bc_flow_spole_fac
@@ -7902,12 +7909,14 @@ subroutine advection_operator_weno3 (ftemp,aop)
       do concurrent (i=1:nr)
         fn = zero
         fs = zero
+!$omp parallel loop
         do concurrent(k=2:npm-1) reduce(+:fn,fs)
           fn = fn + flux_t(   2,k,i)*dp(k)
           fs = fs + flux_t(nt-1,k,i)*dp(k)
         enddo
 ! ****** Note that the south pole needs a sign change since the
 ! ****** theta flux direction is reversed.
+!$omp parallel loop
         do concurrent(k=2:npm-1)
           aop(  1,k,i) =  fn*bc_flow_npole_fac
           aop(ntm,k,i) = -fs*bc_flow_spole_fac
@@ -7969,6 +7978,7 @@ subroutine diffusion_operator_cd (x,y)
       do concurrent(i=1:nr)
         fn = zero
         fs = zero
+!$omp parallel loop
         do concurrent(k=2:npm-1) reduce(+:fn,fs)
           fn = fn + (diffusion_coef(1    ,k,i)        &
                    + diffusion_coef(2    ,k,i))       &
@@ -7977,6 +7987,7 @@ subroutine diffusion_operator_cd (x,y)
                    + diffusion_coef(nt   ,k,i))       &
                   * (x(ntm,k,i) - x(ntm-1,k,i))*dp(k)
         enddo
+!$omp parallel loop
         do concurrent(k=1:npm)
           y(  1,k,i) =  fn*bc_diffusion_npole_fac
           y(ntm,k,i) = -fs*bc_diffusion_spole_fac
