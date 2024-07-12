@@ -45,7 +45,7 @@ module ident
 ! ****** Set the name, version, and date of code.
 !-----------------------------------------------------------------------
 !
-      character(*), parameter :: cname='HipFT'
+      character(*), parameter :: cname='HipFT_WACCPD'
       character(*), parameter :: cvers='1.11.0'
       character(*), parameter :: cdate='07/05/2024'
 !
@@ -3119,10 +3119,6 @@ subroutine analysis_step
         h_valerr_tmp   = zero
         sumfval2       = zero
 !
-!        do concurrent (j=1:npm-2,i=1:ntm) reduce(+:sumfval2,h_valerr_tmp) &
-!                                          reduce(max:h_maxbr_tmp)         &
-!                                          reduce(min:h_minbr_tmp,h_minabsbr_tmp)
-!
 !$omp target teams distribute parallel do collapse(2) reduction(+:sumfval2,h_valerr_tmp) &
 !$omp&                                                reduction(max:h_maxbr_tmp) &
 !$omp&                                                reduction(min:h_minbr_tmp,h_minabsbr_tmp)
@@ -4903,7 +4899,6 @@ subroutine get_dtime_diffusion_euler (dtime_exp)
 !
       max_eig = 0.
 !
-!      do concurrent (i=1:nr,k=2:npm-1,j=2:ntm-1) reduce(max:max_eig)
 !$omp target teams distribute parallel do collapse(3) reduction(max:max_eig)
        do i=1,nr
          do k=2,npm-1
@@ -4984,7 +4979,6 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
 !
       axabsmax = -one
 !
-!      do concurrent (i=1:nr,k=1:npm,j=1:ntm) reduce(max:axabsmax)
 !$omp target teams distribute parallel do collapse(3) reduction(max:axabsmax)
        do i=1,nr
          do k=1,npm
@@ -5007,7 +5001,6 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
 !
       if (axabsmax .gt. zero) then
 !
-!        do concurrent (i=1:nr,k=2:npm-1,j=2:ntm-1) reduce(min:dtime_ptl)
 !$omp target teams distribute parallel do collapse(3) reduction(min:dtime_ptl)
          do i=1,nr
            do k=2,npm-1
@@ -7069,7 +7062,6 @@ subroutine get_flow_dtmax (dtmaxflow)
 !
       dtmax = huge(one)
 !
-!      do concurrent (i=1:nr,k=2:npm-1,j=2:ntm-1) reduce(min:dtmax)
 !$omp target teams distribute parallel do collapse(3) reduction(min:dtmax)
        do i=1,nr
          do k=2,npm-1
