@@ -45,7 +45,7 @@ module ident
 ! ****** Set the name, version, and date of code.
 !-----------------------------------------------------------------------
 !
-      character(*), parameter :: cname='HipFT'
+      character(*), parameter :: cname='HipFT_WACCPD_INTEL_TMP'
       character(*), parameter :: cvers='1.11.0'
       character(*), parameter :: cdate='07/05/2024'
 !
@@ -1995,7 +1995,7 @@ subroutine load_initial_condition
           vt_end_loc = threepi_four
         else
           vt_end_loc = pi_four
-        end if  
+        end if
 !
 ! ****** Use time to set constant phi velocity so final output is exact solution.
 ! ****** for a constant phi rigid rotation velocity.
@@ -7412,12 +7412,14 @@ subroutine advection_operator_upwind (ftemp,aop)
       do concurrent (i=1:nr)
         fn = zero
         fs = zero
+!$omp parallel loop
         do concurrent(k=2:npm-1) reduce(+:fn,fs)
           fn = fn + flux_t(   2,k,i)*dp(k)
           fs = fs + flux_t(ntm1,k,i)*dp(k)
         enddo
 ! ****** Note that the south pole needs a sign change since the
 ! ****** theta flux direction is reversed.
+!$omp parallel loop
         do concurrent(k=2:npm-1)
           aop(  1,k,i) =  fn*bc_flow_npole_fac
           aop(ntm,k,i) = -fs*bc_flow_spole_fac
@@ -7631,12 +7633,14 @@ subroutine advection_operator_weno3 (ftemp,aop)
       do concurrent (i=1:nr)
         fn = zero
         fs = zero
+!$omp parallel loop
         do concurrent(k=2:npm-1) reduce(+:fn,fs)
           fn = fn + flux_t(   2,k,i)*dp(k)
           fs = fs + flux_t(ntm1,k,i)*dp(k)
         enddo
 ! ****** Note that the south pole needs a sign change since the
 ! ****** theta flux direction is reversed.
+!$omp parallel loop
         do concurrent(k=2:npm-1)
           aop(  1,k,i) =  fn*bc_flow_npole_fac
           aop(ntm,k,i) = -fs*bc_flow_spole_fac
@@ -7698,6 +7702,7 @@ subroutine diffusion_operator_cd (x,y)
       do concurrent(i=1:nr)
         fn2_fn1 = zero
         fs2_fs1 = zero
+!$omp parallel loop
         do concurrent(k=2:npm-1) reduce(+:fn2_fn1,fs2_fs1)
           fn2_fn1 = fn2_fn1 + (diffusion_coef(1    ,k,i)        &
                             +  diffusion_coef(2    ,k,i))       &
@@ -7706,6 +7711,7 @@ subroutine diffusion_operator_cd (x,y)
                             +  diffusion_coef(nt   ,k,i))       &
                              * (x(ntm-1,k,i) - x(ntm,k,i))*dp(k)
         enddo
+!$omp parallel loop
         do concurrent(k=1:npm)
           y(  1,k,i) = fn2_fn1*dt_i(  1)*dt_i(  1)*pi_i
           y(ntm,k,i) = fs2_fs1*dt_i(ntm)*dt_i(ntm)*pi_i
