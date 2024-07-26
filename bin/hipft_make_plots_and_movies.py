@@ -138,10 +138,10 @@ def run(args):
         if 'dim3' in list(f1.keys()):
           dim3 = f1['dim3'].shape[0]
           twoD=False
-      if twoD:
-        fileOut = os.path.basename(file).replace('.h5','.png')
-        plot2d(TITLE,args,file,fileOut)
-      elif (args.s):
+        if twoD:
+          fileOut = os.path.basename(file).replace('.h5','.png')
+          plot2d(TITLE,args,file,fileOut)
+        elif (args.s):
         if (args.s > dim3):
           print("Slice requested is outside range defaulting to last slice : "+ str(dim3))
           extractANDplot(TITLE,args,file, dim3)
