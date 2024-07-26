@@ -142,14 +142,14 @@ def run(args):
           fileOut = os.path.basename(file).replace('.h5','.png')
           plot2d(TITLE,args,file,fileOut)
         elif (args.s):
-        if (args.s > dim3):
-          print("Slice requested is outside range defaulting to last slice : "+ str(dim3))
-          extractANDplot(TITLE,args,file, dim3)
-        else:
-          extractANDplot(TITLE,args,file, args.s)
-      else:
-        for i in range(1,dim3):
-          extractANDplot(TITLE,args,file, i)
+          if (args.s > dim3):
+            print("Slice requested is outside range defaulting to last slice : "+ str(dim3))
+            extractANDplot(TITLE,args,file, dim3)
+          else:
+            extractANDplot(TITLE,args,file, args.s)
+    else:
+      for i in range(1,dim3):
+        extractANDplot(TITLE,args,file, i)
   if os.path.exists("tmp_file.h5"):
     os.remove("tmp_file.h5")
 
