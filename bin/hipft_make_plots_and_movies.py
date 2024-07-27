@@ -116,10 +116,10 @@ def run(args):
       for line in ftmp:
         title_str.append(str(float(line.split()[1]))+' hours')
   else:
-      idx=0
-      for filetmp in sorted_listdir:
-          idx+=1
-          title_str.append("File number: {:06d}".format(idx))
+    idx=0
+    for filetmp in sorted_listdir:
+      idx+=1
+      title_str.append("File number: {:06d}".format(idx))
 
   if not os.path.exists(args.datadir+'/plots'):
     os.makedirs(args.datadir+'/plots')
@@ -150,6 +150,7 @@ def run(args):
     else:
       for i in range(1,dim3):
         extractANDplot(TITLE,args,file, i)
+
   if os.path.exists("tmp_file.h5"):
     os.remove("tmp_file.h5")
 
@@ -176,6 +177,7 @@ def run(args):
 
   for filetmp in sorted(os.listdir(args.datadir+'/plots/tmp')):
     os.remove(filetmp)
+
   os.chdir(args.datadir+'/plots')
   os.rmdir(args.datadir+'/plots/tmp')
 
