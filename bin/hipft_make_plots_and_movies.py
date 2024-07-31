@@ -7,7 +7,7 @@ import signal
 import sys
 from pathlib import Path
 
-# Version 2.3.0
+# Version 2.3.1
 
 def handle_int(signum, frame):
     print('You pressed Ctrl+C! Stopping!')
@@ -100,7 +100,13 @@ def run(args):
 
   date_fmt = ''
 
-  sorted_listdir = sorted(os.listdir(args.datadir))
+  h5_files_tmp = [file for file in os.listdir(directory_path) if file.endswith('.h5')]
+
+  sorted_listdir = sorted(h5_files_tmp)
+
+  if len(sorted_listdir) < 1:
+    print('No .h5 files found.')
+    exit()
 
   if os.path.exists(args.mldfile):
     with open(args.mldfile, "r") as ftmp:
@@ -127,9 +133,14 @@ def run(args):
   os.chdir(args.datadir+'/plots')
 
   idx=0
+  twoD = None
   for filetmp in sorted_listdir:
     file=args.datadir+'/'+filetmp
     if filetmp.endswith('.h5'):
+      re_idx = re.search("idx[0-9]+",filetmp)
+      if not re_idx:
+        print("Expecting the file "+ filetmp  +" to contain an idx[0-9]+ number.")
+        continue
       idxx=int(re.search("[0-9]+",re.search("idx[0-9]+",filetmp).group()).group())
       idx+=1
       TITLE=date_fmt+title_str[idx-1]
@@ -147,9 +158,6 @@ def run(args):
             extractANDplot(TITLE,args,file, dim3)
           else:
             extractANDplot(TITLE,args,file, args.s)
-    else:
-      for i in range(1,dim3):
-        extractANDplot(TITLE,args,file, i)
 
   if os.path.exists("tmp_file.h5"):
     os.remove("tmp_file.h5")
@@ -160,7 +168,10 @@ def run(args):
   os.chdir(args.datadir+'/plots/tmp')
 
   if not args.nomovie:
-    if twoD:
+    if twoD is None:
+      print('No files found to make movie from.')
+      exit()
+    elif twoD:
       for filetmp in sorted(os.listdir(args.datadir+'/plots')):
         file=args.datadir+'/plots/'+filetmp
         if filetmp.endswith('.png'):
