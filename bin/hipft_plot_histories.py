@@ -9,7 +9,7 @@ from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_
 import os
 import itertools
 
-# Version 1.8.1
+# Version 1.8.2
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -320,15 +320,14 @@ def run(args):
 
     samples = int(args.samples)
 
-    number_of_data_points = len(hist_sol_full.iloc[:,0])
-
-    if samples == -1:
-        skip = 1
-    else:
-        skip = int(np.floor(np.amax([1,number_of_data_points/samples])))
-
+    number_of_data_points = len(hist_sol_full)
+    
     #thin out data in hist_sol
-    hist_sol = hist_sol_full[::skip]
+    if samples > 1:
+      indices = np.linspace(0, number_of_data_points-1, samples, endpoint=True, dtype=int)
+      hist_sol = hist_sol_full.iloc[indices]
+    else:
+      hist_sol = hist_sol_full
 
     time_list.append(np.array(hist_sol['TIME']))
     fluxp_list.append(np.array(hist_sol['FLUX_POSITIVE']))
