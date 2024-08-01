@@ -100,7 +100,7 @@ def run(args):
 
   date_fmt = ''
 
-  h5_files_tmp = [file for file in os.listdir(directory_path) if file.endswith('.h5')]
+  h5_files_tmp = [file for file in os.listdir(args.datadir) if file.endswith('.h5')]
 
   sorted_listdir = sorted(h5_files_tmp)
 
