@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.11.0'
-      character(*), parameter :: cdate='07/05/2024'
+      character(*), parameter :: cvers='1.12.0'
+      character(*), parameter :: cdate='08/06/2024'
 !
 end module
 !#######################################################################
@@ -687,6 +687,13 @@ module input_parameters
       character(512) :: assimilate_data_map_root_dir = '.'
 !
 ! ****** Custom assimilation options.
+!
+! *** Activate "add" mode where the incoming assimilation data is added
+! *** to the solution instead of blended.
+!
+      logical :: assimilate_data_add = .false.
+!
+! *** Activate custom assimilation function.
 !
       logical :: assimilate_data_custom_from_mu = .false.
 !
@@ -3702,7 +3709,7 @@ subroutine load_flow_from_files
 ! ****** VT (NT,NPM) ******
 !
        if (iamp0) then
-         flowfile_t = TRIM(flow_root_dir)//"/" &
+         flowfile_t = TRIM(flow_root_dir)//"/"&
                     //TRIM(flow_from_files_rel_path_t(flow_from_file_current_idx))
          call read_2d_file (flowfile_t,ln1,ln2,flow_t,s1,s2,ierr)
          deallocate(s1)
@@ -3961,6 +3968,8 @@ subroutine load_data_assimilation
                      trim(map_files_rel_path(1))
         write (*,*) '   LOAD_DATA_ASSIMILATION: File name of first used map:     ', &
                      trim(map_files_rel_path(i))
+        write (*,*) '   LOAD_DATA_ASSIMILATION: Map root directory:     ', &
+                     trim(assimilate_data_map_root_dir)
       end if
 !
 ! ****** Find indices of latitude limit in main mesh tvec.
@@ -4014,9 +4023,15 @@ subroutine assimilate_new_data (new_data)
       allocate(deltaf(ntm,npm,nr))
 !$omp target enter data map(alloc:deltaf)
 
-      do concurrent (i=1:nr,k=1:npm1,j=1:ntm)
-        deltaf(j,k,i) = new_data(k,j,2,i)*(new_data(k,j,1,i) - f(j,k,i))
-      enddo
+      if (assimilate_data_add) then
+        do concurrent (i=1:nr,k=1:npm1,j=1:ntm)
+          deltaf(j,k,i) = new_data(k,j,2,i)*new_data(k,j,1,i)
+        enddo
+      else
+        do concurrent (i=1:nr,k=1:npm1,j=1:ntm)
+          deltaf(j,k,i) = new_data(k,j,2,i)*(new_data(k,j,1,i) - f(j,k,i))
+        enddo
+      end if
       call set_periodic_bc_3d (deltaf,ntm,npm,nr)
 !
 ! ****** Balance the added flux if requested.
@@ -4078,14 +4093,18 @@ subroutine apply_data_assimilation
       if (assimilate_data.and.time.ge.time_of_next_input_map) then
 !
         if (iamp0) then
+!
+          mapfile = TRIM(assimilate_data_map_root_dir)//"/"&
+                    //TRIM(map_files_rel_path(current_map_input_idx))
+!
           if (verbose.gt.0) then
             write(*,*)
             write(*,*) '   UPDATE_FIELD: Loading field index ',current_map_input_idx
             write(*,*) '   UPDATE_FIELD: Time of next input map: ',time_of_next_input_map
+            write(*,*) '   UPDATE_FIELD: assimilate_data_map_root_dir: ',TRIM(assimilate_data_map_root_dir)
+            write(*,*) '   UPDATE_FIELD: map_files_rel_path(curr): ',TRIM(map_files_rel_path(current_map_input_idx))
+            write(*,*) '   UPDATE_FIELD: Map file name: ',TRIM(mapfile)
           end if
-!
-          mapfile = TRIM(assimilate_data_map_root_dir)//"/"&
-                    //TRIM(map_files_rel_path(current_map_input_idx))
 !
           call read_3d_file (mapfile,npm_nd,ntm_nd,nslices,new_data2d,s1,s2,s3,ierr)
 ! ******  TODO:  Add error checking here
@@ -8121,6 +8140,7 @@ subroutine read_input_file
                assimilate_data_lat_limits,                             &
                assimilate_data_mu_limit,                               &
                assimilate_data_mu_limits,                              &
+               assimilate_data_add,                                    &
                advance_source,                                         &
                source_from_file,                                       &
                source_filename,                                        &
@@ -8761,7 +8781,7 @@ end subroutine generate_rfe
 ! 07/15/2022, RC, Version 0.12.0:
 !   - Added time dependent flows from file.
 !     Activate with input flag "-use_flow_from_files".
-!     Must set flag "-assimilate_data_map_root_dir" to the location
+!     Must set flag "-flow_root_dir" to the location
 !     of the flow files, and "-flow_list_filename" to the location
 !     of the csv file listing all files.  This file must be in a
 !     specific format which is currently output by the ConFlow code
@@ -9090,7 +9110,11 @@ end subroutine generate_rfe
 !     The PTL was failing (giving tiny dt) for HipFT runs
 !     at super high resolutions.
 !
+! 08/06/2024, RC, Version 1.12.0:
+!   - Added new data assimilation mode that adds in the assimilated data
+!     and uses the weight layer as a spatially dependent multiplier.
+!     To use, set: ASSIMILATE_DATA_ADD=.TRUE.
+!
 !-----------------------------------------------------------------------
 !
 !#######################################################################
-
