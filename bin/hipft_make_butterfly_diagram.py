@@ -167,12 +167,12 @@ def run(args):
         new_data[:,:,i] = ave_data
         i+=1
       elif (args.slices):
+        xvec, yvec, zvec, data_in = ps.rdhdf_3d(filename)
         dim3 = len(args.slices)
         if firstPass:
           new_data=np.zeros((dim3,len(yvec), len(range(int(args.t0),int(args.tf)+1))))
           firstPass = False
         j = 0
-        xvec, yvec, zvec, data_in = ps.rdhdf_3d(filename)
         for islice in args.slices:
           data = np.squeeze(data_in[islice-1,:,:])
           ave_data = np.average(data, axis=1)
@@ -180,19 +180,19 @@ def run(args):
           j+=1
         i+=1
       else:
+        xvec, yvec, zvec, data_in = ps.rdhdf_3d(filename)
         if firstPass:
           new_data=np.zeros((len(yvec), len(range(int(args.t0),int(args.tf)+1))))
           firstPass = False
-        xvec, yvec, zvec, data_in = ps.rdhdf_3d(filename)
         data = np.squeeze(data_in[int(args.slice)-1,:,:])
         ave_data = np.average(data, axis=1)
         new_data[:,i] = ave_data
         i+=1
     else:
+      xvec, yvec, data = ps.rdhdf_2d(filename)
       if firstPass:
         new_data=np.zeros((len(yvec), len(range(int(args.t0),int(args.tf)+1))))
         firstPass = False
-      xvec, yvec, data = ps.rdhdf_2d(filename)
       ave_data = np.average(data, axis=1)
       new_data[:,i] = ave_data
       i+=1
