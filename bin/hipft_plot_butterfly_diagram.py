@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from astropy.time import Time
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+import os
 import psihdf as ps
 import psipals
 import psimath

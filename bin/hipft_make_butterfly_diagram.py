@@ -3,6 +3,7 @@ import argparse
 import psihdf as ps
 import numpy as np
 from astropy.time import Time
+import os
 
 # Version 1.1.0
 
@@ -153,7 +154,7 @@ def run(args):
     args.tf = count
 
   iRange = list(range(int(args.t0),int(args.tf)+1))
-  
+ 
   #thin out range
   iRange = iRange[::skip]
   
