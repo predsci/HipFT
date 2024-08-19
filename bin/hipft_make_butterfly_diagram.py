@@ -9,11 +9,13 @@ from astropy.time import Time
 def argParsing():
   parser = argparse.ArgumentParser(description='hipft_make_butterfly_diagram:  This tool makes the data for a butterfly diagram by averaging each hipft map along longitude, and then taking a running average of the results over the files.  The result is a single 2D file where each column is the running average of logitudinal averages.  By specifying a UT start time, the x-axis scales is set correctly for easy plotting.')
 
-  parser.add_argument('rundir',
-    help='Path to the directory where hipft was run.')
+  parser.add_argument('-rundir',
+    help='Path to the directory where hipft was run.  Default is current directory.',
+    dest='rundir',
+    required=False)
 
   parser.add_argument('-outpath',
-    help='Path to folder where output data is. Default: rundir/output_maps',
+    help='Path to folder where output data is. Default: args.rundir/output_maps',
     dest='outpath',
     required=False)
 #   Could grep for output_map_directory in hipft.in, if not there,
@@ -34,7 +36,7 @@ def argParsing():
 #   Could extract from data assimilation csv file combined with start index...  too much?    
 
   parser.add_argument('-maplist',
-    help='Full path to the map file list.  Default: rundir/hipft_output_map_list.out',
+    help='Full path to the map file list.  Default: args.rundir/hipft_output_map_list.out',
     dest='mapfile',
     required=False)
 
@@ -110,11 +112,17 @@ def argParsing():
 
 def run(args):
 
-
+  if (args.rundir is None):
+    args.rundir = os.getcwd()
   if (args.outpath is None):
     args.outpath = args.rundir+'/output_maps'
   if (args.mapfile is None):
     args.mapfile = args.rundir+'/hipft_output_map_list.out'
+  
+  #Check that mapfile exists.
+  if not os.path.exists(args.mapfile):
+    print('ERROR!  Map list file not found:  '+args.mapfile)
+    exit(1)
   
   ###### TIME ######
 

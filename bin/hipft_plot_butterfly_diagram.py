@@ -316,6 +316,11 @@ def argParsing():
 
 def run(args):
 
+  #Check that file exists.
+  if not os.path.exists(args.iFile):
+    print('ERROR!  Butterfly h5 file not found:  '+args.iFile)
+    exit(1)
+
   # Load colormaps:
   psipals.load()
 

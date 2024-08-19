@@ -23,7 +23,7 @@ It is recommended to use the latest compiler version available.
 
 HipFT requires the [HDF5](https://www.hdfgroup.org/solutions/hdf5) library.  
 When building for GPUs, the library must be compiled by the same compiler HipFT is using (e.g. nvfortran).  
-Often, this requires buildingthe library from source.  Instructions on how to do this will be added to this README in an upcoming update.
+Often, this requires building the library from source.  Instructions on how to do this will be added to this README in an upcoming update.
   
 1. Find the build script from the `build_examples` folder that is closest to your setup and copy it into the top-level directory.  
 2. Modify the script to set the `HDF5` library paths/flags and compiler flags compatible with your system environment.  
