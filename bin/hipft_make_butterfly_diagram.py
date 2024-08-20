@@ -147,6 +147,13 @@ def run(args):
             time.append(int(float(line.split()[1]))*3600*tfac)
             count = count + 1
   time = np.array(time)
+
+  if (args.tf):
+    time = time[int(args.t0):int(args.tf)+1]
+  else:
+    time = time[int(args.t0):]
+
+
   skip = int(args.cadence)+1
   time = time[::skip]
 
@@ -266,7 +273,6 @@ def writeOut2d(args,liRange,time,newData,uttime,yvec):
             del aveIds[0]
         else:
             break
-
     aveOut[:,i] = np.average(np.take(newData, aveIds, axis=1), axis=1)
 
   ps.wrhdf_2d(args.oFile,uttime,yvec,aveOut)

@@ -223,9 +223,9 @@ def argParsing():
     required=False)
 
   parser.add_argument('-xformat',
-    help='Format for the date option where // is treated as a newline (example: %H:%M:%S//%Y/%m/%d).',
+    help="Format for the date option where // is treated as a newline (example: %%H:%%M:%%S//%%Y/%%m/%%d).",
     dest='xformat',
-    default='%H:%M:%S//%Y/%m/%d',
+    default="%H:%M:%S//%Y/%m/%d",
     required=False)
 
   parser.add_argument('-xcadence',
@@ -465,16 +465,16 @@ def plot(args, xvec, yvec, data, oFile):
   plt.set_cmap(args.cmap)
   plt.clim([cmin, cmax])
 
-  plt.xlim(xmin=xmin, xmax=xmax)
-  plt.ylim(ymin=ymin, ymax=ymax)
-
-  xmn = np.min(xvec_plot)
-  xmx = np.max(xvec_plot)
+  xmn = np.min(xvec)
+  xmx = np.max(xvec)
 
 
   init_locs = plt.xticks()[0]
   locs, labels, utstartSecs = get_xticks(args,xmn,xmx,init_locs)
   xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs)
+
+  plt.xlim(xmin=xmin, xmax=xmax)
+  plt.ylim(ymin=ymin, ymax=ymax)
 
   xdtmi = np.abs(xmax-xmin)/15.0
 
