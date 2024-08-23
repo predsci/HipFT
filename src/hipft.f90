@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.12.0'
-      character(*), parameter :: cdate='08/06/2024'
+      character(*), parameter :: cvers='1.12.1'
+      character(*), parameter :: cdate='08/22/2024'
 !
 end module
 !#######################################################################
@@ -6647,7 +6647,7 @@ subroutine load_weno
 !
 ! ****** Set grid weights.
 !
-      do j=2,ntm1
+      do j=2,nt-2
         dt_total = dt(j-1) + dt(j) + dt(j+1)
         D_C_CPt(j) =           dt(j  )/(dt(j  )+dt(j+1))
         D_C_MCt(j) =           dt(j  )/(dt(j-1)+dt(j  ))
@@ -6657,7 +6657,7 @@ subroutine load_weno
         D_MC_Tt(j) = (dt(j-1)+dt(j  ))/dt_total
       enddo
 !
-      do k=2,npm1
+      do k=2,np-1
         dp_total = dp(k-1) + dp(k) + dp(k+1)
         D_C_CPp(k) =           dp(k  )/(dp(k  )+dp(k+1))
         D_C_MCp(k) =           dp(k  )/(dp(k-1)+dp(k  ))
@@ -9114,6 +9114,11 @@ end subroutine generate_rfe
 !   - Added new data assimilation mode that adds in the assimilated data
 !     and uses the weight layer as a spatially dependent multiplier.
 !     To use, set: ASSIMILATE_DATA_ADD=.TRUE.
+!
+! 08/22/2024, MS/RC, Version 1.12.1:
+!   - BUG FIX: Fixed index issue in load_weno().
+!              dt was being accessed past its bounds
+!              at one pole.
 !
 !-----------------------------------------------------------------------
 !
