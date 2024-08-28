@@ -149,9 +149,9 @@ def run(args):
   time = np.array(time)
 
   if (args.tf):
-    time = time[int(args.t0):int(args.tf)+1]
+    time = time[int(args.t0)-1:int(args.tf)]
   else:
-    time = time[int(args.t0):]
+    time = time[int(args.t0)-1:]
 
 
   skip = int(args.cadence)+1
