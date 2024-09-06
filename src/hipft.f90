@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.12.1'
-      character(*), parameter :: cdate='08/22/2024'
+      character(*), parameter :: cvers='1.12.2'
+      character(*), parameter :: cdate='09/06/2024'
 !
 end module
 !#######################################################################
@@ -3533,10 +3533,11 @@ subroutine add_flow_from_files
        do concurrent (k=1:nr,j=1:npm1,i=1:nt)
          flow_from_files_current_vt(i,j,k) = m_s_to_rs_hr*new_flow_t(j,i)
        enddo
-       ! Set phi ghost cell.
-       do concurrent (k=1:nr,i=1:nt)
-         flow_from_files_current_vt(i,npm,k) = flow_from_files_current_vt(i,2,k)
-       enddo
+!
+! ****** Ensure periodicity.
+!
+       call set_periodic_bc_3d (flow_from_files_current_vt,nt,npm,nr)
+!
 !$omp target exit data map(delete:new_flow_t)
        deallocate(new_flow_t)
 !
@@ -3563,6 +3564,11 @@ subroutine add_flow_from_files
        do concurrent (k=1:nr,j=1:np,i=1:ntm)
          flow_from_files_current_vp(i,j,k) = m_s_to_rs_hr*new_flow_p(j,i)
        enddo
+!
+! ****** Ensure periodicity.
+!
+       call set_periodic_bc_3d (flow_from_files_current_vp,ntm,np,nr)
+!
 !$omp target exit data map(delete:new_flow_p)
        deallocate(new_flow_p)
 !
@@ -7479,7 +7485,7 @@ subroutine advection_operator_weno3 (ftemp,aop)
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ), dimension(ntm,npm,nr), INTENT(IN) :: ftemp
+      real(r_typ), dimension(ntm,npm,nr), INTENT(IN)  :: ftemp
       real(r_typ), dimension(ntm,npm,nr), INTENT(OUT) :: aop
 !
 !-----------------------------------------------------------------------
@@ -7508,7 +7514,7 @@ subroutine advection_operator_weno3 (ftemp,aop)
 !
 ! ****** Compute Lax-Friedrichs fluxes.
 !
-      do concurrent (i=1:nr,k=1:npm,j=1:ntm1)
+      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
         LP(j,k,i) = half*ftemp(j,k,i)*(vt(j+1,k,i) - alpha_t(j,k,i))
         LN(j,k,i) = half*ftemp(j,k,i)*(vt(j  ,k,i) + alpha_t(j,k,i))
       enddo
@@ -7552,12 +7558,12 @@ subroutine advection_operator_weno3 (ftemp,aop)
       do concurrent (i=1:nr,k=1:npm)
 !
         cct=sign(upwind,vt(2,k,i))
-        flux_t(2,k,i) = vt(2,k,i)*half*((one - cct)*ftemp(2,k,i)      &
+        flux_t(2,k,i) = vt(2,k,i)*half*((one - cct)*ftemp(2,k,i) &
                                       + (one + cct)*ftemp(1,k,i))
 !
-        cct=sign(upwind,vt(ntm1,k,i))
-        flux_t(ntm1,k,i) = vt(ntm1,k,i)*half*((one - cct)*ftemp(ntm1,k,i) &
-                                            + (one + cct)*ftemp(ntm2,k,i))
+        cct=sign(upwind,vt(nt-1,k,i))
+        flux_t(nt-1,k,i) = vt(nt-1,k,i)*half*((one - cct)*ftemp(ntm  ,k,i) &
+                                            + (one + cct)*ftemp(ntm-1,k,i))
 !
       enddo
 !
@@ -7580,17 +7586,14 @@ subroutine advection_operator_weno3 (ftemp,aop)
         LN(j,k,i) = half*ftemp(j,k,i)*(vp(j,k  ,i) + alpha_p(j,k,i))
       enddo
 !
-      do concurrent (i=1:nr,j=2:ntm-1)
-        LP(j,0,i) = half*ftemp(j,npm-2,i)*(vp(j,npm-1,i) - alpha_p(j,npm-2,i))
-        LN(j,0,i) = half*ftemp(j,npm-2,i)*(vp(j,npm-2,i) + alpha_p(j,npm-2,i))
-      enddo
+! ****** Set periodicity.
 !
       do concurrent (i=1:nr,j=2:ntm-1)
-        LP(j,npm,i) = half*ftemp(j,npm,i)*(vp(j,3,i) - alpha_p(j,npm,i))
-        LN(j,npm,i) = half*ftemp(j,npm,i)*(vp(j,2,i) + alpha_p(j,npm,i))
+        LP(j,  0,i) = LP(j,npm-2,i)
+        LN(j,  0,i) = LN(j,npm-2,i)
+        LP(j,npm,i) = LP(j,2,i)
+        LN(j,npm,i) = LN(j,2,i)
       enddo
-!
-! ***** No need to seam since k loop covers all.
 !
 ! ****** Now compute f+(i-1/2) and f-(i-1/2)
 ! ****** Note that N-(i) = N+(i-1)
@@ -7652,7 +7655,7 @@ subroutine advection_operator_weno3 (ftemp,aop)
         fs = zero
         do concurrent(k=2:npm-1) reduce(+:fn,fs)
           fn = fn + flux_t(   2,k,i)*dp(k)
-          fs = fs + flux_t(ntm1,k,i)*dp(k)
+          fs = fs + flux_t(nt-1,k,i)*dp(k)
         enddo
 ! ****** Note that the south pole needs a sign change since the
 ! ****** theta flux direction is reversed.
@@ -9119,6 +9122,11 @@ end subroutine generate_rfe
 !   - BUG FIX: Fixed index issue in load_weno().
 !              dt was being accessed past its bounds
 !              at one pole.
+!
+! 09/06/2024, RC, Version 1.12.2:
+!   - Small optimization to WENO3 scheme.
+!   - Added enforcement of periodic boundaries when
+!     reading in flows from file.
 !
 !-----------------------------------------------------------------------
 !
