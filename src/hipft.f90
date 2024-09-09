@@ -6628,7 +6628,7 @@ subroutine load_weno
 !
 ! ****** Set grid weights.
 !
-      do j=2,ntm1
+      do j=2,nt-2
         dt_total = dt(j-1) + dt(j) + dt(j+1)
         D_C_CPt(j) =           dt(j  )/(dt(j  )+dt(j+1))
         D_C_MCt(j) =           dt(j  )/(dt(j-1)+dt(j  ))
@@ -6638,7 +6638,7 @@ subroutine load_weno
         D_MC_Tt(j) = (dt(j-1)+dt(j  ))/dt_total
       enddo
 !
-      do k=2,npm1
+      do k=2,np-1
         dp_total = dp(k-1) + dp(k) + dp(k+1)
         D_C_CPp(k) =           dp(k  )/(dp(k  )+dp(k+1))
         D_C_MCp(k) =           dp(k  )/(dp(k-1)+dp(k  ))
