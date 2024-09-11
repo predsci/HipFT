@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.12.2'
-      character(*), parameter :: cdate='09/06/2024'
+      character(*), parameter :: cvers='1.12.3'
+      character(*), parameter :: cdate='09/11/2024'
 !
 end module
 !#######################################################################
@@ -269,6 +269,10 @@ module diffusion
 ! ****** Diffusion constant coef array.
 !
       real(r_typ), dimension(:), allocatable :: diffusion_coef_constant_rvec
+!
+! ****** Polar boundary condition factors.
+!
+      real(r_typ) :: bc_diffusion_npole_fac, bc_diffusion_spole_fac
 !
 ! ****** Explicit Euler diffusion stable time-step and number of cycles.
 !
@@ -2504,8 +2508,8 @@ subroutine load_flows
 !
       if (advection_num_method_space.eq.WENO3) call load_weno
 !
-      bc_flow_npole_fac = sin(dt(  1)*half)/(twopi*(one-cos(dt(  1)*half)))
-      bc_flow_spole_fac = sin(dt(ntm)*half)/(twopi*(one-cos(dt(ntm)*half)))
+      bc_flow_npole_fac = two*dth_i(   2)*pi_i
+      bc_flow_spole_fac = two*dth_i(nt-1)*pi_i
 !
 end subroutine
 !#######################################################################
@@ -6605,6 +6609,11 @@ subroutine load_diffusion
         auto_sc = .false.
       end if
 !
+! ****** Set polar boundary condition factors.
+!
+      bc_diffusion_npole_fac = pi_i*dth_i(   2)**2
+      bc_diffusion_spole_fac = pi_i*dth_i(nt-1)**2
+!
 end subroutine
 !#######################################################################
 subroutine load_weno
@@ -7449,7 +7458,7 @@ subroutine advection_operator_upwind (ftemp,aop)
         enddo
       enddo
 !
-! ****** Set periodic boundary condition.
+! ****** Set periodic phi boundary condition.
 !
       call set_periodic_bc_3d (aop,ntm,npm,nr)
 !
@@ -7697,7 +7706,7 @@ subroutine diffusion_operator_cd (x,y)
 !-----------------------------------------------------------------------
 !
       integer :: i,j,k
-      real(r_typ) :: fn2_fn1,fs2_fs1
+      real(r_typ) :: fn,fs
       real(r_typ), dimension(ntm,npm,nr), INTENT(IN) :: x
       real(r_typ), dimension(ntm,npm,nr), INTENT(OUT) :: y
 !
@@ -7718,19 +7727,19 @@ subroutine diffusion_operator_cd (x,y)
 ! ****** Compute boundary points.
 !
       do concurrent(i=1:nr)
-        fn2_fn1 = zero
-        fs2_fs1 = zero
-        do concurrent(k=2:npm-1) reduce(+:fn2_fn1,fs2_fs1)
-          fn2_fn1 = fn2_fn1 + (diffusion_coef(1    ,k,i)        &
-                            +  diffusion_coef(2    ,k,i))       &
-                             * (x(2    ,k,i) - x(1  ,k,i))*dp(k)
-          fs2_fs1 = fs2_fs1 + (diffusion_coef(nt-1 ,k,i)        &
-                            +  diffusion_coef(nt   ,k,i))       &
-                             * (x(ntm-1,k,i) - x(ntm,k,i))*dp(k)
+        fn = zero
+        fs = zero
+        do concurrent(k=2:npm-1) reduce(+:fn,fs)
+          fn = fn + (diffusion_coef(1    ,k,i)        &
+                   + diffusion_coef(2    ,k,i))       &
+                  * (x(2  ,k,i) - x(1    ,k,i))*dp(k)
+          fs = fs + (diffusion_coef(nt-1 ,k,i)        &
+                   + diffusion_coef(nt   ,k,i))       &
+                  * (x(ntm,k,i) - x(ntm-1,k,i))*dp(k)
         enddo
         do concurrent(k=1:npm)
-          y(  1,k,i) = fn2_fn1*dt_i(  1)*dt_i(  1)*pi_i
-          y(ntm,k,i) = fs2_fs1*dt_i(ntm)*dt_i(ntm)*pi_i
+          y(  1,k,i) =  fn*bc_diffusion_npole_fac
+          y(ntm,k,i) = -fs*bc_diffusion_spole_fac
         enddo
       enddo
 !
@@ -9127,6 +9136,11 @@ end subroutine generate_rfe
 !   - Small optimization to WENO3 scheme.
 !   - Added enforcement of periodic boundaries when
 !     reading in flows from file.
+!
+! 09/11/2024, RC, Version 1.12.3:
+!   - Refactored polar boundary conditions for advection and
+!     diffusion.  Now, advection uses the same 
+!     small angle approximation like the diffusion does.
 !
 !-----------------------------------------------------------------------
 !
