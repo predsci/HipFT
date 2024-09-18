@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.12.3'
-      character(*), parameter :: cdate='09/11/2024'
+      character(*), parameter :: cvers='1.13.0'
+      character(*), parameter :: cdate='09/18/2024'
 !
 end module
 !#######################################################################
@@ -441,6 +441,7 @@ module weno
       real(r_typ), dimension(:), allocatable :: D_CP_Tt
       real(r_typ), dimension(:), allocatable :: D_P_Tt
       real(r_typ), dimension(:), allocatable :: D_MC_Tt
+      real(r_typ), dimension(:), allocatable :: weno_eps_t
 !
       real(r_typ), dimension(:), allocatable :: D_C_CPp
       real(r_typ), dimension(:), allocatable :: D_C_MCp
@@ -448,6 +449,7 @@ module weno
       real(r_typ), dimension(:), allocatable :: D_CP_Tp
       real(r_typ), dimension(:), allocatable :: D_P_Tp
       real(r_typ), dimension(:), allocatable :: D_MC_Tp
+      real(r_typ), dimension(:), allocatable :: weno_eps_p
 !
       real(r_typ), dimension(:,:,:), allocatable :: alpha_t
       real(r_typ), dimension(:,:,:), allocatable :: alpha_p
@@ -634,6 +636,10 @@ module input_parameters
 ! ****** Upwind coefficient.
 !
       real(r_typ) :: upwind = one
+!
+! ****** Weno epsilon value. Zero sets epsilon to grid spacing.
+!
+      real(r_typ) :: weno_eps = zero
 !
 !-----------------------------------------------------------------------
 !
@@ -6626,6 +6632,7 @@ subroutine load_weno
 !
       use number_types
       use mesh
+      use input_parameters, ONLY : weno_eps
       use weno
 !
 !-----------------------------------------------------------------------
@@ -6652,6 +6659,7 @@ subroutine load_weno
       allocate (D_CP_Tt(nt))
       allocate (D_P_Tt(nt))
       allocate (D_MC_Tt(nt))
+      allocate (weno_eps_t(ntm))
 !
       allocate (D_C_CPp(np))
       allocate (D_C_MCp(np))
@@ -6659,6 +6667,17 @@ subroutine load_weno
       allocate (D_CP_Tp(np))
       allocate (D_P_Tp(np))
       allocate (D_MC_Tp(np))
+      allocate (weno_eps_p(npm))
+!
+! ****** Set epsilons.
+!
+      if (weno_eps.le.0.) then
+        weno_eps_t(:) = dt(:)
+        weno_eps_p(:) = dp(:)
+      else
+        weno_eps_t(:) = weno_eps
+        weno_eps_p(:) = weno_eps
+      end if
 !
 ! ****** Set grid weights.
 !
@@ -6693,7 +6712,7 @@ subroutine load_weno
 !
 !$omp target enter data map(to:d_c_cpt,d_c_mct,d_m_tt,d_cp_tt,d_p_tt,&
 !$omp d_mc_tt,d_c_cpp,d_c_mcp,d_m_tp,d_cp_tp,d_p_tp,d_mc_tp,alpha_t,&
-!$omp alpha_p)
+!$omp alpha_p,weno_eps_t,weno_eps_p)
 !
 end subroutine
 !#######################################################################
@@ -7542,10 +7561,10 @@ subroutine advection_operator_weno3 (ftemp,aop)
         B0p = four*(D_C_CPt(j  )*(LP(j+1,k,i) - LP(j  ,k,i)))**2
         B1p = four*(D_C_MCt(j  )*(LP(j  ,k,i) - LP(j-1,k,i)))**2
 !
-        w0m = D_P_Tt(j-1) /(dt(j-1) + B0m)**2
-        w1m = D_MC_Tt(j-1)/(dt(j-1) + B1m)**2
-        w0p = D_M_Tt(j)   /(dt(j  ) + B0p)**2
-        w1p = D_CP_Tt(j)  /(dt(j  ) + B1p)**2
+        w0m = D_P_Tt(j-1) /(weno_eps_t(j-1) + B0m)**2
+        w1m = D_MC_Tt(j-1)/(weno_eps_t(j-1) + B1m)**2
+        w0p = D_M_Tt(j)   /(weno_eps_t(j  ) + B0p)**2
+        w1p = D_CP_Tt(j)  /(weno_eps_t(j  ) + B1p)**2
 !
         wm_sum = w0m + w1m
         wp_sum = w0p + w1p
@@ -7619,10 +7638,10 @@ subroutine advection_operator_weno3 (ftemp,aop)
         B0p = four*(D_C_CPp(k  )*(LP(j,k+1,i) - LP(j,k  ,i)))**2
         B1p = four*(D_C_MCp(k  )*(LP(j,k  ,i) - LP(j,k-1,i)))**2
 !
-        w0m = D_P_Tp (k-1)/(dp(k-1) + B0m)**2
-        w1m = D_MC_Tp(k-1)/(dp(k-1) + B1m)**2
-        w0p = D_M_Tp (k)  /(dp(k  ) + B0p)**2
-        w1p = D_CP_Tp(k)  /(dp(k  ) + B1p)**2
+        w0m = D_P_Tp (k-1)/(weno_eps_p(k-1) + B0m)**2
+        w1m = D_MC_Tp(k-1)/(weno_eps_p(k-1) + B1m)**2
+        w0p = D_M_Tp (k)  /(weno_eps_p(k  ) + B0p)**2
+        w1p = D_CP_Tp(k)  /(weno_eps_p(k  ) + B1p)**2
 !
         wm_sum = w0m + w1m
         wp_sum = w0p + w1p
@@ -8132,6 +8151,7 @@ subroutine read_input_file
                flow_list_filename,                                     &
                flow_root_dir,                                          &
                flow_num_method,                                        &
+               weno_eps,                                               &
                upwind,                                                 &
                advance_diffusion,                                      &
                diffusion_coef_filename,                                &
@@ -9141,6 +9161,14 @@ end subroutine generate_rfe
 !   - Refactored polar boundary conditions for advection and
 !     diffusion.  Now, advection uses the same 
 !     small angle approximation like the diffusion does.
+!
+! 09/18/2024, MS+RC, Version 1.13.0:
+!   - Added WENO_EPS input parameter.  If set to a positive value,
+!     it will be used for the eps in the WENO3 scheme.
+!     If not set (or set to the default value of 0), the
+!     grid-based eps of the CS-WENO3(h) scheme is used.
+!     This parameter is added to allow testing of the 
+!     CS-WENO3(h) versus the standard WENO3 scheme.
 !
 !-----------------------------------------------------------------------
 !
