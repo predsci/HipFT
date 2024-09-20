@@ -8,7 +8,7 @@ np.seterr(divide='ignore', invalid='ignore')
 
 def argParsing():
 
-    parser = argparse.ArgumentParser(description='hipft_map_diff: Compute comparison metrics between two HipFT H5 map files (including any/all realizations).  The metrics are:   RMSD   MAXABS   MCV(RMSD)  MAPE  MAXAPE')
+    parser = argparse.ArgumentParser(description='hipft_map_diff: Compute comparison metrics between two HipFT H5 map files (including any/all realizations).  The metrics are:   RMSD   MAXABS   MCV(RMSD)  MAPE  MAXAPE HHABS')
 
     parser.add_argument('file1',
                         type=str,
@@ -56,7 +56,20 @@ def getdiff_mcvrmsd(x, y):
     top = np.sum((x - y) ** 2)
     bot = np.sum(y ** 2)
     if bot == 0:
-        d = -1
+    # Use NRMSD if y is all zeros:
+        N = np.size(x)
+        d = np.sqrt(top/N)
+    else:
+        d = np.sqrt(top/bot)
+    return d
+
+def getdiff_hh(x, y):
+    top = np.sum((x - y) ** 2)
+    bot = np.sum(np.abs(x) * np.abs(y))
+    if bot == 0:
+    # Use NRMSD if one or both are all zeros:
+        N = np.size(x)
+        d = np.sqrt(top/N)
     else:
         d = np.sqrt(top/bot)
     return d
@@ -118,6 +131,7 @@ listOfdiff.append(getdiff_maxabs(fieldData1, fieldData2))
 listOfdiff.append(getdiff_mcvrmsd(fieldData1, fieldData2))
 listOfdiff.append(getdiff_mape(fieldData1, fieldData2))
 listOfdiff.append(getdiff_maxape(fieldData1, fieldData2))
+listOfdiff.append(getdiff_hh(fieldData1, fieldData2))
 
 if (args.diff is not None):
     fieldDataDiff = fieldData1 - fieldData2
