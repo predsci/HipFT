@@ -210,7 +210,7 @@ def run(args):
       ylabel='MAPE'
     elif etype == 6:
       ylabel='MAXAPE'
-    elif etype == 6:
+    elif etype == 7:
       ylabel='HHABS'
 
 
