@@ -89,6 +89,13 @@ def argParsing():
     type=str,
     required=False)
 
+  parser.add_argument('-errtype',
+    help='Error to use for plotting: 1: RMSD, 2: MAXABS, 3: CVRMSD, 4: MAPE, 5: MAXAPE, 6: HHABS (Default: 3)',
+    dest='errtype',
+    type=int,
+    required=False,
+    default=3)
+
   return parser.parse_args()
 
 
@@ -97,6 +104,7 @@ def run(args):
   hipft=args.hipft if args.hipft else os.popen('which hipft').read().replace('\n','')
   htest=args.htest if args.htest else hipft.replace('bin/hipft','testsuite')
   hconv=args.htest if args.htest else hipft.replace('bin/hipft','bin/hipft_convergence_plot.py')
+  hconv+=' -errtype '+str(args.errtype)
 
   if hipft == "":
     print("No hipft found")
