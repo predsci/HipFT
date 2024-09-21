@@ -20,7 +20,7 @@ def argParsing():
     required=False)
 
   parser.add_argument('-errtype',
-    help='Error to use for plotting: 1: RMSD, 2: MAXABS, 3: CVRMSD, 4: MAPE, 5: MAXAPE (Default: 3)',
+    help='Error to use for plotting: 1: RMSD, 2: MAXABS, 3: CVRMSD, 4: MAPE, 5: MAXAPE, 6: HHABS (Default: 3)',
     dest='errtype',
     type=int,
     required=False,
@@ -210,6 +210,8 @@ def run(args):
       ylabel='MAPE'
     elif etype == 6:
       ylabel='MAXAPE'
+    elif etype == 6:
+      ylabel='HHABS'
 
 
   ax.set_ylabel(ylabel,fontsize=fsize)
