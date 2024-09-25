@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 import argparse
 import numpy as np
@@ -9,7 +10,7 @@ from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_
 import os
 import itertools
 
-# Version 1.8.3
+# Version 1.8.4
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -419,7 +420,7 @@ def run(args):
       NOTindividual,LABEL_LEN,label_list,lgfsize,'Blue','Red',["|Flux (-)|","Flux (+)"])
 
   ymin=0.0#np.amin([np.amin(fluxm_FF),np.amin(fluxp_FF)])
-  ymax = max(np.amax(np.abs(arr)) for arr in fluxm_FF + fluxp_FF)
+  ymax = max(np.amax(np.abs(arr)) for array in (fluxm_FF, fluxp_FF) for arr in array)
   plt.title('Total Positive and Negative Flux', {'fontsize': fsize, 'color': tc})
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})  
   ax.add_artist(legend1)  
@@ -475,7 +476,7 @@ def run(args):
 #
 # ****** Polar +/- fluxes.
 #
-  ymax = max(np.amax(np.abs(arr)) for arr in fluxp_pn_FF + fluxm_pn_FF + fluxp_ps_FF + fluxm_ps_FF)
+  ymax = max(np.amax(np.abs(arr)) for array in (fluxp_pn_FF, fluxm_pn_FF, fluxp_ps_FF, fluxm_ps_FF) for arr in array)
   ymin = -ymax 
   fig = plt.figure(num=None, figsize=(14, 7), dpi=args.dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
@@ -497,7 +498,7 @@ def run(args):
 #
 # ****** Polar average field strengths.
 #
-  ymax = max(np.amax(np.abs(arr)) for arr in np.array(pole_n_avg_field_list,dtype=object) + np.array(pole_s_avg_field_list,dtype=object))
+  ymax = max(np.amax(np.abs(arr)) for array in (np.array(pole_n_avg_field_list,dtype=object), np.array(pole_s_avg_field_list,dtype=object)) for arr in array)
   ymin = -ymax 
   fig = plt.figure(num=None, figsize=(14, 7), dpi=args.dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
@@ -527,7 +528,7 @@ def run(args):
     legend1 = normalMode2(plt,ax,fig,args,brmax_list,np.abs(np.array(brmin_list,dtype=object)),time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
       NOTindividual,LABEL_LEN,label_list,lgfsize,'blue','red',["max(Br)","|min(Br)|"])
   
-  ymax = max(np.amax(np.abs(arr)) for arr in brmax_list + brmin_list)
+  ymax = max(np.amax(np.abs(arr)) for array in (brmax_list, brmin_list) for arr in array)
   ymin = 0.0 
   
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
