@@ -1,10 +1,10 @@
 &hipft_input_parameters
 !
-  verbose=.true.
+  verbose = 2
 !
   initial_map_filename = 'br_input.h5'
 !
-  output_map_root_filename = 'br_smoothed'
+  output_map_root_filename = 'hipft_brmap'
 !  
   diffusion_coef_constant = 500.0
 !

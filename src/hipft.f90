@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT_INTEL_GPU'
-      character(*), parameter :: cvers='1.13.0'
-      character(*), parameter :: cdate='09/18/2024'
+      character(*), parameter :: cvers='1.14.0'
+      character(*), parameter :: cdate='09/24/2024'
 !
 end module
 !#######################################################################
@@ -1641,7 +1641,7 @@ subroutine create_and_open_output_log_files
         'SPOLE_AREA',' ',&
         'EQ_DIPOLE',' ',&
         'AX_DIPOLE',' ',&
-        'VALIDATION_ERR_CVRMSD',' '
+        'VALIDATION_ERR_HHabs',' '
 !
         close(IO_HIST_SOL)
 !
@@ -3143,7 +3143,7 @@ subroutine analysis_step
           h_maxbr_tmp = max(f(i,j,k),h_maxbr_tmp)
           h_minabsbr_tmp = min(abs(f(i,j,k)),h_minabsbr_tmp)
           fv = (f(i,j,k) - fval(j,i,k))**2
-          fv2 = fval(j,i,k)**2
+          fv2 = abs(f(i,j,k))*abs(fval(j,i,k))
           h_valerr_tmp = h_valerr_tmp + fv
           sumfval2 = sumfval2 + fv2
         enddo
@@ -3152,7 +3152,11 @@ subroutine analysis_step
         h_maxbr(k)    = h_maxbr_tmp
         h_minabsbr(k) = h_minabsbr_tmp
         h_valerr(k)   = h_valerr_tmp
-        h_valerr(k) = sqrt(h_valerr_tmp/sumfval2)
+        if (sumfval2 .eq. zero) then
+          h_valerr(k) = sqrt(h_valerr_tmp/(ntm*(npm-1)))
+        else
+          h_valerr(k) = sqrt(h_valerr_tmp/sumfval2)
+        end if
       enddo
 !
 !$omp target exit data map(delete:fval)
@@ -9175,6 +9179,11 @@ end subroutine generate_rfe
 !     grid-based eps of the CS-WENO3(h) scheme is used.
 !     This parameter is added to allow testing of the 
 !     CS-WENO3(h) versus the standard WENO3 scheme.
+!
+! 09/24/2024, RC, Version 1.14.0:
+!   - Changed validation history error calculation to use the 
+!     HHabs metric instead of MCV(RMSD).  If the denominator
+!     is zero, the normalized RMSD is used.
 !
 !-----------------------------------------------------------------------
 !
