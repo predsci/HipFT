@@ -9,7 +9,7 @@ from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_
 import os
 import itertools
 
-# Version 1.8.1
+# Version 1.8.3
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -320,15 +320,14 @@ def run(args):
 
     samples = int(args.samples)
 
-    number_of_data_points = len(hist_sol_full.iloc[:,0])
-
-    if samples == -1:
-        skip = 1
-    else:
-        skip = int(np.floor(np.amax([1,number_of_data_points/samples])))
-
+    number_of_data_points = len(hist_sol_full)
+    
     #thin out data in hist_sol
-    hist_sol = hist_sol_full[::skip]
+    if samples > 1:
+      indices = np.linspace(0, number_of_data_points-1, samples, endpoint=True, dtype=int)
+      hist_sol = hist_sol_full.iloc[indices]
+    else:
+      hist_sol = hist_sol_full
 
     time_list.append(np.array(hist_sol['TIME']))
     fluxp_list.append(np.array(hist_sol['FLUX_POSITIVE']))
@@ -370,20 +369,20 @@ def run(args):
 #
 # ****** Create needed parameters and lists.
 #  
-  time_tfac = np.array(time_list)*tfac
-  xmn = np.min(time_tfac[0])
-  xmx = np.max(time_tfac[0])
-  flux_tot_un_FF = np.array(flux_tot_un_list)*flux_fac
-  fluxm_FF = np.array(np.abs(fluxm_list))*flux_fac
-  fluxp_FF = np.array(fluxp_list)*flux_fac
+  time_tfac = np.array(time_list,dtype=object)*tfac
+  xmn = np.amin([np.amin(arr) for arr in time_tfac])
+  xmx = np.amax([np.amax(arr) for arr in time_tfac])
+  flux_tot_un_FF = np.array(flux_tot_un_list,dtype=object)*flux_fac
+  fluxm_FF = np.abs(np.array(fluxm_list,dtype=object))*flux_fac
+  fluxp_FF = np.array(fluxp_list,dtype=object)*flux_fac
 
-  flux_tot_s_FF = np.array(flux_tot_s_list)*flux_fac
-  fluxp_pn_FF = np.array(fluxp_pn_list)*flux_fac
-  fluxm_pn_FF = np.array(fluxm_pn_list)*flux_fac
-  fluxp_ps_FF = np.array(fluxp_ps_list)*flux_fac
-  fluxm_ps_FF = np.array(fluxm_ps_list)*flux_fac
+  flux_tot_s_FF = np.array(flux_tot_s_list,dtype=object)*flux_fac
+  fluxp_pn_FF = np.array(fluxp_pn_list,dtype=object)*flux_fac
+  fluxm_pn_FF = np.array(fluxm_pn_list,dtype=object)*flux_fac
+  fluxp_ps_FF = np.array(fluxp_ps_list,dtype=object)*flux_fac
+  fluxm_ps_FF = np.array(fluxm_ps_list,dtype=object)*flux_fac
 
-  valerr=np.array(valerr_list)*(1e5)
+  valerr=np.array(valerr_list,dtype=object)*(1e5)
 
 #
 # ****** Total flux imbalance.
@@ -396,7 +395,7 @@ def run(args):
   else:
     normalMode(plt,ax,fig,args,flux_imb_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-')
 
-  ymax = np.amax(np.abs(flux_imb_list))
+  ymax = np.amax([np.amax(np.abs(arr)) for arr in flux_imb_list])
   ymin = -ymax 
 
   plt.title('Relative Flux Imbalance', {'fontsize': fsize, 'color': tc})
@@ -420,7 +419,7 @@ def run(args):
       NOTindividual,LABEL_LEN,label_list,lgfsize,'Blue','Red',["|Flux (-)|","Flux (+)"])
 
   ymin=0.0#np.amin([np.amin(fluxm_FF),np.amin(fluxp_FF)])
-  ymax=np.amax([np.amax(fluxm_FF),np.amax(fluxp_FF)])
+  ymax = max(np.amax(np.abs(arr)) for arr in fluxm_FF + fluxp_FF)
   plt.title('Total Positive and Negative Flux', {'fontsize': fsize, 'color': tc})
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})  
   ax.add_artist(legend1)  
@@ -446,7 +445,7 @@ def run(args):
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})
 
   ymin=0.0 #np.amin(flux_tot_un_FF)
-  ymax=np.amax(flux_tot_un_FF)
+  ymax = np.amax([np.amax(arr) for arr in flux_tot_un_FF])
   makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,ymin,ymax,fsize)
   plt.ylim(ymin=0.0)
   fig.savefig('history_'+args.runtag+'_flux_total_unsigned.png', bbox_inches="tight", dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
@@ -467,8 +466,7 @@ def run(args):
 
   #ymin=np.amin(flux_tot_s_FF)
   #ymax=np.amax(flux_tot_s_FF)
-  
-  ymax = np.amax(np.abs(flux_tot_s_FF))
+  ymax = np.amax([np.amax(np.abs(arr)) for arr in flux_tot_s_FF])
   ymin = -ymax 
   
   makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,ymin,ymax,fsize)
@@ -477,8 +475,7 @@ def run(args):
 #
 # ****** Polar +/- fluxes.
 #
-  ymax = np.amax([np.amax(np.abs(fluxp_pn_FF)),np.amax(np.abs(fluxm_pn_FF)),\
-                  np.amax(np.abs(fluxp_ps_FF)),np.amax(np.abs(fluxm_ps_FF))])
+  ymax = max(np.amax(np.abs(arr)) for arr in fluxp_pn_FF + fluxm_pn_FF + fluxp_ps_FF + fluxm_ps_FF)
   ymin = -ymax 
   fig = plt.figure(num=None, figsize=(14, 7), dpi=args.dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
@@ -500,7 +497,7 @@ def run(args):
 #
 # ****** Polar average field strengths.
 #
-  ymax = np.amax([np.amax(np.abs(np.array(pole_n_avg_field_list))),np.amax(np.abs(np.array(pole_s_avg_field_list)))])
+  ymax = max(np.amax(np.abs(arr)) for arr in np.array(pole_n_avg_field_list,dtype=object) + np.array(pole_s_avg_field_list,dtype=object))
   ymin = -ymax 
   fig = plt.figure(num=None, figsize=(14, 7), dpi=args.dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
@@ -525,12 +522,12 @@ def run(args):
   ax = plt.gca()
 
   if args.summary:
-    legend1 = summaryMode2(brmax_list,np.abs(brmin_list),time_tfac[0],LW,FLW,fsize,plt,"blue","red","max(Br)","|min(Br)|")
+    legend1 = summaryMode2(brmax_list,np.abs(np.array(brmin_list,dtype=object)),time_tfac[0],LW,FLW,fsize,plt,"blue","red","max(Br)","|min(Br)|")
   else:
-    legend1 = normalMode2(plt,ax,fig,args,brmax_list,np.abs(brmin_list),time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
+    legend1 = normalMode2(plt,ax,fig,args,brmax_list,np.abs(np.array(brmin_list,dtype=object)),time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
       NOTindividual,LABEL_LEN,label_list,lgfsize,'blue','red',["max(Br)","|min(Br)|"])
   
-  ymax = np.amax([np.amax(np.abs(brmax_list)),np.amax(np.abs(brmin_list))])
+  ymax = max(np.amax(np.abs(arr)) for arr in brmax_list + brmin_list)
   ymin = 0.0 
   
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
@@ -561,7 +558,7 @@ def run(args):
   #ymin=np.amin(ax_dipole_list)
   #ymax=np.amax(ax_dipole_list)
   
-  ymax = np.amax(np.abs(ax_dipole_list))
+  ymax = np.amax([np.amax(np.abs(arr)) for arr in ax_dipole_list])
   ymin = -ymax 
   
   
@@ -579,8 +576,8 @@ def run(args):
   else:
     normalMode(plt,ax,fig,args,eq_dipole_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-')
  
-  ymin=np.amin(eq_dipole_list)
-  ymax=np.amax(eq_dipole_list)
+  ymin = np.amin([np.amin(arr) for arr in eq_dipole_list])
+  ymax = np.amax([np.amax(arr) for arr in eq_dipole_list])
   plt.title('Equatorial Dipole Strength', {'fontsize': fsize, 'color': tc})
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
 
@@ -1226,4 +1223,3 @@ def main():
 
 if __name__ == '__main__':
   main()
-

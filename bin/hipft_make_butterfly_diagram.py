@@ -3,17 +3,20 @@ import argparse
 import psihdf as ps
 import numpy as np
 from astropy.time import Time
+import os
 
 # Version 1.1.0
 
 def argParsing():
   parser = argparse.ArgumentParser(description='hipft_make_butterfly_diagram:  This tool makes the data for a butterfly diagram by averaging each hipft map along longitude, and then taking a running average of the results over the files.  The result is a single 2D file where each column is the running average of logitudinal averages.  By specifying a UT start time, the x-axis scales is set correctly for easy plotting.')
 
-  parser.add_argument('rundir',
-    help='Path to the directory where hipft was run.')
+  parser.add_argument('-rundir',
+    help='Path to the directory where hipft was run.  Default is current directory.',
+    dest='rundir',
+    required=False)
 
   parser.add_argument('-outpath',
-    help='Path to folder where output data is. Default: rundir/output_maps',
+    help='Path to folder where output data is. Default: args.rundir/output_maps',
     dest='outpath',
     required=False)
 #   Could grep for output_map_directory in hipft.in, if not there,
@@ -34,7 +37,7 @@ def argParsing():
 #   Could extract from data assimilation csv file combined with start index...  too much?    
 
   parser.add_argument('-maplist',
-    help='Full path to the map file list.  Default: rundir/hipft_output_map_list.out',
+    help='Full path to the map file list.  Default: args.rundir/hipft_output_map_list.out',
     dest='mapfile',
     required=False)
 
@@ -110,11 +113,17 @@ def argParsing():
 
 def run(args):
 
-
+  if (args.rundir is None):
+    args.rundir = os.getcwd()
   if (args.outpath is None):
     args.outpath = args.rundir+'/output_maps'
   if (args.mapfile is None):
     args.mapfile = args.rundir+'/hipft_output_map_list.out'
+  
+  #Check that mapfile exists.
+  if not os.path.exists(args.mapfile):
+    print('ERROR!  Map list file not found:  '+args.mapfile)
+    exit(1)
   
   ###### TIME ######
 
@@ -138,6 +147,13 @@ def run(args):
             time.append(int(float(line.split()[1]))*3600*tfac)
             count = count + 1
   time = np.array(time)
+
+  if (args.tf):
+    time = time[int(args.t0)-1:int(args.tf)]
+  else:
+    time = time[int(args.t0)-1:]
+
+
   skip = int(args.cadence)+1
   time = time[::skip]
 
@@ -145,7 +161,7 @@ def run(args):
     args.tf = count
 
   iRange = list(range(int(args.t0),int(args.tf)+1))
-  
+ 
   #thin out range
   iRange = iRange[::skip]
   
@@ -167,12 +183,12 @@ def run(args):
         new_data[:,:,i] = ave_data
         i+=1
       elif (args.slices):
+        xvec, yvec, zvec, data_in = ps.rdhdf_3d(filename)
         dim3 = len(args.slices)
         if firstPass:
           new_data=np.zeros((dim3,len(yvec), len(range(int(args.t0),int(args.tf)+1))))
           firstPass = False
         j = 0
-        xvec, yvec, zvec, data_in = ps.rdhdf_3d(filename)
         for islice in args.slices:
           data = np.squeeze(data_in[islice-1,:,:])
           ave_data = np.average(data, axis=1)
@@ -180,19 +196,19 @@ def run(args):
           j+=1
         i+=1
       else:
+        xvec, yvec, zvec, data_in = ps.rdhdf_3d(filename)
         if firstPass:
           new_data=np.zeros((len(yvec), len(range(int(args.t0),int(args.tf)+1))))
           firstPass = False
-        xvec, yvec, zvec, data_in = ps.rdhdf_3d(filename)
         data = np.squeeze(data_in[int(args.slice)-1,:,:])
         ave_data = np.average(data, axis=1)
         new_data[:,i] = ave_data
         i+=1
     else:
+      xvec, yvec, data = ps.rdhdf_2d(filename)
       if firstPass:
         new_data=np.zeros((len(yvec), len(range(int(args.t0),int(args.tf)+1))))
         firstPass = False
-      xvec, yvec, data = ps.rdhdf_2d(filename)
       ave_data = np.average(data, axis=1)
       new_data[:,i] = ave_data
       i+=1
@@ -257,7 +273,6 @@ def writeOut2d(args,liRange,time,newData,uttime,yvec):
             del aveIds[0]
         else:
             break
-
     aveOut[:,i] = np.average(np.take(newData, aveIds, axis=1), axis=1)
 
   ps.wrhdf_2d(args.oFile,uttime,yvec,aveOut)

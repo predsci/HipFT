@@ -7,7 +7,7 @@ import signal
 import sys
 from pathlib import Path
 
-# Version 2.3.0
+# Version 2.3.1
 
 def handle_int(signum, frame):
     print('You pressed Ctrl+C! Stopping!')
@@ -100,7 +100,13 @@ def run(args):
 
   date_fmt = ''
 
-  sorted_listdir = sorted(os.listdir(args.datadir))
+  h5_files_tmp = [file for file in os.listdir(args.datadir) if file.endswith('.h5')]
+
+  sorted_listdir = sorted(h5_files_tmp)
+
+  if len(sorted_listdir) < 1:
+    print('No .h5 files found.')
+    exit()
 
   if os.path.exists(args.mldfile):
     with open(args.mldfile, "r") as ftmp:
@@ -116,10 +122,10 @@ def run(args):
       for line in ftmp:
         title_str.append(str(float(line.split()[1]))+' hours')
   else:
-      idx=0
-      for filetmp in sorted_listdir:
-          idx+=1
-          title_str.append("File number: {:06d}".format(idx))
+    idx=0
+    for filetmp in sorted_listdir:
+      idx+=1
+      title_str.append("File number: {:06d}".format(idx))
 
   if not os.path.exists(args.datadir+'/plots'):
     os.makedirs(args.datadir+'/plots')
@@ -127,9 +133,14 @@ def run(args):
   os.chdir(args.datadir+'/plots')
 
   idx=0
+  twoD = None
   for filetmp in sorted_listdir:
     file=args.datadir+'/'+filetmp
     if filetmp.endswith('.h5'):
+      re_idx = re.search("idx[0-9]+",filetmp)
+      if not re_idx:
+        print("Expecting the file "+ filetmp  +" to contain an idx[0-9]+ number.")
+        continue
       idxx=int(re.search("[0-9]+",re.search("idx[0-9]+",filetmp).group()).group())
       idx+=1
       TITLE=date_fmt+title_str[idx-1]
@@ -138,18 +149,16 @@ def run(args):
         if 'dim3' in list(f1.keys()):
           dim3 = f1['dim3'].shape[0]
           twoD=False
-      if twoD:
-        fileOut = os.path.basename(file).replace('.h5','.png')
-        plot2d(TITLE,args,file,fileOut)
-      elif (args.s):
-        if (args.s > dim3):
-          print("Slice requested is outside range defaulting to last slice : "+ str(dim3))
-          extractANDplot(TITLE,args,file, dim3)
-        else:
-          extractANDplot(TITLE,args,file, args.s)
-      else:
-        for i in range(1,dim3):
-          extractANDplot(TITLE,args,file, i)
+        if twoD:
+          fileOut = os.path.basename(file).replace('.h5','.png')
+          plot2d(TITLE,args,file,fileOut)
+        elif (args.s):
+          if (args.s > dim3):
+            print("Slice requested is outside range defaulting to last slice : "+ str(dim3))
+            extractANDplot(TITLE,args,file, dim3)
+          else:
+            extractANDplot(TITLE,args,file, args.s)
+
   if os.path.exists("tmp_file.h5"):
     os.remove("tmp_file.h5")
 
@@ -159,7 +168,10 @@ def run(args):
   os.chdir(args.datadir+'/plots/tmp')
 
   if not args.nomovie:
-    if twoD:
+    if twoD is None:
+      print('No files found to make movie from.')
+      exit()
+    elif twoD:
       for filetmp in sorted(os.listdir(args.datadir+'/plots')):
         file=args.datadir+'/plots/'+filetmp
         if filetmp.endswith('.png'):
@@ -176,6 +188,7 @@ def run(args):
 
   for filetmp in sorted(os.listdir(args.datadir+'/plots/tmp')):
     os.remove(filetmp)
+
   os.chdir(args.datadir+'/plots')
   os.rmdir(args.datadir+'/plots/tmp')
 

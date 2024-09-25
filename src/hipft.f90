@@ -45,9 +45,9 @@ module ident
 ! ****** Set the name, version, and date of code.
 !-----------------------------------------------------------------------
 !
-      character(*), parameter :: cname='HipFT_WACCPD_INTEL_TMP'
-      character(*), parameter :: cvers='1.11.0'
-      character(*), parameter :: cdate='07/05/2024'
+      character(*), parameter :: cname='HipFT_INTEL_GPU'
+      character(*), parameter :: cvers='1.13.0'
+      character(*), parameter :: cdate='09/18/2024'
 !
 end module
 !#######################################################################
@@ -270,6 +270,10 @@ module diffusion
 !
       real(r_typ), dimension(:), allocatable :: diffusion_coef_constant_rvec
 !
+! ****** Polar boundary condition factors.
+!
+      real(r_typ) :: bc_diffusion_npole_fac, bc_diffusion_spole_fac
+!
 ! ****** Explicit Euler diffusion stable time-step and number of cycles.
 !
       real(r_typ) :: dtime_diffusion_euler = 0.
@@ -437,6 +441,7 @@ module weno
       real(r_typ), dimension(:), allocatable :: D_CP_Tt
       real(r_typ), dimension(:), allocatable :: D_P_Tt
       real(r_typ), dimension(:), allocatable :: D_MC_Tt
+      real(r_typ), dimension(:), allocatable :: weno_eps_t
 !
       real(r_typ), dimension(:), allocatable :: D_C_CPp
       real(r_typ), dimension(:), allocatable :: D_C_MCp
@@ -444,6 +449,7 @@ module weno
       real(r_typ), dimension(:), allocatable :: D_CP_Tp
       real(r_typ), dimension(:), allocatable :: D_P_Tp
       real(r_typ), dimension(:), allocatable :: D_MC_Tp
+      real(r_typ), dimension(:), allocatable :: weno_eps_p
 !
       real(r_typ), dimension(:,:,:), allocatable :: alpha_t
       real(r_typ), dimension(:,:,:), allocatable :: alpha_p
@@ -631,6 +637,10 @@ module input_parameters
 !
       real(r_typ) :: upwind = one
 !
+! ****** Weno epsilon value. Zero sets epsilon to grid spacing.
+!
+      real(r_typ) :: weno_eps = zero
+!
 !-----------------------------------------------------------------------
 !
 ! ****** DIFFUSION ********
@@ -687,6 +697,13 @@ module input_parameters
       character(512) :: assimilate_data_map_root_dir = '.'
 !
 ! ****** Custom assimilation options.
+!
+! *** Activate "add" mode where the incoming assimilation data is added
+! *** to the solution instead of blended.
+!
+      logical :: assimilate_data_add = .false.
+!
+! *** Activate custom assimilation function.
 !
       logical :: assimilate_data_custom_from_mu = .false.
 !
@@ -2497,8 +2514,8 @@ subroutine load_flows
 !
       if (advection_num_method_space.eq.WENO3) call load_weno
 !
-      bc_flow_npole_fac = sin(dt(  1)*half)/(twopi*(one-cos(dt(  1)*half)))
-      bc_flow_spole_fac = sin(dt(ntm)*half)/(twopi*(one-cos(dt(ntm)*half)))
+      bc_flow_npole_fac = two*dth_i(   2)*pi_i
+      bc_flow_spole_fac = two*dth_i(nt-1)*pi_i
 !
 end subroutine
 !#######################################################################
@@ -3526,10 +3543,11 @@ subroutine add_flow_from_files
        do concurrent (k=1:nr,j=1:npm1,i=1:nt)
          flow_from_files_current_vt(i,j,k) = m_s_to_rs_hr*new_flow_t(j,i)
        enddo
-       ! Set phi ghost cell.
-       do concurrent (k=1:nr,i=1:nt)
-         flow_from_files_current_vt(i,npm,k) = flow_from_files_current_vt(i,2,k)
-       enddo
+!
+! ****** Ensure periodicity.
+!
+       call set_periodic_bc_3d (flow_from_files_current_vt,nt,npm,nr)
+!
 !$omp target exit data map(delete:new_flow_t)
        deallocate(new_flow_t)
 !
@@ -3556,6 +3574,11 @@ subroutine add_flow_from_files
        do concurrent (k=1:nr,j=1:np,i=1:ntm)
          flow_from_files_current_vp(i,j,k) = m_s_to_rs_hr*new_flow_p(j,i)
        enddo
+!
+! ****** Ensure periodicity.
+!
+       call set_periodic_bc_3d (flow_from_files_current_vp,ntm,np,nr)
+!
 !$omp target exit data map(delete:new_flow_p)
        deallocate(new_flow_p)
 !
@@ -3702,7 +3725,7 @@ subroutine load_flow_from_files
 ! ****** VT (NT,NPM) ******
 !
        if (iamp0) then
-         flowfile_t = TRIM(flow_root_dir)//"/" &
+         flowfile_t = TRIM(flow_root_dir)//"/"&
                     //TRIM(flow_from_files_rel_path_t(flow_from_file_current_idx))
          call read_2d_file (flowfile_t,ln1,ln2,flow_t,s1,s2,ierr)
          deallocate(s1)
@@ -3961,6 +3984,8 @@ subroutine load_data_assimilation
                      trim(map_files_rel_path(1))
         write (*,*) '   LOAD_DATA_ASSIMILATION: File name of first used map:     ', &
                      trim(map_files_rel_path(i))
+        write (*,*) '   LOAD_DATA_ASSIMILATION: Map root directory:     ', &
+                     trim(assimilate_data_map_root_dir)
       end if
 !
 ! ****** Find indices of latitude limit in main mesh tvec.
@@ -4014,9 +4039,15 @@ subroutine assimilate_new_data (new_data)
       allocate(deltaf(ntm,npm,nr))
 !$omp target enter data map(alloc:deltaf)
 
-      do concurrent (i=1:nr,k=1:npm1,j=1:ntm)
-        deltaf(j,k,i) = new_data(k,j,2,i)*(new_data(k,j,1,i) - f(j,k,i))
-      enddo
+      if (assimilate_data_add) then
+        do concurrent (i=1:nr,k=1:npm1,j=1:ntm)
+          deltaf(j,k,i) = new_data(k,j,2,i)*new_data(k,j,1,i)
+        enddo
+      else
+        do concurrent (i=1:nr,k=1:npm1,j=1:ntm)
+          deltaf(j,k,i) = new_data(k,j,2,i)*(new_data(k,j,1,i) - f(j,k,i))
+        enddo
+      end if
       call set_periodic_bc_3d (deltaf,ntm,npm,nr)
 !
 ! ****** Balance the added flux if requested.
@@ -4078,14 +4109,18 @@ subroutine apply_data_assimilation
       if (assimilate_data.and.time.ge.time_of_next_input_map) then
 !
         if (iamp0) then
+!
+          mapfile = TRIM(assimilate_data_map_root_dir)//"/"&
+                    //TRIM(map_files_rel_path(current_map_input_idx))
+!
           if (verbose.gt.0) then
             write(*,*)
             write(*,*) '   UPDATE_FIELD: Loading field index ',current_map_input_idx
             write(*,*) '   UPDATE_FIELD: Time of next input map: ',time_of_next_input_map
+            write(*,*) '   UPDATE_FIELD: assimilate_data_map_root_dir: ',TRIM(assimilate_data_map_root_dir)
+            write(*,*) '   UPDATE_FIELD: map_files_rel_path(curr): ',TRIM(map_files_rel_path(current_map_input_idx))
+            write(*,*) '   UPDATE_FIELD: Map file name: ',TRIM(mapfile)
           end if
-!
-          mapfile = TRIM(assimilate_data_map_root_dir)//"/"&
-                    //TRIM(map_files_rel_path(current_map_input_idx))
 !
           call read_3d_file (mapfile,npm_nd,ntm_nd,nslices,new_data2d,s1,s2,s3,ierr)
 ! ******  TODO:  Add error checking here
@@ -6580,6 +6615,11 @@ subroutine load_diffusion
         auto_sc = .false.
       end if
 !
+! ****** Set polar boundary condition factors.
+!
+      bc_diffusion_npole_fac = pi_i*dth_i(   2)**2
+      bc_diffusion_spole_fac = pi_i*dth_i(nt-1)**2
+!
 end subroutine
 !#######################################################################
 subroutine load_weno
@@ -6592,6 +6632,7 @@ subroutine load_weno
 !
       use number_types
       use mesh
+      use input_parameters, ONLY : weno_eps
       use weno
 !
 !-----------------------------------------------------------------------
@@ -6618,6 +6659,7 @@ subroutine load_weno
       allocate (D_CP_Tt(nt))
       allocate (D_P_Tt(nt))
       allocate (D_MC_Tt(nt))
+      allocate (weno_eps_t(ntm))
 !
       allocate (D_C_CPp(np))
       allocate (D_C_MCp(np))
@@ -6625,6 +6667,17 @@ subroutine load_weno
       allocate (D_CP_Tp(np))
       allocate (D_P_Tp(np))
       allocate (D_MC_Tp(np))
+      allocate (weno_eps_p(npm))
+!
+! ****** Set epsilons.
+!
+      if (weno_eps.le.0.) then
+        weno_eps_t(:) = dt(:)
+        weno_eps_p(:) = dp(:)
+      else
+        weno_eps_t(:) = weno_eps
+        weno_eps_p(:) = weno_eps
+      end if
 !
 ! ****** Set grid weights.
 !
@@ -6659,7 +6712,7 @@ subroutine load_weno
 !
 !$omp target enter data map(to:d_c_cpt,d_c_mct,d_m_tt,d_cp_tt,d_p_tt,&
 !$omp d_mc_tt,d_c_cpp,d_c_mcp,d_m_tp,d_cp_tp,d_p_tp,d_mc_tp,alpha_t,&
-!$omp alpha_p)
+!$omp alpha_p,weno_eps_t,weno_eps_p)
 !
 end subroutine
 !#######################################################################
@@ -7426,7 +7479,7 @@ subroutine advection_operator_upwind (ftemp,aop)
         enddo
       enddo
 !
-! ****** Set periodic boundary condition.
+! ****** Set periodic phi boundary condition.
 !
       call set_periodic_bc_3d (aop,ntm,npm,nr)
 !
@@ -7462,7 +7515,7 @@ subroutine advection_operator_weno3 (ftemp,aop)
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ), dimension(ntm,npm,nr), INTENT(IN) :: ftemp
+      real(r_typ), dimension(ntm,npm,nr), INTENT(IN)  :: ftemp
       real(r_typ), dimension(ntm,npm,nr), INTENT(OUT) :: aop
 !
 !-----------------------------------------------------------------------
@@ -7491,7 +7544,7 @@ subroutine advection_operator_weno3 (ftemp,aop)
 !
 ! ****** Compute Lax-Friedrichs fluxes.
 !
-      do concurrent (i=1:nr,k=1:npm,j=1:ntm1)
+      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
         LP(j,k,i) = half*ftemp(j,k,i)*(vt(j+1,k,i) - alpha_t(j,k,i))
         LN(j,k,i) = half*ftemp(j,k,i)*(vt(j  ,k,i) + alpha_t(j,k,i))
       enddo
@@ -7510,10 +7563,10 @@ subroutine advection_operator_weno3 (ftemp,aop)
         B0p = four*(D_C_CPt(j  )*(LP(j+1,k,i) - LP(j  ,k,i)))**2
         B1p = four*(D_C_MCt(j  )*(LP(j  ,k,i) - LP(j-1,k,i)))**2
 !
-        w0m = D_P_Tt(j-1) /(dt(j-1) + B0m)**2
-        w1m = D_MC_Tt(j-1)/(dt(j-1) + B1m)**2
-        w0p = D_M_Tt(j)   /(dt(j  ) + B0p)**2
-        w1p = D_CP_Tt(j)  /(dt(j  ) + B1p)**2
+        w0m = D_P_Tt(j-1) /(weno_eps_t(j-1) + B0m)**2
+        w1m = D_MC_Tt(j-1)/(weno_eps_t(j-1) + B1m)**2
+        w0p = D_M_Tt(j)   /(weno_eps_t(j  ) + B0p)**2
+        w1p = D_CP_Tt(j)  /(weno_eps_t(j  ) + B1p)**2
 !
         wm_sum = w0m + w1m
         wp_sum = w0p + w1p
@@ -7535,12 +7588,12 @@ subroutine advection_operator_weno3 (ftemp,aop)
       do concurrent (i=1:nr,k=1:npm)
 !
         cct=sign(upwind,vt(2,k,i))
-        flux_t(2,k,i) = vt(2,k,i)*half*((one - cct)*ftemp(2,k,i)      &
+        flux_t(2,k,i) = vt(2,k,i)*half*((one - cct)*ftemp(2,k,i) &
                                       + (one + cct)*ftemp(1,k,i))
 !
-        cct=sign(upwind,vt(ntm1,k,i))
-        flux_t(ntm1,k,i) = vt(ntm1,k,i)*half*((one - cct)*ftemp(ntm1,k,i) &
-                                            + (one + cct)*ftemp(ntm2,k,i))
+        cct=sign(upwind,vt(nt-1,k,i))
+        flux_t(nt-1,k,i) = vt(nt-1,k,i)*half*((one - cct)*ftemp(ntm  ,k,i) &
+                                            + (one + cct)*ftemp(ntm-1,k,i))
 !
       enddo
 !
@@ -7563,17 +7616,14 @@ subroutine advection_operator_weno3 (ftemp,aop)
         LN(j,k,i) = half*ftemp(j,k,i)*(vp(j,k  ,i) + alpha_p(j,k,i))
       enddo
 !
-      do concurrent (i=1:nr,j=2:ntm-1)
-        LP(j,0,i) = half*ftemp(j,npm-2,i)*(vp(j,npm-1,i) - alpha_p(j,npm-2,i))
-        LN(j,0,i) = half*ftemp(j,npm-2,i)*(vp(j,npm-2,i) + alpha_p(j,npm-2,i))
-      enddo
+! ****** Set periodicity.
 !
       do concurrent (i=1:nr,j=2:ntm-1)
-        LP(j,npm,i) = half*ftemp(j,npm,i)*(vp(j,3,i) - alpha_p(j,npm,i))
-        LN(j,npm,i) = half*ftemp(j,npm,i)*(vp(j,2,i) + alpha_p(j,npm,i))
+        LP(j,  0,i) = LP(j,npm-2,i)
+        LN(j,  0,i) = LN(j,npm-2,i)
+        LP(j,npm,i) = LP(j,2,i)
+        LN(j,npm,i) = LN(j,2,i)
       enddo
-!
-! ***** No need to seam since k loop covers all.
 !
 ! ****** Now compute f+(i-1/2) and f-(i-1/2)
 ! ****** Note that N-(i) = N+(i-1)
@@ -7590,10 +7640,10 @@ subroutine advection_operator_weno3 (ftemp,aop)
         B0p = four*(D_C_CPp(k  )*(LP(j,k+1,i) - LP(j,k  ,i)))**2
         B1p = four*(D_C_MCp(k  )*(LP(j,k  ,i) - LP(j,k-1,i)))**2
 !
-        w0m = D_P_Tp (k-1)/(dp(k-1) + B0m)**2
-        w1m = D_MC_Tp(k-1)/(dp(k-1) + B1m)**2
-        w0p = D_M_Tp (k)  /(dp(k  ) + B0p)**2
-        w1p = D_CP_Tp(k)  /(dp(k  ) + B1p)**2
+        w0m = D_P_Tp (k-1)/(weno_eps_p(k-1) + B0m)**2
+        w1m = D_MC_Tp(k-1)/(weno_eps_p(k-1) + B1m)**2
+        w0p = D_M_Tp (k)  /(weno_eps_p(k  ) + B0p)**2
+        w1p = D_CP_Tp(k)  /(weno_eps_p(k  ) + B1p)**2
 !
         wm_sum = w0m + w1m
         wp_sum = w0p + w1p
@@ -7636,7 +7686,7 @@ subroutine advection_operator_weno3 (ftemp,aop)
 !$omp parallel loop
         do concurrent(k=2:npm-1) reduce(+:fn,fs)
           fn = fn + flux_t(   2,k,i)*dp(k)
-          fs = fs + flux_t(ntm1,k,i)*dp(k)
+          fs = fs + flux_t(nt-1,k,i)*dp(k)
         enddo
 ! ****** Note that the south pole needs a sign change since the
 ! ****** theta flux direction is reversed.
@@ -7679,7 +7729,7 @@ subroutine diffusion_operator_cd (x,y)
 !-----------------------------------------------------------------------
 !
       integer :: i,j,k
-      real(r_typ) :: fn2_fn1,fs2_fs1
+      real(r_typ) :: fn,fs
       real(r_typ), dimension(ntm,npm,nr), INTENT(IN) :: x
       real(r_typ), dimension(ntm,npm,nr), INTENT(OUT) :: y
 !
@@ -7700,21 +7750,21 @@ subroutine diffusion_operator_cd (x,y)
 ! ****** Compute boundary points.
 !
       do concurrent(i=1:nr)
-        fn2_fn1 = zero
-        fs2_fs1 = zero
+        fn = zero
+        fs = zero
 !$omp parallel loop
-        do concurrent(k=2:npm-1) reduce(+:fn2_fn1,fs2_fs1)
-          fn2_fn1 = fn2_fn1 + (diffusion_coef(1    ,k,i)        &
-                            +  diffusion_coef(2    ,k,i))       &
-                             * (x(2    ,k,i) - x(1  ,k,i))*dp(k)
-          fs2_fs1 = fs2_fs1 + (diffusion_coef(nt-1 ,k,i)        &
-                            +  diffusion_coef(nt   ,k,i))       &
-                             * (x(ntm-1,k,i) - x(ntm,k,i))*dp(k)
+        do concurrent(k=2:npm-1) reduce(+:fn,fs)
+          fn = fn + (diffusion_coef(1    ,k,i)        &
+                   + diffusion_coef(2    ,k,i))       &
+                  * (x(2  ,k,i) - x(1    ,k,i))*dp(k)
+          fs = fs + (diffusion_coef(nt-1 ,k,i)        &
+                   + diffusion_coef(nt   ,k,i))       &
+                  * (x(ntm,k,i) - x(ntm-1,k,i))*dp(k)
         enddo
 !$omp parallel loop
         do concurrent(k=1:npm)
-          y(  1,k,i) = fn2_fn1*dt_i(  1)*dt_i(  1)*pi_i
-          y(ntm,k,i) = fs2_fs1*dt_i(ntm)*dt_i(ntm)*pi_i
+          y(  1,k,i) =  fn*bc_diffusion_npole_fac
+          y(ntm,k,i) = -fs*bc_diffusion_spole_fac
         enddo
       enddo
 !
@@ -8107,6 +8157,7 @@ subroutine read_input_file
                flow_list_filename,                                     &
                flow_root_dir,                                          &
                flow_num_method,                                        &
+               weno_eps,                                               &
                upwind,                                                 &
                advance_diffusion,                                      &
                diffusion_coef_filename,                                &
@@ -8127,6 +8178,7 @@ subroutine read_input_file
                assimilate_data_lat_limits,                             &
                assimilate_data_mu_limit,                               &
                assimilate_data_mu_limits,                              &
+               assimilate_data_add,                                    &
                advance_source,                                         &
                source_from_file,                                       &
                source_filename,                                        &
@@ -8767,7 +8819,7 @@ end subroutine generate_rfe
 ! 07/15/2022, RC, Version 0.12.0:
 !   - Added time dependent flows from file.
 !     Activate with input flag "-use_flow_from_files".
-!     Must set flag "-assimilate_data_map_root_dir" to the location
+!     Must set flag "-flow_root_dir" to the location
 !     of the flow files, and "-flow_list_filename" to the location
 !     of the csv file listing all files.  This file must be in a
 !     specific format which is currently output by the ConFlow code
@@ -9096,7 +9148,34 @@ end subroutine generate_rfe
 !     The PTL was failing (giving tiny dt) for HipFT runs
 !     at super high resolutions.
 !
+! 08/06/2024, RC, Version 1.12.0:
+!   - Added new data assimilation mode that adds in the assimilated data
+!     and uses the weight layer as a spatially dependent multiplier.
+!     To use, set: ASSIMILATE_DATA_ADD=.TRUE.
+!
+! 08/22/2024, MS/RC, Version 1.12.1:
+!   - BUG FIX: Fixed index issue in load_weno().
+!              dt was being accessed past its bounds
+!              at one pole.
+!
+! 09/06/2024, RC, Version 1.12.2:
+!   - Small optimization to WENO3 scheme.
+!   - Added enforcement of periodic boundaries when
+!     reading in flows from file.
+!
+! 09/11/2024, RC, Version 1.12.3:
+!   - Refactored polar boundary conditions for advection and
+!     diffusion.  Now, advection uses the same 
+!     small angle approximation like the diffusion does.
+!
+! 09/18/2024, MS+RC, Version 1.13.0:
+!   - Added WENO_EPS input parameter.  If set to a positive value,
+!     it will be used for the eps in the WENO3 scheme.
+!     If not set (or set to the default value of 0), the
+!     grid-based eps of the CS-WENO3(h) scheme is used.
+!     This parameter is added to allow testing of the 
+!     CS-WENO3(h) versus the standard WENO3 scheme.
+!
 !-----------------------------------------------------------------------
 !
 !#######################################################################
-

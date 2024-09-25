@@ -38,6 +38,13 @@ def argParsing():
     required=False,
     default=3)
 
+  parser.add_argument('-weno_eps',
+    help='Weno epsilon value. Zero sets epsilon to grid spacing. (Default: 0)',
+    dest='weno_eps',
+    type=float,
+    required=False,
+    default=0)
+
   parser.add_argument('-np',
     help='Starting resolution in phi (Default: 64 for phi tests; 1024 for theta tests only; 2x theta for theta/phi tests)',
     dest='np',
@@ -82,6 +89,13 @@ def argParsing():
     type=str,
     required=False)
 
+  parser.add_argument('-errtype',
+    help='Error to use for plotting: 1: RMSD, 2: MAXABS, 3: CVRMSD, 4: MAPE, 5: MAXAPE, 6: HHABS (Default: 3)',
+    dest='errtype',
+    type=int,
+    required=False,
+    default=3)
+
   return parser.parse_args()
 
 
@@ -90,6 +104,7 @@ def run(args):
   hipft=args.hipft if args.hipft else os.popen('which hipft').read().replace('\n','')
   htest=args.htest if args.htest else hipft.replace('bin/hipft','testsuite')
   hconv=args.htest if args.htest else hipft.replace('bin/hipft','bin/hipft_convergence_plot.py')
+  hconv+=' -errtype '+str(args.errtype)
 
   if hipft == "":
     print("No hipft found")
@@ -102,6 +117,8 @@ def run(args):
     text=testtype+"-fnm"+str(args.fnm)
     if args.dt:
       text=text+"-dt"+str(args.dt)
+    if args.weno_eps != 0:
+      text=text+"-weno_eps"+str(args.weno_eps)
     convergencefile = args.ofile if args.ofile else text+'.txt'
     createConFile(text,convergencefile)
     np_s=args.np if args.np else 64
@@ -111,6 +128,8 @@ def run(args):
       testname=testtype+"-nt"+str(nt)+"-np"+str(np)+"-fnm"+str(args.fnm)
       if args.dt:
         testname=testname+"-dt"+str(args.dt)
+      if args.weno_eps != 0:
+        testname=testname+"-weno_eps"+str(args.weno_eps)
       preparedir(testname,testtype,htest,hipft)
       print("=> Modifying hipft.in input file with chosen parameters")
       sed("res_nt",str(nt))
@@ -123,6 +142,8 @@ def run(args):
         sedi("upwind",str(0.))
       else:
         sedi("flow_num_method",str(args.fnm))
+      if args.weno_eps != 0:
+        sedi("weno_eps",str(args.weno_eps))
       run_hipft()
       out=os.popen("cat diffh.log").read().replace('\n','')
       print("=> Exiting run directory "+testname)
@@ -141,6 +162,8 @@ def run(args):
     text=testtype+"-fnm"+str(args.fnm)
     if args.dt:
       text=text+"-dt"+str(args.dt)
+    if args.weno_eps != 0:
+      text=text+"-weno_eps"+str(args.weno_eps)
     convergencefile = args.ofile if args.ofile else text+'.txt'
     createConFile(text,convergencefile)
     np_s=args.np if args.np else 64
@@ -150,6 +173,8 @@ def run(args):
       testname=testtype+"-nt"+str(nt)+"-np"+str(np)+"-fnm"+str(args.fnm)
       if args.dt:
         testname=testname+"-dt"+str(args.dt)
+      if args.weno_eps != 0:
+        testname=testname+"-weno_eps"+str(args.weno_eps)
       preparedir(testname,testtype,htest,hipft)
       print("=> Modifying hipft.in input file with chosen parameters")
       sed("res_nt",str(nt))
@@ -165,6 +190,8 @@ def run(args):
         sedi("upwind",str(0.))
       else:
         sedi("flow_num_method",str(args.fnm))
+      if args.weno_eps != 0:
+        sedi("weno_eps",str(args.weno_eps))
       run_hipft()
       out=os.popen("cat diffh.log").read().replace('\n','')
       print("=> Exiting run directory "+testname)
@@ -183,6 +210,8 @@ def run(args):
     text=testtype+"-fnm"+str(args.fnm)
     if args.dt:
       text=text+"-dt"+str(args.dt)
+    if args.weno_eps != 0:
+      text=text+"-weno_eps"+str(args.weno_eps)
     convergencefile = args.ofile if args.ofile else text+'.txt'
     createConFile(text,convergencefile)
     np=args.np if args.np else 1024
@@ -192,6 +221,8 @@ def run(args):
       testname=testtype+"-nt"+str(nt)+"-np"+str(np)+"-fnm"+str(args.fnm)
       if args.dt:
         testname=testname+"-dt"+str(args.dt)
+      if args.weno_eps != 0:
+        testname=testname+"-weno_eps"+str(args.weno_eps)
       preparedir(testname,testtype,htest,hipft)
       print("=> Modifying hipft.in input file with chosen parameters")
       sed("res_nt",str(nt))
@@ -204,6 +235,8 @@ def run(args):
         sedi("upwind",str(0.))
       else:
         sedi("flow_num_method",str(args.fnm))
+      if args.weno_eps != 0:
+        sedi("weno_eps",str(args.weno_eps))
       run_hipft()
       out=os.popen("cat diffh.log").read().replace('\n','')
       print("=> Exiting run directory "+testname)
@@ -222,6 +255,8 @@ def run(args):
     text=testtype+"-fnm"+str(args.fnm)
     if args.dt:
       text=text+"-dt"+str(args.dt)
+    if args.weno_eps != 0:
+      text=text+"-weno_eps"+str(args.weno_eps)
     convergencefile = args.ofile if args.ofile else text+'.txt'
     createConFile(text,convergencefile)
     nt_s=args.nt if args.nt else 64
@@ -232,6 +267,8 @@ def run(args):
       testname=testtype+"-nt"+str(nt)+"-np"+str(np)+"-fnm"+str(args.fnm)
       if args.dt:
         testname=testname+"-dt"+str(args.dt)
+      if args.weno_eps != 0:
+        testname=testname+"-weno_eps"+str(args.weno_eps)
       preparedir(testname,testtype,htest,hipft)
       print("=> Modifying hipft.in input file with chosen parameters")
       sed("res_nt",str(nt))
@@ -244,6 +281,8 @@ def run(args):
         sedi("upwind",str(0.))
       else:
         sedi("flow_num_method",str(args.fnm))
+      if args.weno_eps != 0:
+        sedi("weno_eps",str(args.weno_eps))
       run_hipft()
       out=os.popen("cat diffh.log").read().replace('\n','')
       print("=> Exiting run directory "+testname)
@@ -306,6 +345,8 @@ def run(args):
       text=text+"-dt"+str(args.dt)
     if args.strang:
       text=text+"-strang"
+    if args.weno_eps != 0:
+      text=text+"-weno_eps"+str(args.weno_eps)
     convergencefile = args.ofile if args.ofile else text+'.txt'
     createConFile(text,convergencefile)
     nt_s=args.nt if args.nt else 64
@@ -318,6 +359,8 @@ def run(args):
         testname=testname+"-dt"+str(args.dt)
       if args.strang:
         testname=testname+"-strang"
+      if args.weno_eps != 0:
+        testname=testname+"-weno_eps"+str(args.weno_eps)
       preparedir(testname,testtype,htest,hipft)
       print("=> Modifying hipft.in input file with chosen parameters")
       sed("res_nt",str(nt))
@@ -327,6 +370,8 @@ def run(args):
         sed("dt_max",str(args.dt))
       if args.strang:
         sedi("strang_splitting",".true.")
+      if args.weno_eps != 0:
+        sedi("weno_eps",str(args.weno_eps))
       sed("n_realizations",'1')
       sed("diffusion_coef_constant","500")
       sedi("diffusion_num_method",str(args.dnm))
@@ -348,7 +393,6 @@ def run(args):
     print("=> Exiting test directory "+testtype)
     os.chdir("..")
 
-   
 
 
 def maketestdir(testdir):
@@ -429,4 +473,3 @@ def main():
 
 if __name__ == '__main__':
   main()
-
