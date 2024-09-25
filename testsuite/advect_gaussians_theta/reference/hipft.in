@@ -1,12 +1,12 @@
 &hipft_input_parameters
 !
-  verbose = .true.
+  verbose = 2
   output_single_precision = .false.
 !
   res_nt = 180
   res_np = 360
 !
-  validation_run = 3
+  validation_run = 2
 !
   time_end = 672.0
   dt_max = 1.0
@@ -14,6 +14,8 @@
 ! ****** Activate the flow advance.
 !
   advance_flow = .true.
+!
+  flow_vt_const = -9999.0
 !
 /
 !
