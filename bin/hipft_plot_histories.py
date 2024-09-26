@@ -1,16 +1,16 @@
-
 #!/usr/bin/env python3
 import argparse
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+mpl.use('Agg')
 from astropy.time import Time
 from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_number
 import os
 import itertools
 
-# Version 1.8.4
+# Version 1.9.0
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -272,6 +272,10 @@ def run(args):
       print('ERROR: Can only compare a maximum of 256 runs.')
       quit()
 
+  if args.summary and LABEL_LEN == 1:
+      print('WARNING: Summary mode only works for multiple histories.  Switching to standard mode.')
+      args.summary = False
+
   print("==> Reading history files...")
   time_list=[]
   fluxp_list=[]
@@ -284,7 +288,10 @@ def run(args):
   eq_dipole_list=[]
   brmin_list=[]
   brmax_list=[]
-  valerr_list=[]
+
+  if args.valrun:
+      valerr_list=[]
+
   flux_tot_un_list=[]
   flux_tot_s_list=[]
   flux_imb_list=[]
@@ -347,7 +354,9 @@ def run(args):
 
     brmin_list.append(np.array(hist_sol['BR_MIN']))
     brmax_list.append(np.array(hist_sol['BR_MAX']))
-    valerr_list.append(np.array(hist_sol['VALIDATION_ERR_CVRMSD']))
+
+    if args.valrun:
+        valerr_list.append(np.array(hist_sol['VALIDATION_ERR_HHabs']))
 
     #Compute derived quantities:
     flux_tot_un = np.abs(fluxp_list[i]) + np.abs(fluxm_list[i])
@@ -383,7 +392,8 @@ def run(args):
   fluxp_ps_FF = np.array(fluxp_ps_list,dtype=object)*flux_fac
   fluxm_ps_FF = np.array(fluxm_ps_list,dtype=object)*flux_fac
 
-  valerr=np.array(valerr_list,dtype=object)*(1e5)
+  if args.valrun:
+      valerr=np.array(valerr_list,dtype=object)*(1e5)
 
 #
 # ****** Total flux imbalance.
@@ -600,7 +610,7 @@ def run(args):
 
     plt.title('Validation Error', {'fontsize': fsize, 'color': tc})
     xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs)
-    plt.ylabel('(CV)RMSD ($10^{-5}$)', {'fontsize': fsize, 'color': tc})
+    plt.ylabel('HHabs ($10^{-5}$)', {'fontsize': fsize, 'color': tc})
     ax.tick_params(axis='y',labelsize=fsize)
     ax.grid(zorder=0)
 

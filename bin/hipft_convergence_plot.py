@@ -3,6 +3,7 @@ import argparse
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+mpl.use('Agg')
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt Convergence Plotting.')
