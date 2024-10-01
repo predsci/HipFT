@@ -280,7 +280,7 @@
 !       -----> Setting this to 0 (default) activates the PTL time step limit
 !       -----> which automatically subcycles the minimum needed amount.
 !
-  strang_splitting = .true.
+  strang_splitting = .false.
 !
 !       -----> Set this to use second-order Strange splitting when using
 !       -----> both diffusion and advection (in an A-D-A sequence).

@@ -60,6 +60,10 @@
 !
 !-----------------------------------------------------------------------
 !
+  strang_splitting = .true.
+!
+!-----------------------------------------------------------------------
+!
 ! ****** DATA ASSIMILATION ********
 !
   assimilate_data = .true.
@@ -70,9 +74,9 @@
 ! ****** RANDOM FLUX ********
 !
   advance_source = .true.
-  source_rfe_model = 1
-  source_rfe_total_unsigned_flux_per_hour = 105.0
+  source_rfe_model = 2
+  source_rfe_total_unsigned_flux_per_hour = 150.0
   source_rfe_lifetime = 0.3
-  
+  source_rfe_seed = 12345  
 /
 !
