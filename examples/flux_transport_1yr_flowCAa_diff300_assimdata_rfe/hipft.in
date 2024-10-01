@@ -70,6 +70,9 @@
   assimilate_data_map_list_filename = 'zenodo_hipft/map_files_2022.csv'
   assimilate_data_map_root_dir = 'zenodo_hipft/.'
   assimilate_data_balance_flux = .true.
+  assimilate_data_custom_from_mu = .true.
+  assimilate_data_mu_limit = 0.1
+  assimilate_data_mu_power = 4.0
 !
 ! ****** RANDOM FLUX ********
 !
