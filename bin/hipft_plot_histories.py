@@ -324,7 +324,7 @@ def run(args):
 
   for i,dire in enumerate(hist_list):
     h_file_name = dire
-    hist_sol_full = pd.read_table(h_file_name,header=0,sep='\s+')
+    hist_sol_full = pd.read_table(h_file_name,header=0,sep='\\s+')
 
     samples = int(args.samples)
 
@@ -379,21 +379,21 @@ def run(args):
 #
 # ****** Create needed parameters and lists.
 #  
-  time_tfac = np.array(time_list,dtype=object)*tfac
+  time_tfac = np.array(time_list,dtype=np.float64)*tfac
   xmn = np.amin([np.amin(arr) for arr in time_tfac])
   xmx = np.amax([np.amax(arr) for arr in time_tfac])
-  flux_tot_un_FF = np.array(flux_tot_un_list,dtype=object)*flux_fac
-  fluxm_FF = np.abs(np.array(fluxm_list,dtype=object))*flux_fac
-  fluxp_FF = np.array(fluxp_list,dtype=object)*flux_fac
+  flux_tot_un_FF = np.array(flux_tot_un_list,dtype=np.float64)*flux_fac
+  fluxm_FF = np.abs(np.array(fluxm_list,dtype=np.float64))*flux_fac
+  fluxp_FF = np.array(fluxp_list,dtype=np.float64)*flux_fac
 
-  flux_tot_s_FF = np.array(flux_tot_s_list,dtype=object)*flux_fac
-  fluxp_pn_FF = np.array(fluxp_pn_list,dtype=object)*flux_fac
-  fluxm_pn_FF = np.array(fluxm_pn_list,dtype=object)*flux_fac
-  fluxp_ps_FF = np.array(fluxp_ps_list,dtype=object)*flux_fac
-  fluxm_ps_FF = np.array(fluxm_ps_list,dtype=object)*flux_fac
+  flux_tot_s_FF = np.array(flux_tot_s_list,dtype=np.float64)*flux_fac
+  fluxp_pn_FF = np.array(fluxp_pn_list,dtype=np.float64)*flux_fac
+  fluxm_pn_FF = np.array(fluxm_pn_list,dtype=np.float64)*flux_fac
+  fluxp_ps_FF = np.array(fluxp_ps_list,dtype=np.float64)*flux_fac
+  fluxm_ps_FF = np.array(fluxm_ps_list,dtype=np.float64)*flux_fac
 
   if args.valrun:
-      valerr=np.array(valerr_list,dtype=object)*(1e5)
+      valerr=np.array(valerr_list,dtype=np.float64)*(1e5)
 
 #
 # ****** Total flux imbalance.
@@ -508,7 +508,7 @@ def run(args):
 #
 # ****** Polar average field strengths.
 #
-  ymax = max(np.amax(np.abs(arr)) for array in (np.array(pole_n_avg_field_list,dtype=object), np.array(pole_s_avg_field_list,dtype=object)) for arr in array)
+  ymax = max(np.amax(np.abs(arr)) for array in (np.array(pole_n_avg_field_list,dtype=np.float64), np.array(pole_s_avg_field_list,dtype=np.float64)) for arr in array)
   ymin = -ymax 
   fig = plt.figure(num=None, figsize=(14, 7), dpi=args.dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
@@ -533,9 +533,9 @@ def run(args):
   ax = plt.gca()
 
   if args.summary:
-    legend1 = summaryMode2(brmax_list,np.abs(np.array(brmin_list,dtype=object)),time_tfac[0],LW,FLW,fsize,plt,"blue","red","max(Br)","|min(Br)|")
+    legend1 = summaryMode2(brmax_list,np.abs(np.array(brmin_list,dtype=np.float64)),time_tfac[0],LW,FLW,fsize,plt,"blue","red","max(Br)","|min(Br)|")
   else:
-    legend1 = normalMode2(plt,ax,fig,args,brmax_list,np.abs(np.array(brmin_list,dtype=object)),time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
+    legend1 = normalMode2(plt,ax,fig,args,brmax_list,np.abs(np.array(brmin_list,dtype=np.float64)),time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
       NOTindividual,LABEL_LEN,label_list,lgfsize,'blue','red',["max(Br)","|min(Br)|"])
   
   ymax = max(np.amax(np.abs(arr)) for array in (brmax_list, brmin_list) for arr in array)
@@ -634,7 +634,7 @@ def makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,ymin,ymax,fsize)
 
 
 def summaryMode(llist,xlist,LW,FLW,fsize,plt):
-  summaryHelper1(llist,xlist,LW,FLW,plt,"k",'blue',"$\mu$","$\sigma$","[Min,Max]")
+  summaryHelper1(llist,xlist,LW,FLW,plt,"k",'blue',"$\\mu$","$\\sigma$","[Min,Max]")
   plt.legend(loc='upper left',fontsize=fsize, ncol=3)
 
 
@@ -642,7 +642,7 @@ def summaryMode2(llist1,llist2,xlist,LW,FLW,fsize,plt,CM1,CM2,LT1,LT2):
   summaryHelper1(llist1,xlist,LW,FLW,plt,CM1,CM1,LT1,'_nolegend_','_nolegend_')
   summaryHelper1(llist2,xlist,LW,FLW,plt,CM2,CM2,LT2,'_nolegend_','_nolegend_')
   legend1 = plt.legend(loc='upper right',fontsize=fsize, ncol=2)
-  addLegendGeneric(LW,FLW,fsize,plt,"k","gray","$\mu$","$\sigma$","[Min,Max]")
+  addLegendGeneric(LW,FLW,fsize,plt,"k","gray","$\\mu$","$\\sigma$","[Min,Max]")
   return legend1
 
 
@@ -652,7 +652,7 @@ def summaryMode4(llist1,llist2,llist3,llist4,xlist,LW,FLW,fsize,plt,CM1,CM2,CM3,
   summaryHelper1(llist3,xlist,LW,FLW,plt,CM3,CM3,LT3,'_nolegend_','_nolegend_')
   summaryHelper1(llist4,xlist,LW,FLW,plt,CM4,CM4,LT4,'_nolegend_','_nolegend_')
   legend1 = plt.legend(loc='upper right',fontsize=fsize, ncol=4)
-  addLegendGeneric(LW,FLW,fsize,plt,"k","gray","$\mu$","$\sigma$","[Min,Max]")
+  addLegendGeneric(LW,FLW,fsize,plt,"k","gray","$\\mu$","$\\sigma$","[Min,Max]")
   return legend1
 
 
@@ -669,9 +669,9 @@ def summaryHelper1(llist,xlist,LW,FLW,plt,CM,CF,LT1,LT2,LT3):
 
 
 def addLegendGeneric(LW,FLW,fsize,plt,CM,CF,LT1,LT2,LT3):
-  h1=plt.plot(np.NaN, np.NaN,color=CM,linewidth=LW,label='_nolegend_')
-  h2=plt.fill_between([np.NaN],[0],[0],linewidth=FLW,alpha=0.5,color=CF,label='_nolegend_')
-  h3=plt.fill_between([np.NaN],[0],[0],linewidth=FLW,alpha=0.25,color=CF,label='_nolegend_')
+  h1=plt.plot(np.nan, np.nan,color=CM,linewidth=LW,label='_nolegend_')
+  h2=plt.fill_between([np.nan],[0],[0],linewidth=FLW,alpha=0.5,color=CF,label='_nolegend_')
+  h3=plt.fill_between([np.nan],[0],[0],linewidth=FLW,alpha=0.25,color=CF,label='_nolegend_')
   plt.legend([h1[0],h2,h3],[LT1,LT2,LT3],loc='lower left',fontsize=fsize, ncol=3)
 
 
