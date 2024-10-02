@@ -186,7 +186,7 @@ def run(args):
       else:
         makeMovie(args,odir,file,args.s)
     else:
-      for i in range(1,dim3):
+      for i in range(1,dim3+1):
         makeMovie(args,odir,file,i)
 
   for filetmp in sorted(os.listdir(args.datadir+'/plots/tmp')):
