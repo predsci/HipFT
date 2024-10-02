@@ -159,7 +159,7 @@ def run(args):
           else:
             extractANDplot(TITLE,args,file, args.s)
         else:
-          for i in range(1,dim3):
+          for i in range(1,dim3+1):
             extractANDplot(TITLE,args,file, i)
 
   if os.path.exists("tmp_file.h5"):
