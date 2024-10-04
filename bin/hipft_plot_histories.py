@@ -333,6 +333,7 @@ def run(args):
     #thin out data in hist_sol
     if samples > 1:
       indices = np.linspace(0, number_of_data_points-1, samples, endpoint=True, dtype=int)
+      indices = np.unique(indices)
       hist_sol = hist_sol_full.iloc[indices]
     else:
       hist_sol = hist_sol_full
