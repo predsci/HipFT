@@ -6,8 +6,9 @@ import re
 import signal
 import sys
 from pathlib import Path
+import concurrent.futures
 
-# Version 2.3.1
+# Version 2.4.0
 
 def handle_int(signum, frame):
     print('You pressed Ctrl+C! Stopping!')
@@ -85,6 +86,13 @@ def argParsing():
     action='store_true',
     required=False)
 
+  parser.add_argument('-cores',
+    help='Number of cores to use.',
+    dest='cores',
+    default=1,
+    type=int,
+    required=False)
+
   return parser.parse_args()
 
 
@@ -132,38 +140,49 @@ def run(args):
 
   os.chdir(args.datadir+'/plots')
 
-  idx=0
-  twoD = None
-  for filetmp in sorted_listdir:
+  def process_file(filetmp, idx):
     file=args.datadir+'/'+filetmp
     if filetmp.endswith('.h5'):
       re_idx = re.search("idx[0-9]+",filetmp)
       if not re_idx:
         print("Expecting the file "+ filetmp  +" to contain an idx[0-9]+ number.")
-        continue
-      idxx=int(re.search("[0-9]+",re.search("idx[0-9]+",filetmp).group()).group())
-      idx+=1
-      TITLE=date_fmt+title_str[idx-1]
+        return None
+      idxx = int(re.search("[0-9]+",re.search("idx[0-9]+",filetmp).group()).group())
+      TITLE = date_fmt+title_str[idx-1]
       with h5py.File(file,'r') as f1:
-        twoD=True
+        twoD = True
         if 'dim3' in list(f1.keys()):
           dim3 = f1['dim3'].shape[0]
-          twoD=False
-        if twoD:
-          fileOut = os.path.basename(file).replace('.h5','.png')
-          plot2d(TITLE,args,file,fileOut)
-        elif (args.s):
-          if (args.s > dim3):
-            print("Slice requested is outside range defaulting to last slice : "+ str(dim3))
-            extractANDplot(TITLE,args,file, dim3)
-          else:
-            extractANDplot(TITLE,args,file, args.s)
+          twoD = False
+      if twoD:
+        fileOut = os.path.basename(file).replace('.h5','.png')
+        plot2d(TITLE,args,file,fileOut)
+      elif (args.s):
+        if (args.s > dim3):
+          print("Slice requested is outside range defaulting to last slice : "+ str(dim3))
+          extractANDplot(TITLE,args,file, dim3, idx)
         else:
-          for i in range(1,dim3+1):
-            extractANDplot(TITLE,args,file, i)
+          extractANDplot(TITLE,args,file, args.s, idx)
+      else:
+        for i in range(1,dim3+1):
+          extractANDplot(TITLE,args,file, i, idx)
+      return None
+    return None
 
-  if os.path.exists("tmp_file.h5"):
-    os.remove("tmp_file.h5")
+  with concurrent.futures.ThreadPoolExecutor(max_workers=args.cores) as executor:
+    futures = [executor.submit(process_file, filetmp, idx + 1) for idx, filetmp in enumerate(sorted_listdir)]
+
+  twoD = None
+  for future in concurrent.futures.as_completed(futures):
+    dim3 = future.result()
+    if dim3 != None:
+      twoD = False
+    else:
+      twoD =  True
+    break
+
+  if os.path.exists("tmp_file*.h5"):
+    os.remove("tmp_file*.h5")
 
   if not os.path.exists(args.datadir+'/plots/tmp'):
     os.makedirs(args.datadir+'/plots/tmp')
@@ -182,12 +201,12 @@ def run(args):
       ffmpefMovie(args,odir,args.outfile)
     elif (args.s):
       if (args.s > dim3):
-        makeMovie(args,odir,file,dim3)
+        makeMovie(args,odir,dim3)
       else:
-        makeMovie(args,odir,file,args.s)
+        makeMovie(args,odir,args.s)
     else:
       for i in range(1,dim3+1):
-        makeMovie(args,odir,file,i)
+        makeMovie(args,odir,i)
 
   for filetmp in sorted(os.listdir(args.datadir+'/plots/tmp')):
     os.remove(filetmp)
@@ -196,7 +215,7 @@ def run(args):
   os.rmdir(args.datadir+'/plots/tmp')
 
 
-def makeMovie(args,odir,file,r):
+def makeMovie(args,odir,r):
   fslice="%06d" % r
   for filetmp in sorted(os.listdir(args.datadir+'/plots')):
     file=args.datadir+'/plots/'+filetmp
@@ -216,10 +235,11 @@ def ffmpefMovie(args,odir,name):
   os.system('cp '+args.datadir+'/plots/tmp/'+name+'.mov '+odir+'/'+name+'.mov')
 
 
-def extractANDplot(TITLE,args,file, r):
-  os.system('hipft_extract_realization.py '+ file +' -r '+ str(r) +' -o tmp_file.h5')
-  fileOut = os.path.basename(file).replace('.h5','') +'_r' + "%06d" % r +'.png'
-  plot2d(TITLE,args,"tmp_file.h5",fileOut)
+def extractANDplot(TITLE, args, file, r, idx):
+  tmp_file = f'tmp_file{idx}.h5'
+  os.system(f'hipft_extract_realization.py {file} -r {r} -o {tmp_file}')
+  fileOut = os.path.basename(file).replace('.h5', '') + f'_r{r:06d}.png'
+  plot2d(TITLE, args, tmp_file, fileOut)
 
 
 def plot2d(TITLE,args,file,fileOut):
@@ -230,7 +250,11 @@ def plot2d(TITLE,args,file,fileOut):
 def main():
   ## Get input agruments:
   args = argParsing()
-  run(args)
+  try:
+    run(args)
+  except KeyboardInterrupt:
+    print("Ctrl-C pressed!")
+    sys.exit(0)
 
 if __name__ == '__main__':
   main()
