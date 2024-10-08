@@ -12,8 +12,9 @@ import os
 import psihdf as ps
 import psipals
 import psimath
+import multiprocessing as mp
 
-# Version 1.2.1
+# Version 1.3.0
 
 def signal_handler(signal, frame):
   print('You pressed Ctrl+C! Stopping!')
@@ -310,12 +311,20 @@ def argParsing():
     action='store_true',
     default=False,
     required=False)
+
+  parser.add_argument('-cores',
+    help='Number of cores to use for movies.',
+    dest='cores',
+    type=int,
+    required=False)
   
   return parser.parse_args()
 
 
-
 def run(args):
+
+  if not args.cores:
+    args.cores = int(os.getenv('OMP_NUM_THREADS', 1))
 
   #Check that file exists.
   if not os.path.exists(args.iFile):
@@ -339,18 +348,12 @@ def run(args):
   if bool(args.dim3):
     if (args.sall):
       xvec, yvec, zvec, data_in = ps.rdhdf_3d(args.iFile)
-      for islice in range(len(zvec)):
-        oFileNew = oFile.replace('.png','_r'+str(int(zvec[islice])).zfill(6)+'.png')
-        data = np.squeeze(data_in[islice,:,:])
-        plot(args, xvec, yvec, data, oFileNew)
-        matplotlib.pyplot.close()
+      with mp.Pool(processes=args.cores) as pool:
+            pool.starmap(process_file, [(args, islice, oFile, xvec, yvec, data_in, zvec[islice]) for islice in range(len(zvec))])
     elif (args.slices):
       xvec, yvec, zvec, data_in = ps.rdhdf_3d(args.iFile)
-      for islice in args.slices:
-        oFileNew = oFile.replace('.png','_r'+str(islice).zfill(6)+'.png')
-        data = np.squeeze(data_in[islice-1,:,:])
-        plot(args, xvec, yvec, data, oFileNew)
-        matplotlib.pyplot.close()
+      with mp.Pool(processes=args.cores) as pool:
+            pool.starmap(process_file, [(args, islice, oFile, xvec, yvec, data_in, zvec[islice]) for islice in args.slices])
     else:
       xvec, yvec, zvec, data_in = ps.rdhdf_3d(args.iFile)
       data = np.squeeze(data_in[int(args.slice)-1,:,:])
@@ -362,6 +365,11 @@ def run(args):
     plot(args, xvec, yvec, data, oFile)
     matplotlib.pyplot.close()
 
+
+def process_file(args, islice, oFile, xvec, yvec, data_in, zvec_i):
+  oFileNew = oFile.replace('.png','_r'+str(int(zvec_i)).zfill(6)+'.png')
+  data = np.squeeze(data_in[islice,:,:])
+  plot(args, xvec, yvec, data, oFileNew)
 
 
 def plot(args, xvec, yvec, data, oFile):
@@ -1023,4 +1031,3 @@ def main():
 
 if __name__ == '__main__':
   main()
-

@@ -87,9 +87,8 @@ def argParsing():
     required=False)
 
   parser.add_argument('-cores',
-    help='Number of cores to use.',
+    help='Number of cores to use (Default 1 or the environment variable OMP_NUM_THREADS if set).',
     dest='cores',
-    default=1,
     type=int,
     required=False)
 
@@ -97,6 +96,10 @@ def argParsing():
 
 
 def run(args):
+
+  if not args.cores:
+    args.cores = int(os.getenv('OMP_NUM_THREADS', 1))
+
   if args.odir:
     odir=str(Path(args.odir).resolve())
   else:
@@ -141,12 +144,13 @@ def run(args):
   os.chdir(args.datadir+'/plots')
 
   def process_file(filetmp, idx):
+    dim3 = None
     file=args.datadir+'/'+filetmp
     if filetmp.endswith('.h5'):
       re_idx = re.search("idx[0-9]+",filetmp)
       if not re_idx:
         print("Expecting the file "+ filetmp  +" to contain an idx[0-9]+ number.")
-        return None
+        return dim3
       idxx = int(re.search("[0-9]+",re.search("idx[0-9]+",filetmp).group()).group())
       TITLE = date_fmt+title_str[idx-1]
       with h5py.File(file,'r') as f1:
@@ -166,20 +170,17 @@ def run(args):
       else:
         for i in range(1,dim3+1):
           extractANDplot(TITLE,args,file, i, idx)
-      return None
-    return None
+      return dim3
+    return dim3
 
   with concurrent.futures.ThreadPoolExecutor(max_workers=args.cores) as executor:
     futures = [executor.submit(process_file, filetmp, idx + 1) for idx, filetmp in enumerate(sorted_listdir)]
 
-  twoD = None
+  twoD = True
   for future in concurrent.futures.as_completed(futures):
     dim3 = future.result()
-    if dim3 != None:
-      twoD = False
-    else:
-      twoD =  True
-    break
+    if dim3 is not None:
+        twoD = False 
 
   if os.path.exists("tmp_file*.h5"):
     os.remove("tmp_file*.h5")
@@ -250,11 +251,8 @@ def plot2d(TITLE,args,file,fileOut):
 def main():
   ## Get input agruments:
   args = argParsing()
-  try:
-    run(args)
-  except KeyboardInterrupt:
-    print("Ctrl-C pressed!")
-    sys.exit(0)
+  run(args)
+
 
 if __name__ == '__main__':
   main()
