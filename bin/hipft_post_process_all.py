@@ -37,32 +37,38 @@ def argParsing():
     dest='utstart',
     required=False)
 
+# This may not be needed....
   parser.add_argument('-maplist',
     help='Full path to the map file list.  Default: args.rundir/hipft_output_map_list.out',
     dest='maplist',
     required=False)
 
+# These will be changed to UT start and stop later...
   parser.add_argument('-t0',
     help='Sequence start index.',
     dest='t0',
     required=False)
-
   parser.add_argument('-tf',
     help='Sequence stop index. If not specified, all maps in mapfile are used.',
     dest='tf',
     required=False)
 
+# Remove this.
   parser.add_argument('-tfac',
     help='Time factor to get time into units of hours (HipFT time is in hours, so default tfac=1).',
     dest='tfac',
     required=False)
- 
+#  if total time >1 year, <2 years, use cr.... etc.  (no weeks)  if >2 yrs, use years.
+#  Add "-plot_axis_options" flag that takes in big string and atttached to plot script calls.  
   parser.add_argument('-xunits',
     help='Units of the x-axis (date, seconds, minutes, hours, days, weeks, cr, or years).',
     dest='xunits',
     default='hours',
     required=False)
+# -map_plot_options    
+# -butterfly_plot_options  ("-cmin -10 -cmax 10")
 
+# Remove this...   But - add check for "ffmpeg" in system (which) in plot script  - if not there, write out "Warning - ffmpeg not detected, not making movie file."
   parser.add_argument('-nomovie',
     help='Do not make mov movie.',
     dest='nomovie',
@@ -70,16 +76,22 @@ def argParsing():
     action='store_true',
     required=False)
 
+# Change name of this to "hipft_home"
   parser.add_argument('-hipftbin',
     help='HipFT bin location',
     dest='hipft',
     type=str,
     required=False)
 
+# change name to history_plot_samples
+# Add "all" option for all.  Add this to help.
   parser.add_argument('-samples',
     help='Number of points to plot, this helps with larger files (default:300)',
     default=300)
 
+# Rename "cores" to "np" in all scripts (if not being used)
+# In THIS script, -parallel (use python cpu count if omp_num_threads is not set
+# default shoudl be true.
   parser.add_argument('-cores',
     help='Number of cores to use for movies.',
     dest='cores',
@@ -87,27 +99,32 @@ def argParsing():
     required=False)
 
   parser.add_argument('-butterfly',
-    help='Create butterfly plots only',
+    help='Create butterfly plots',
     dest='butterfly',
     default=False,
     action='store_true',
     required=False)
 
   parser.add_argument('-movies',
-    help='Create movies only',
+    help='Create movies',
     dest='movies',
     default=False,
     action='store_true',
     required=False)
 
   parser.add_argument('-history',
-    help='Create history plots only, Options{ 1: All, 2: individual, 3: together, 4: summary}',
+    help='Create history plots, Options{ 1: Plot all histories (2,3,4), \
+                                         2: Plot individual realizations, \
+                                         3: Plot all realizations together, \
+                                         4: Plot realization summary (mean, stddev, etc)}',
     dest='history',
     type=int,
+    default=1,
     required=False)
 
+# force --> overwrite
   parser.add_argument('-force',
-    help='Force remaking the plots',
+    help='Overwrite selected processing',
     dest='force',
     default=False,
     action='store_true',
@@ -345,3 +362,35 @@ def main():
 
 if __name__ == '__main__':
   main()
+  
+  
+  
+# NOTES
+
+# If UT is specified, run hipft_add_dates_to_map_output_list.py to make UTC/TAI map list, for use in movies.
+# (add mdl flag to movie script call)
+
+# If no UT specificed, butterfly and other plots should be just "Hours" etc, not "Hours since.."
+# Use flag ignore_data_uttime to do this.
+
+# Issue:  No x-axis ticks in butterfly plots
+   # Heuristics shoudl cover this - see inputs)
+
+
+# Create subfolder called "post_processing"  rundir/post_processing 
+# In subfolder, more subfolders....
+#   butterfly, map_plotting, histories
+#                ->   images       movies
+#                     r1,r2,etc.    (no sub)
+
+# Add -5 to 5 cmin/cmax to butterfly plot
+# Add custom cmin/cmax for map plots and butterfly in this script
+
+# More and pretty verbosity on steps it is doing.
+# OFT Post Processing
+# ==> Loading.....
+# ==> Plotting butterfly diagram using <N> processes...
+# ==> Done!  Results are in [DIRECTORY]
+
+
+  

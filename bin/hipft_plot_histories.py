@@ -10,7 +10,7 @@ from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_
 import os
 import itertools
 
-# Version 1.9.0
+# Version 1.9.1
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -631,6 +631,8 @@ def makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,ymin,ymax,fsize)
   xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs)
   ax.tick_params(axis='y',labelsize=fsize)
   ax.grid(zorder=0)
+  t = ax.yaxis.get_offset_text()
+  t.set_size(fsize)
   fig.tight_layout()
 
 
