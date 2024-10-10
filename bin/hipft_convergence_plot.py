@@ -34,7 +34,7 @@ def argParsing():
     required=False) 
 
   parser.add_argument('-dpi',
-    help='DPI for plots.',
+    help='DPI for plots (default 120).',
     dest='dpi',
     default=120,
     type=int,
@@ -63,18 +63,24 @@ def argParsing():
     dest='ylabel',
     required=False)
 
+  parser.add_argument('-ymax',
+    help='Y axis max',
+    dest='ymax',
+    type=float,
+    required=False)
+
   parser.add_argument('-ms',
     help='Marker size',
     dest='ms',
     type=float,
-    default=2000,
+    default=4000,
     required=False)
 
   parser.add_argument('-lms',
     help='Legend marker size',
     dest='lms',
     type=float,
-    default=2000,
+    default=3000,
     required=False)
 
   parser.add_argument('-markers',
@@ -88,6 +94,31 @@ def argParsing():
     dest='colors',
     type=str,
     required=False)
+
+  parser.add_argument('-orders',
+    help='Comma separated list of order lines to plot (can use [] to skip some)',
+    dest='orders',
+    type=str,
+    required=False)
+
+  parser.add_argument('-order_tethers',
+    help='Comma separated list of indices to tether order lines to',
+    dest='order_tethers',
+    type=str,
+    required=False)
+
+  parser.add_argument('-order_labels',
+    help='Comma separated list of legend labels for orders',
+    dest='order_labels',
+    type=str,
+    required=False)
+    
+  parser.add_argument('-lw',
+    help='Line width',
+    dest='lw',
+    type=float,
+    default=10,
+    required=False)    
 
   return parser.parse_args()
 
@@ -113,7 +144,7 @@ def run(args):
 
   if args.markers:
     MARKERS=arg_dict['markers'].split(',')
-    if len(lgl_list) != LABEL_LEN:
+    if len(MARKERS) != LABEL_LEN:
       print('Not enough markers provided')
       return
   else:
@@ -121,12 +152,36 @@ def run(args):
 
   if args.colors:
     COLORS=arg_dict['colors'].split(',')
-    if len(lgl_list) != LABEL_LEN:
+    if len(COLORS) != LABEL_LEN:
       print('Not enough colors provided')
       return
   else:
     cmap = plt.get_cmap('rainbow',LABEL_LEN)
     COLORS = [mpl.colors.rgb2hex(cmap(i)) for i in range(cmap.N)]  
+
+  if args.orders:
+    ORDERS=arg_dict['orders'].split(',')
+    if len(ORDERS) != LABEL_LEN:
+      print('Not enough orders provided')
+      return
+
+  if args.order_tethers:
+    ORDER_TETHERS=arg_dict['order_tethers'].split(',')
+    if len(ORDER_TETHERS) != LABEL_LEN:
+      print('Not enough order_tethers provided')
+      return
+  elif(args.orders):
+    ORDER_TETHERS = [-1 for i in range(LABEL_LEN)]
+
+  if args.order_labels:
+    ORDER_LABELS=arg_dict['order_labels'].split(',')
+    if len(ORDER_LABELS) != LABEL_LEN:
+      print('Not enough order_labels provided')
+      return
+  elif(args.orders):
+    ORDER_LABELS = ['$O(h^'+str(ORDERS[i])+')$' for i in range(LABEL_LEN)]
+
+  lw=args.lw
 
   etype = args.errtype+1
 
@@ -134,9 +189,14 @@ def run(args):
   ms=args.ms
   fig, ax = plt.subplots(num=None, figsize=(int(fgsize[0]),int(fgsize[1])), dpi=args.dpi, facecolor='w')
 
+  ox0=[]
+  ox1=[]
+  oy0=[]    
+  oy1=[] 
+
   for (idx,cfile) in enumerate(cfile_list):
     nxl=[]
-    err=[]
+    err=[]   
     testtype=None
     with open(cfile, 'r') as f:
       testtype=f.readline().replace('\n','')
@@ -182,7 +242,27 @@ def run(args):
 
     xvec = dsize/np.array(nxl)
     yvec = np.array(err)
+
     plt.scatter(xvec,yvec,s=ms,c=COLORS[idx],edgecolors=COLORS[idx],zorder=3,marker=MARKERS[idx],label=leglabel)
+    
+    if args.orders:
+      xvec = dsize/np.array(nxl)
+      yvec = np.array(err)    
+      xtether = xvec[int(ORDER_TETHERS[idx])]
+      ytether = yvec[int(ORDER_TETHERS[idx])]
+      xmin = xvec[0]
+      xmax = xvec[-1]
+      ox0.append(float(xmin))
+      oy0.append(float(10.0**(np.log10(ytether)-float(ORDERS[idx])*(np.log10(xtether)-np.log10(xmin)))))
+      ox1.append(float(xmax))
+      oy1.append(float(10.0**(np.log10(ytether)+float(ORDERS[idx])*(np.log10(xmax)-np.log10(xtether)))))
+
+
+  if args.orders:
+    for (idx,cfile) in enumerate(cfile_list):
+      leglabel = '$O(h^'+str(ORDERS[idx])+')$'
+      ax.plot([ox0[idx],ox1[idx]],[oy0[idx],oy1[idx]],'--',c=COLORS[idx],linewidth=lw,label=leglabel)
+
 
   if args.xlabel:
     xlabel=args.xlabel
@@ -214,7 +294,7 @@ def run(args):
     elif etype == 6:
       ylabel='MAXAPE'
     elif etype == 7:
-      ylabel='HHABS'
+      ylabel='HH$_{||}$'
 
 
   ax.set_ylabel(ylabel,fontsize=fsize)
@@ -223,6 +303,8 @@ def run(args):
   ax.tick_params(axis='x',labelsize=fsize)
   ax.set_xscale("log")
   ax.set_yscale("log")
+  if (args.ymax):
+      ax.set_ylim(ymax=args.ymax)
   ax.set_aspect('equal')
   ax.grid(zorder=0)
 
@@ -232,15 +314,19 @@ def run(args):
   plt.xticks(xvec,np_list)
   plt.minorticks_off()
 
-  lg = plt.legend(fontsize=fsize,loc='best')
+  lg = plt.legend(fontsize=fsize,loc='lower right')
 
   for handle in lg.legend_handles:
     handle._sizes= [args.lms]
 
-  ofile = args.ofile if args.ofile else testtype+'.png'
+  fig.tight_layout()
 
-  fig.tight_layout()                               
+  ofile = args.ofile if args.ofile else testtype+'.png'
   fig.savefig(ofile,bbox_inches='tight',dpi=args.dpi)
+
+  ofile = args.ofile if args.ofile else testtype+'.pdf'
+  fig.savefig(ofile,bbox_inches='tight',dpi=args.dpi)
+
   plt.close('all')
 
 
