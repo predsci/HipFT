@@ -164,8 +164,10 @@ def run(args):
 
       if 'AdvThG' in testtype:
         xindx = 1
+        dsize = np.pi
       else:
         xindx = 0
+        dsize = 2*np.pi
 
       f.readline()
       f.readline()
@@ -178,7 +180,7 @@ def run(args):
         nxl.append(int(data[xindx]))
         err.append(float(data[etype]))
 
-    xvec = np.pi/(np.array(nxl))
+    xvec = dsize/np.array(nxl)
     yvec = np.array(err)
     plt.scatter(xvec,yvec,s=ms,c=COLORS[idx],edgecolors=COLORS[idx],zorder=3,marker=MARKERS[idx],label=leglabel)
 
@@ -186,7 +188,7 @@ def run(args):
     xlabel=args.xlabel
   else:
     if 'AdvPhG' in testtype:
-    	xlabel='$\Delta \phi$'
+      xlabel='$\Delta \phi$'
     elif 'AdvPhSc' in testtype:
       xlabel='$\Delta \phi$'
     elif 'AdvThG' in testtype:
@@ -224,7 +226,7 @@ def run(args):
   ax.set_aspect('equal')
   ax.grid(zorder=0)
 
-  xfirst=int(1/((np.pi/nxl[0])/np.pi))
+  xfirst=int(1/ ((dsize/nxl[0])/np.pi) )
   np_list=['$\\frac{\pi}{'+str(xfirst * 2 ** (n - 1))+'}$' for n in range(1, len(nxl) + 1)]
 
   plt.xticks(xvec,np_list)
