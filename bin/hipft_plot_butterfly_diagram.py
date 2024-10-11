@@ -312,9 +312,9 @@ def argParsing():
     default=False,
     required=False)
 
-  parser.add_argument('-cores',
-    help='Number of cores to use for movies.',
-    dest='cores',
+  parser.add_argument('-np',
+    help='Number of threads to use for movies.',
+    dest='np',
     type=int,
     required=False)
   
@@ -323,8 +323,9 @@ def argParsing():
 
 def run(args):
 
-  if not args.cores:
-    args.cores = int(os.getenv('OMP_NUM_THREADS', 1))
+  if not args.np:
+    args.np = int(os.getenv('OMP_NUM_THREADS', 1))
+  print(args.np)
 
   #Check that file exists.
   if not os.path.exists(args.iFile):
@@ -348,11 +349,11 @@ def run(args):
   if bool(args.dim3):
     if (args.sall):
       xvec, yvec, zvec, data_in = ps.rdhdf_3d(args.iFile)
-      with mp.Pool(processes=args.cores) as pool:
+      with mp.Pool(processes=args.np) as pool:
             pool.starmap(process_file, [(args, islice, oFile, xvec, yvec, data_in, zvec[islice]) for islice in range(len(zvec))])
     elif (args.slices):
       xvec, yvec, zvec, data_in = ps.rdhdf_3d(args.iFile)
-      with mp.Pool(processes=args.cores) as pool:
+      with mp.Pool(processes=args.np) as pool:
             pool.starmap(process_file, [(args, islice, oFile, xvec, yvec, data_in, zvec[islice]) for islice in args.slices])
     else:
       xvec, yvec, zvec, data_in = ps.rdhdf_3d(args.iFile)

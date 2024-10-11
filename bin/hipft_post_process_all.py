@@ -53,11 +53,6 @@ def argParsing():
     dest='tf',
     required=False)
 
-# Remove this.
-  parser.add_argument('-tfac',
-    help='Time factor to get time into units of hours (HipFT time is in hours, so default tfac=1).',
-    dest='tfac',
-    required=False)
 #  if total time >1 year, <2 years, use cr.... etc.  (no weeks)  if >2 yrs, use years.
 #  Add "-plot_axis_options" flag that takes in big string and atttached to plot script calls.  
   parser.add_argument('-xunits',
@@ -65,10 +60,17 @@ def argParsing():
     dest='xunits',
     default='hours',
     required=False)
+
+  # Check which options exist / which scripts have them...
+  parser.add_argument('-plot_axis_options',
+    help='String of plot options for the axises.',
+    dest='plot_axis_options',
+    required=False)
+
+
 # -map_plot_options    
 # -butterfly_plot_options  ("-cmin -10 -cmax 10")
 
-# Remove this...   But - add check for "ffmpeg" in system (which) in plot script  - if not there, write out "Warning - ffmpeg not detected, not making movie file."
   parser.add_argument('-nomovie',
     help='Do not make mov movie.',
     dest='nomovie',
@@ -76,26 +78,23 @@ def argParsing():
     action='store_true',
     required=False)
 
-# Change name of this to "hipft_home"
-  parser.add_argument('-hipftbin',
+  parser.add_argument('-hipft_home',
     help='HipFT bin location',
-    dest='hipft',
+    dest='hipft_home',
     type=str,
     required=False)
 
-# change name to history_plot_samples
-# Add "all" option for all.  Add this to help.
-  parser.add_argument('-samples',
-    help='Number of points to plot, this helps with larger files (default:300)',
-    default=300)
+  parser.add_argument('-history_plot_samples',
+    help='Number of points to plot, this helps with larger files (default: 300) (Can set to "all" to plot all points)',
+    dest='history_plot_samples',
+    default=300,
+    required=False)
 
-# Rename "cores" to "np" in all scripts (if not being used)
-# In THIS script, -parallel (use python cpu count if omp_num_threads is not set
-# default shoudl be true.
-  parser.add_argument('-cores',
-    help='Number of cores to use for movies.',
-    dest='cores',
-    type=int,
+  parser.add_argument('-serial',
+    help='Set the number of threads to use to 1 instead of using the environment variable OMP_NUM_THREADS.',
+    dest='serial',
+    default=False,
+    action='store_true',
     required=False)
 
   parser.add_argument('-butterfly',
@@ -113,21 +112,28 @@ def argParsing():
     required=False)
 
   parser.add_argument('-history',
+    nargs='?',
+    const=1,
     help='Create history plots, Options{ 1: Plot all histories (2,3,4), \
                                          2: Plot individual realizations, \
                                          3: Plot all realizations together, \
-                                         4: Plot realization summary (mean, stddev, etc)}',
+                                         4: Plot realization summary (mean, stddev, etc)}, \
+                                         If not provided, defaults to 1.',
     dest='history',
     type=int,
-    default=1,
     required=False)
 
-# force --> overwrite
-  parser.add_argument('-force',
+  parser.add_argument('-overwrite',
     help='Overwrite selected processing',
-    dest='force',
+    dest='overwrite',
     default=False,
     action='store_true',
+    required=False)
+
+  parser.add_argument('-output_dir',
+    help='Output directory of script (Default: current_folder/post_processing)',
+    dest='output_dir',
+    type=str,
     required=False)
 
   return parser.parse_args()
@@ -135,198 +141,277 @@ def argParsing():
 
 def run(args):
 
-  if not args.cores:
-    args.cores = int(os.getenv('OMP_NUM_THREADS', 1))
+  print('')
+  print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+  print('')
+  print('                         OFT Post Processing                          ')
+  print('')
+  print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+
+  args.num_threads = 1 if args.serial else int(os.getenv('OMP_NUM_THREADS', os.cpu_count() or 1))
 
   run_all = not (args.butterfly or args.movies or args.history)
 
-  args.hipftbin = args.hipftbin if args.hipft else os.popen('which hipft').read().replace('\n','').replace('bin/hipft','bin/')
+  args.hipft_home = args.hipft_home if args.hipft_home else os.path.dirname(os.path.normpath(os.popen('which hipft').read().strip()))
+
+  print(f'HipFT bin found at :')
+  print(f'\t {args.hipft_home}')
+  print(f'Number of threads running on : {args.num_threads}')
+
   args.rundir = args.rundir or os.getcwd()
-  cur_dir = os.getcwd()
+  args.output_dir = os.path.join(os.getcwd(), 'post_processing')
+  os.makedirs(args.output_dir, exist_ok=True)
+  print(f'==> Created post processing output folder at :')
+  print(f'\t {args.output_dir}')
+
+  if run_all or args.history:
+    history_folder = os.path.join(args.output_dir, "histories")
+    os.makedirs(history_folder, exist_ok=True)
+    print(f'==> Created map histories output folder at :')
+    print(f'\t {history_folder}')
 
   ## ~~~~~~ Get number of realizations
   pattern = os.path.join(args.rundir, 'hipft_history_sol*.out')
-  file_list = glob.glob(pattern)
-  check_exist = [os.path.join(cur_dir,os.path.basename(file)) for file in file_list]
+  file_list = sorted(glob.glob(pattern))
+  check_exist = [os.path.basename(file) for file in file_list]
   is3d = len(file_list) > 1
 
   ## ~~~~~~ Plot individual histories 
   if run_all or args.history == 1 or args.history == 2:
-    if args.force:
+    print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+    print('==> Starting to make individual history plots')
+    
+    if args.overwrite:
+      print('==> Overwriting any existing individual history plots!')
       hist_ind = file_list
     else:
       hist_ind = []
+      histories_directory = os.path.join(args.output_dir, "histories")
       for check, file in zip(check_exist, file_list):
-        pattern = check.replace('hipft_history_sol', 'history').replace('.out', '*.png')
+        match = re.search(r'r(\d+)', file)
+        r = match.group() if match else "r000001"
+        check_file = check.replace('hipft_history_sol', 'history').replace('.out', '*.png')
+        pattern = os.path.join(histories_directory, r, check_file)
         found_list = glob.glob(pattern)
         if len(found_list) != 9:
           hist_ind.append(file)
+        else:
+          print(f'==>        Found existing individual plots for {r}')
 
     if hist_ind:
         plot_individual_history(args, hist_ind)
     else:
-      print("All individual history plots exist")
+      print("==> All individual history plots already exist")
 
   ## ~~~~~~ Plot all histories together
   if (run_all or args.history == 1 or args.history == 3) and is3d:
-    hist_ind_flag = args.force or len(glob.glob(os.path.join(cur_dir, 'history_together*.png'))) != 9
+    print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+    print('==> Starting to make plotted together history plots')
+
+    if args.overwrite:
+      print('==> Overwriting any existing plotted together history plots!')
+
+    hist_ind_flag = args.overwrite or len(glob.glob(os.path.join(os.path.join(args.output_dir, "histories"), 'history_together*.png'))) != 9
 
     if hist_ind_flag:
       plot_together_history(args, file_list)
     else:
-      print("Together history plots exist")
+      print("==> All plotted together history plots already exist")
 
   ## ~~~~~~ Plot histories summary
   if (run_all or args.history == 1 or args.history == 4) and is3d:
-    hist_ind_flag = args.force or len(glob.glob(os.path.join(cur_dir, 'history_summary*.png'))) != 9
+    print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+    print('==> Starting to make plotted summary history plots')
+
+    if args.overwrite:
+      print('==> Overwriting any existing summary history plots!')
+    
+    hist_ind_flag = args.overwrite or len(glob.glob(os.path.join(os.path.join(args.output_dir, "histories"), 'history_summary*.png'))) != 9
     
     if hist_ind_flag:
       plot_summary_history(args, file_list)
     else:
-      print("Summary history plots exist")
+      print("==> All summary history plots already exist")
 
   ## ~~~~~~ Make butterfly h5
+
   if run_all or args.butterfly:
-    if args.force or not os.path.exists(os.path.join(cur_dir, 'butterfly.h5')):
+    print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+    print('==> Starting to make butterfly plots')
+
+    butterfly_folder = os.path.join(args.output_dir, "butterfly")
+    os.makedirs(butterfly_folder, exist_ok=True)
+    print(f'==> Created butterfly output folder at :')
+    print(f'\t {butterfly_folder}')
+
+    if args.overwrite:
+      print('==> Overwriting any existing butterfly h5 file!')  
+
+    if args.overwrite or not os.path.exists(os.path.join(os.path.join(args.output_dir, "butterfly"), 'butterfly.h5')):
       make_butterfly(args, is3d)
     else:
-      print("butterfly h5 exists")
+      print("==> All butterfly h5 files already exists")
 
   ## ~~~~~~ Plot butterfly h5
     butterfly_plots = []
-    if not args.force:
+    if not args.overwrite:
       if is3d:
         for file in check_exist:
-          butterfly_file = file.replace('hipft_history_sol', 'butterfly').replace('.out', '.png')
+          check_file = file.replace('hipft_history_sol', 'butterfly').replace('.out', '.png')
+          butterfly_file = os.path.join(args.output_dir, "butterfly", check_file)
           if not os.path.exists(butterfly_file):
             match = re.search(r'r(\d+)', butterfly_file)
             r = int(match.group(1)) if match else -1
             butterfly_plots.append(str(r-1))
+          else:
+            print(f'==>        Found existing butterfly plots for {match.group()}')
       else:
-        if not os.path.exists(os.path.join(cur_dir, 'butterfly.png')):
+        if not os.path.exists(os.path.join(args.output_dir, "butterfly", 'butterfly.png')):
             butterfly_plots.append('-1')
+        else:
+            print(f'==>         Found existing butterfly plots for r000001')
 
+    if args.overwrite:
+      print('==> Overwriting any existing butterfly plots!')  
 
-    if butterfly_plots or args.force:
+    if butterfly_plots or args.overwrite:
       plot_butterfly(args, is3d, None if len(butterfly_plots) == len(file_list) else butterfly_plots)
     else:
-      print("All butterfly plots exist")
+      print("==> All butterfly plots already exist")
 
   ## ~~~~~~ Make movies
+
+
+  if run_all or args.movies:
+    print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+    print('==> Starting to make movies and images')
+
+    if args.overwrite:
+      print('==> Overwriting any existing movies and images!')  
+
+    movies_folder = os.path.join(args.output_dir, "map_plotting")
+    os.makedirs(movies_folder, exist_ok=True)
+    print(f'==> Created map plotting output folder at :')
+    print(f'\t {movies_folder}')
+
   if run_all or args.movies:
     movie_ind = []
 
     if not args.outpath:
       args.outpath = os.path.join(args.rundir, 'output_maps')
 
-    if not args.force:
+    if not args.overwrite:
       if is3d:
+        movies_directory = os.path.join(args.output_dir, "map_plotting")
         for file in check_exist:
-          pattern = file.replace('hipft_history_sol', 'hipft_movie').replace('.out', '*.mov')
+          match = re.search(r'r(\d+)', file)
+          r = match.group() if match else "r000001"
+          check_file = file.replace('hipft_history_sol', 'hipft_movie').replace('.out', '*.mov')
+          pattern = os.path.join(movies_directory, 'movies', check_file)
           found_list = glob.glob(pattern)
           pattern = os.path.join(args.outpath, 'hipft_brmap_idx*.h5')
-          num_frames = glob.glob(pattern)
-          match = re.search(r'r(\d+)', file)
-          r = match.group() if match else ""
-          pattern = os.path.join(args.outpath, 'plots', f'hipft_brmap_idx*{r}.png')
+          num_frames = len(glob.glob(pattern))
+          pattern = os.path.join(movies_directory, 'images', r, f'hipft_brmap_idx*{r}.png')
           num_plots = glob.glob(pattern)
-
-          if not found_list or len(num_plots) != len(num_frames):
+          if not found_list or len(num_plots) != num_frames:
             r = int(match.group(1)) if match else -1
             movie_ind.append(str(r-1))
+          else:
+            print(f'==>        Found existing movies and images for {r}')
       else:
-        if not os.path.exists(os.path.join(cur_dir, 'hipft_movie.mov')):
+        if not os.path.exists(os.path.join(args.output_dir, 'hipft_movie.mov')):
           butterfly_plots.append('1')
-
-    if movie_ind or args.force:
-      make_movies(args, None if len(movie_ind) == len(file_list) else movie_ind)
+        else:
+            print(f'==>        Found existing movies and images for r000001')
+      isSubset = len(movie_ind) != len(file_list)
     else:
-      print("All movies exist")
+      isSubset = False
+
+    if movie_ind or args.overwrite:
+      make_movies(args, movie_ind, isSubset)
+    else:
+      print("==> All movies and images already exist")
 
 
 def plot_individual_history(args, hist_ind):
-  print("Plotting histories individual...")
+  print("==> Plotting all individual history plots...")
 
-  bc_plotHistories = os.path.join(args.hipftbin, 'hipft_plot_histories.py')
-  bc_plotHistories += f' -samples {args.samples}'
+  bc_plotHistories = os.path.join(args.hipft_home, 'hipft_plot_histories.py')
+  bc_plotHistories += f" -samples {args.history_plot_samples}" if args.history_plot_samples != 'all' else ''
+  bc_plotHistories += f" -utstart {args.utstart}" if args.utstart else ''
 
-  if args.tfac:
-    bc_plotHistories += f' -tfac {args.tfac}'
-  if args.utstart:
-    bc_plotHistories += f' -utstart {args.utstart}'
-
+  histories_directory = os.path.join(args.output_dir, "histories")
   for file in hist_ind:
     match = re.search(r'r(\d+)', file)
     realization = match.group() if match else 'individual'
+    os.chdir(histories_directory)
     os.system(f'{bc_plotHistories} -histfiles {file} -runtag {realization}')
+    os.chdir(args.output_dir)
+
+  for file in hist_ind:
+    match = re.search(r'r(\d+)', file)
+    r = match.group() if match else "r000001"
+    histories_sub_directory = os.path.join(histories_directory, r)
+    os.makedirs(histories_sub_directory, exist_ok=True)
+    os.system(f'mv {os.path.join(histories_directory,f"*{r}*.png")} {histories_sub_directory}')
 
 
 def plot_together_history(args, file_list):
-  print("Plotting histories together...")
+  print("==> Plotting all together history plots...")
 
-  bc_plotHistories = os.path.join(args.hipftbin, 'hipft_plot_histories.py')
-  bc_plotHistories += f' -samples {args.samples}'
-
-  if args.tfac:
-    bc_plotHistories += f' -tfac {args.tfac}'
-  if args.utstart:
-    bc_plotHistories += f' -utstart {args.utstart}'
+  bc_plotHistories = os.path.join(args.hipft_home, 'hipft_plot_histories.py')
+  bc_plotHistories += f" -samples {args.history_plot_samples}" if args.history_plot_samples != 'all' else ''
+  bc_plotHistories += f" -utstart {args.utstart}" if args.utstart else ''
 
   histfiles = ','.join(file_list)
-  os.system(f'{bc_plotHistories} -histfiles {histfiles} -runtag together')  
+  os.chdir(os.path.join(args.output_dir, "histories"))
+  os.system(f'{bc_plotHistories} -histfiles {histfiles} -runtag together')
+  os.chdir(args.output_dir)
 
 
 def plot_summary_history(args, file_list):
-  print("Plotting histories summary...")
+  print("==> Plotting all summary history plots...")
 
-  bc_plotHistories = os.path.join(args.hipftbin, 'hipft_plot_histories.py')
-  bc_plotHistories += f' -samples {args.samples}'
-
-  if args.tfac:
-    bc_plotHistories += f' -tfac {args.tfac}'
-  if args.utstart:
-    bc_plotHistories += f' -utstart {args.utstart}'
+  bc_plotHistories = os.path.join(args.hipft_home, 'hipft_plot_histories.py')
+  bc_plotHistories += f" -samples {args.history_plot_samples}" if args.history_plot_samples != 'all' else ''
+  bc_plotHistories += f" -utstart {args.utstart}" if args.utstart else ''
 
   histfiles = ','.join(file_list)
+  os.chdir(os.path.join(args.output_dir, "histories"))
   os.system(f'{bc_plotHistories} -summary -histfiles {histfiles} -runtag summary')
+  os.chdir(args.output_dir)
 
 
 def make_butterfly(args, is3d):
-  print("Make butterfly h5...")
+  print("==> Creating buttefly h5 file...")
 
-  bc_makeButterfly = os.path.join(args.hipftbin, 'hipft_make_butterfly_diagram.py')
-  if args.rundir:
-    bc_makeButterfly += f' -rundir {args.rundir}'
-  if args.outpath:
-    bc_makeButterfly += f' -outpath {args.outpath}'
-  if args.maplist:
-    bc_makeButterfly += f' -maplist {args.maplist}'
-  if args.basefn:
-    bc_makeButterfly += f' -basefn {args.basefn}'
-  if args.utstart:
-    bc_makeButterfly += f' -utstart {args.utstart}'
-  if args.t0:
-    bc_makeButterfly += f' -t0 {args.t0}'
-  if args.tf:
-    bc_makeButterfly += f' -tf {args.tf}'
-  if args.tfac:
-    bc_makeButterfly += f' -tfac {args.tfac}'
-  if is3d:
-    bc_makeButterfly += ' -3d -sall'
-  
+  bc_makeButterfly = os.path.join(args.hipft_home, 'hipft_make_butterfly_diagram.py')
+
+  bc_makeButterfly += f" -rundir {args.rundir}" if args.rundir else ''
+  bc_makeButterfly += f" -outpath {args.outpath}" if args.outpath else ''
+  bc_makeButterfly += f" -maplist {args.maplist}" if args.maplist else ''
+  bc_makeButterfly += f" -basefn {args.basefn}" if args.basefn else ''
+  bc_makeButterfly += f" -utstart {args.utstart}" if args.utstart else ''
+  bc_makeButterfly += f" -t0 {args.t0}" if args.t0 else ''
+  bc_makeButterfly += f" -tf {args.tf}" if args.tf else ''
+  bc_makeButterfly += f" -3d -sall" if is3d else ''
+
+  os.chdir(os.path.join(args.output_dir, "butterfly"))
   os.system(bc_makeButterfly)
+  os.chdir(args.output_dir)
 
 
 def plot_butterfly(args, is3d, butterfly_plots):
-  print("Plot butterfly h5...")
+  print("==> Plotting buttefly plots...")
 
-  bc_plotButterfly = os.path.join(args.hipftbin, 'hipft_plot_butterfly_diagram.py')
+  bc_plotButterfly = os.path.join(args.hipft_home, 'hipft_plot_butterfly_diagram.py')
   bc_plotButterfly += ' butterfly.h5'
 
+  if not args.utstart:
+    bc_plotButterfly += ' -ignore_data_uttime'
   if args.xunits:
     bc_plotButterfly += f' -xunits {args.xunits}'
-  if (args.cores):
-    bc_plotButterfly += f' -cores {args.cores}'
+  bc_plotButterfly += f' -np {args.num_threads}'
   if is3d:
     bc_plotButterfly += ' -3d'
     if butterfly_plots:
@@ -334,25 +419,52 @@ def plot_butterfly(args, is3d, butterfly_plots):
     else:
       bc_plotButterfly += ' -sall'
 
+  os.chdir(os.path.join(args.output_dir, "butterfly"))
   os.system(bc_plotButterfly)
+  os.chdir(args.output_dir)
 
 
-def make_movies(args, movie_ind):
-  print("Making movies...")
+def make_movies(args, movie_ind, isSubset):
+  print("==> Making all movies and images...")
 
-  bc_makeMovie = os.path.join(args.hipftbin, 'hipft_make_plots_and_movies.py')
+  mldfile = None
+
+  if args.utstart:
+    make_mldfile = os.path.join(args.hipft_home, 'hipft_add_dates_to_map_output_list.py')
+    make_mldfile += f' {args.utstart}'
+    make_mldfile += f' -maplist {os.path.join(args.rundir, "hipft_output_map_list.out")}'
+    make_mldfile += f' -o {os.path.join(args.output_dir, "map_plotting", "hipft_output_map_list")}'
+    os.system(make_mldfile)
+    mldfile = os.path.join(args.output_dir, "map_plotting", 'hipft_output_map_list_utc.out')
+
+  if args.maplist:
+    mldfile = args.maplist
+
+  bc_makeMovie = os.path.join(args.hipft_home, 'hipft_make_plots_and_movies.py')
   bc_makeMovie += f' -dir {args.outpath}'
+  bc_makeMovie += f' -np {args.num_threads}'
+  if mldfile:
+    bc_makeMovie += f' -mldfile {mldfile}'
 
-  if (args.nomovie):
-    bc_makeMovie += ' -nomovie'
-  if (args.cores):
-    bc_makeMovie += f' -cores {args.cores}'
-
-  if movie_ind:
+  movies_directory = os.path.join(args.output_dir, "map_plotting", "movies")
+  os.makedirs(movies_directory, exist_ok=True)
+  os.chdir(movies_directory)
+  if isSubset:
     for r in movie_ind: 
       os.system(f'{bc_makeMovie} -slice {r}')
   else:
     os.system(bc_makeMovie)
+
+  images_directory = os.path.join(args.output_dir, "map_plotting", "images")
+  os.makedirs(images_directory, exist_ok=True)
+
+  for idx in movie_ind:
+    r = f'r{str(int(idx)+1).zfill(6)}'
+    images_sub_directory = os.path.join(images_directory, r)
+    os.makedirs(images_sub_directory, exist_ok=True)
+    os.system(f'cp {os.path.join(args.outpath, "plots", f"*{r}*.png")} {images_sub_directory}')
+
+  os.chdir(args.output_dir)
 
 
 def main():
@@ -367,21 +479,8 @@ if __name__ == '__main__':
   
 # NOTES
 
-# If UT is specified, run hipft_add_dates_to_map_output_list.py to make UTC/TAI map list, for use in movies.
-# (add mdl flag to movie script call)
-
-# If no UT specificed, butterfly and other plots should be just "Hours" etc, not "Hours since.."
-# Use flag ignore_data_uttime to do this.
-
 # Issue:  No x-axis ticks in butterfly plots
    # Heuristics shoudl cover this - see inputs)
-
-
-# Create subfolder called "post_processing"  rundir/post_processing 
-# In subfolder, more subfolders....
-#   butterfly, map_plotting, histories
-#                ->   images       movies
-#                     r1,r2,etc.    (no sub)
 
 # Add -5 to 5 cmin/cmax to butterfly plot
 # Add custom cmin/cmax for map plots and butterfly in this script

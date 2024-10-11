@@ -86,9 +86,9 @@ def argParsing():
     action='store_true',
     required=False)
 
-  parser.add_argument('-cores',
-    help='Number of cores to use (Default 1 or the environment variable OMP_NUM_THREADS if set).',
-    dest='cores',
+  parser.add_argument('-np',
+    help='Number of threads to use (Default 1 or the environment variable OMP_NUM_THREADS if set).',
+    dest='np',
     type=int,
     required=False)
 
@@ -97,8 +97,8 @@ def argParsing():
 
 def run(args):
 
-  if not args.cores:
-    args.cores = int(os.getenv('OMP_NUM_THREADS', 1))
+  if not args.np:
+    args.np = int(os.getenv('OMP_NUM_THREADS', 1))
 
   if args.odir:
     odir=str(Path(args.odir).resolve())
@@ -173,7 +173,7 @@ def run(args):
       return dim3
     return dim3
 
-  with concurrent.futures.ThreadPoolExecutor(max_workers=args.cores) as executor:
+  with concurrent.futures.ThreadPoolExecutor(max_workers=args.np) as executor:
     futures = [executor.submit(process_file, filetmp, idx + 1) for idx, filetmp in enumerate(sorted_listdir)]
 
   twoD = True
@@ -214,6 +214,7 @@ def run(args):
 
   os.chdir(args.datadir+'/plots')
   os.rmdir(args.datadir+'/plots/tmp')
+  os.system('rm tmp_file*.h5')
 
 
 def makeMovie(args,odir,r):
@@ -232,8 +233,11 @@ def linkFile(file,filetmp):
 
 
 def ffmpefMovie(args,odir,name):
-  os.system('ffmpeg -y -framerate 15 -i "movie%d.png" -pix_fmt yuv420p -c:a copy -crf 20 -r 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -codec:v libx264 "'+name+'.mov"')
-  os.system('cp '+args.datadir+'/plots/tmp/'+name+'.mov '+odir+'/'+name+'.mov')
+  if os.path.dirname(os.path.normpath(os.popen('which ffmpeg').read().strip())) == '':
+    print("Warning - ffmpeg not detected, not making movie file.")
+  else:
+    os.system('ffmpeg -y -framerate 15 -i "movie%d.png" -pix_fmt yuv420p -c:a copy -crf 20 -r 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -codec:v libx264 "'+name+'.mov"')
+    os.system('cp '+args.datadir+'/plots/tmp/'+name+'.mov '+odir+'/'+name+'.mov')
 
 
 def extractANDplot(TITLE, args, file, r, idx):
