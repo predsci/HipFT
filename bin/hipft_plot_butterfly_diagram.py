@@ -325,7 +325,6 @@ def run(args):
 
   if not args.np:
     args.np = int(os.getenv('OMP_NUM_THREADS', 1))
-  print(args.np)
 
   #Check that file exists.
   if not os.path.exists(args.iFile):
@@ -354,7 +353,7 @@ def run(args):
     elif (args.slices):
       xvec, yvec, zvec, data_in = ps.rdhdf_3d(args.iFile)
       with mp.Pool(processes=args.np) as pool:
-            pool.starmap(process_file, [(args, islice, oFile, xvec, yvec, data_in, zvec[islice]) for islice in args.slices])
+            pool.starmap(process_file, [(args, islice-1, oFile, xvec, yvec, data_in, zvec[islice-1]) for islice in args.slices])
     else:
       xvec, yvec, zvec, data_in = ps.rdhdf_3d(args.iFile)
       data = np.squeeze(data_in[int(args.slice)-1,:,:])
@@ -627,9 +626,9 @@ def get_xticks(args,xmn,xmx,init_locs):
     utstartSecs = 0
   else:
     utstartSecs = xmn
-  initLocs_uttime = init_locs*hours
-  xmn_uttime = xmn*hours
-  xmx_uttime = xmx*hours
+  initLocs_uttime = init_locs*3600
+  xmn_uttime = xmn
+  xmx_uttime = xmx
   if args.xunits == "date":
     if (args.ignore_data_uttime):
       raise Exception("Did not specify a utstart")
@@ -648,8 +647,6 @@ def get_xticks(args,xmn,xmx,init_locs):
   elif args.xunits == "cr":
     if (args.ignore_data_uttime): 
       locs, labels = since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,cr)
-    else:
-      locs, labels = cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime)
   elif args.xunits == "years":
     locs, labels = since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,years)
   locs = (np.array(locs)-utstartSecs)/3600

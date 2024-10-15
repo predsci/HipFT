@@ -52,6 +52,13 @@ def argParsing():
     dest='s',
     type=int,
     required=False)
+  
+  parser.add_argument('-slices',
+    help='Slice indices (if not specified all slices wil be plotted)',
+    dest='slices', 
+    type=int, 
+    nargs='+',
+    required=False)
 
   parser.add_argument('-cmin',
     help='Colormap Minimum',
@@ -167,9 +174,16 @@ def run(args):
           extractANDplot(TITLE,args,file, dim3, idx)
         else:
           extractANDplot(TITLE,args,file, args.s, idx)
+      elif (args.slices):
+        for slice in args.slices:
+          if (slice > dim3):
+            print(f"Slice {slice} requested is outside range defaulting to last slice : {dim3}")
+            extractANDplot(TITLE, args, file, dim3, idx)
+        else:
+          extractANDplot(TITLE, args, file, slice, idx)
       else:
         for i in range(1,dim3+1):
-          extractANDplot(TITLE,args,file, i, idx)
+          extractANDplot(TITLE, args, file, i, idx)
       return dim3
     return dim3
 
@@ -205,6 +219,12 @@ def run(args):
         makeMovie(args,odir,dim3)
       else:
         makeMovie(args,odir,args.s)
+    elif (args.slices):
+      for slice in args.slices:
+        if (slice > dim3):
+          makeMovie(args,odir,dim3)
+        else:
+          makeMovie(args,odir,slice)
     else:
       for i in range(1,dim3+1):
         makeMovie(args,odir,i)
