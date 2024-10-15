@@ -6,6 +6,8 @@ import os
 import argparse
 import signal
 
+# Version 1.0.1
+
 def handle_int(signum, frame):
     print('You pressed Ctrl+C! Stopping!')
     signal.signal(signum, signal.SIG_DFL)
@@ -341,7 +343,7 @@ def plot_individual_history(args, hist_ind):
   bc_plotHistories = os.path.join(args.hipft_home, 'hipft_plot_histories.py')
   bc_plotHistories += f" -samples {args.history_plot_samples}" if args.history_plot_samples != 'all' else ''
   bc_plotHistories += f" -utstart {args.utstart}" if args.utstart else ''
-  bc_plotHistories += f" {args.map_plot_options}"
+  bc_plotHistories += f" {args.map_plot_options}" if args.map_plot_options else ''
   bc_plotHistories += f" {args.plot_axis_options}" if args.plot_axis_options else ''
 
   histories_directory = os.path.join(args.output_dir, "histories")
@@ -366,7 +368,7 @@ def plot_together_history(args, file_list):
   bc_plotHistories = os.path.join(args.hipft_home, 'hipft_plot_histories.py')
   bc_plotHistories += f" -samples {args.history_plot_samples}" if args.history_plot_samples != 'all' else ''
   bc_plotHistories += f" -utstart {args.utstart}" if args.utstart else ''
-  bc_plotHistories += f" {args.map_plot_options}"
+  bc_plotHistories += f" {args.map_plot_options}" if args.map_plot_options else ''
   bc_plotHistories += f" {args.plot_axis_options}" if args.plot_axis_options else ''
 
   histfiles = ','.join(file_list)
@@ -381,7 +383,7 @@ def plot_summary_history(args, file_list):
   bc_plotHistories = os.path.join(args.hipft_home, 'hipft_plot_histories.py')
   bc_plotHistories += f" -samples {args.history_plot_samples}" if args.history_plot_samples != 'all' else ''
   bc_plotHistories += f" -utstart {args.utstart}" if args.utstart else ''
-  bc_plotHistories += f" {args.map_plot_options}"
+  bc_plotHistories += f" {args.map_plot_options}" if args.map_plot_options else ''
   bc_plotHistories += f" {args.plot_axis_options}" if args.plot_axis_options else ''
 
   histfiles = ','.join(file_list)
@@ -450,7 +452,7 @@ def make_movies(args, movie_ind, isSubset):
   bc_makeMovie += f' -np {args.num_threads}'
   if mldfile:
     bc_makeMovie += f' -mldfile {mldfile}'
-  bc_makeMovie += f' -np {args.movie_plot_options}'
+  bc_makeMovie += f' {args.movie_plot_options}' if args.movie_plot_options else ''
 
   movies_directory = os.path.join(args.output_dir, "map_plotting", "movies")
   os.makedirs(movies_directory, exist_ok=True)
