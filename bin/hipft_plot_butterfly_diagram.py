@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from astropy.time import Time
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_number
 import os
 import psihdf as ps
 import psipals
@@ -214,7 +215,6 @@ def argParsing():
   parser.add_argument('-xunits',
     help='Units of the x-axis (date, seconds, minutes, hours, days, weeks, cr, or years).',
     dest='xunits',
-    default='hours',
     required=False)
 
   parser.add_argument('-xcrpos',
@@ -586,6 +586,23 @@ def get_xticks(args,xmn,xmx,init_locs):
   cr = 2356586
   years = 31556952
   default = hours
+
+  if not args.xunits:
+    total_time = xmx - xmn
+    if total_time < 2*minutes:
+      args.xunits = 'seconds'
+    elif total_time < 2*hours:
+      args.xunits = 'minutes'
+    elif total_time < 7*days:
+      args.xunits = 'hours'
+    elif total_time < years:
+      args.xunits = 'days'
+    elif total_time < 2*years:
+      args.xunits = 'cr'
+      if not args.xcadence:
+        args.xcadence = 2
+    else:
+      args.xunits = 'years'
   
   xcUnitsSec = default
   if (args.xc_units):
@@ -647,9 +664,11 @@ def get_xticks(args,xmn,xmx,init_locs):
   elif args.xunits == "cr":
     if (args.ignore_data_uttime): 
       locs, labels = since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,cr)
+    else:
+      locs, labels = cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime)
   elif args.xunits == "years":
     locs, labels = since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,years)
-  locs = (np.array(locs)-utstartSecs)/3600
+  locs = np.array(locs)/3600
   labels = [label.replace('//','\n') for label in labels]
   return locs, labels, utstartSecs
 
@@ -965,7 +984,7 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
       plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
     if (args.xlabel):
       plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
-    elif (args.utstart): 
+    elif not (args.ignore_data_uttime): 
       if (args.xcrpos == 'start'):
         plt.xlabel('Carrington Rotation', {'fontsize': args.fsize, 'color': tc})
       else: 

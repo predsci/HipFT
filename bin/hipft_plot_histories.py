@@ -81,7 +81,6 @@ def argParsing():
   parser.add_argument('-xunits',
     help='Units of the x-axis (date, seconds, minutes, hours, days, weeks, cr, or years).',
     dest='xunits',
-    default='hours',
     required=False)
 
   parser.add_argument('-xcrpos',
@@ -383,6 +382,7 @@ def run(args):
   time_tfac = np.array(time_list,dtype=np.float64)*tfac
   xmn = np.amin([np.amin(arr) for arr in time_tfac])
   xmx = np.amax([np.amax(arr) for arr in time_tfac])
+  total_time = (np.amax([np.amax(arr) for arr in time_list]) - np.amin([np.amin(arr) for arr in time_list]))*tfac*3600
   flux_tot_un_FF = np.array(flux_tot_un_list,dtype=np.float64)*flux_fac
   fluxm_FF = np.abs(np.array(fluxm_list,dtype=np.float64))*flux_fac
   fluxp_FF = np.array(fluxp_list,dtype=np.float64)*flux_fac
@@ -413,7 +413,7 @@ def run(args):
   plt.title('Relative Flux Imbalance', {'fontsize': fsize, 'color': tc})
   plt.ylabel('%', {'fontsize': fsize, 'color': tc})
   init_locs = plt.xticks()[0]
-  locs, labels, utstartSecs = get_xticks(args,xmn,xmx,init_locs)
+  locs, labels, utstartSecs = get_xticks(args,xmn,xmx,init_locs,total_time)
   
   makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,ymin,ymax,fsize)
   fig.savefig('history_'+args.runtag+'_flux_imb_pm.png', bbox_inches='tight', dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
@@ -771,7 +771,7 @@ def addLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig):
 #  
 
 
-def get_xticks(args,xmn,xmx,init_locs):
+def get_xticks(args,xmn,xmx,init_locs,total_time):
   seconds = 1
   minutes = 60
   hours = 3600
@@ -781,6 +781,22 @@ def get_xticks(args,xmn,xmx,init_locs):
   cr = 2356586
   years = 31556952
   default = hours
+
+  if not args.xunits:
+    if total_time < 2*minutes:
+      args.xunits = 'seconds'
+    elif total_time < 2*hours:
+      args.xunits = 'minutes'
+    elif total_time < 7*days:
+      args.xunits = 'hours'
+    elif total_time < years:
+      args.xunits = 'days'
+    elif total_time < 2*years:
+      args.xunits = 'cr'
+      if not args.xcadence:
+        args.xcadence = 2
+    else:
+      args.xunits = 'years'
   
   xcUnitsSec = default
   if (args.xc_units):

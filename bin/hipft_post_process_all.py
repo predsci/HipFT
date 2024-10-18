@@ -5,8 +5,10 @@ import re
 import os
 import argparse
 import signal
+import numpy as np
+import pandas as pd
 
-# Version 1.0.1
+# Version 1.0.2
 
 def handle_int(signum, frame):
     print('You pressed Ctrl+C! Stopping!')
@@ -55,11 +57,9 @@ def argParsing():
     dest='tf',
     required=False)
 
-#  if total time >1 year, <2 years, use cr.... etc.  (no weeks)  if >2 yrs, use years.
   parser.add_argument('-xunits',
     help='Units of the x-axis (date, seconds, minutes, hours, days, weeks, cr, or years).',
     dest='xunits',
-    default='hours',
     required=False)
 
   parser.add_argument('-plot_axis_options',
@@ -80,7 +80,7 @@ def argParsing():
   parser.add_argument('-butterfly_plot_options',
     help='String of plot options for the butterfly plots.',
     dest='butterfly_plot_options',
-    default="-cmin -5 -cmax 5",
+    default="-cmin -10 -cmax 10",
     required=False)
 
   parser.add_argument('-hipft_home',
@@ -180,6 +180,30 @@ def run(args):
   file_list = sorted(glob.glob(pattern))
   check_exist = [os.path.basename(file) for file in file_list]
   is3d = len(file_list) > 1
+
+  ## ~~~~~~ Get xunits to use if not set
+  if not args.xunits and (run_all or args.history or args.butterfly):
+    hist_sol = pd.read_table(file_list[0],header=0,sep='\\s+')
+    time_list = np.array(hist_sol['TIME'])
+    total_time = (time_list[-1] - time_list[0])*3600
+    minutes = 60
+    hours = 3600
+    days = 86400
+    years = 31556952
+    if total_time < 2*minutes:
+      args.xunits = 'seconds'
+    elif total_time < 2*hours:
+      args.xunits = 'minutes'
+    elif total_time < 7*days:
+      args.xunits = 'hours'
+    elif total_time < years:
+      args.xunits = 'days'
+    elif args.utstart and total_time < 2*years:
+      args.xunits = 'cr'
+      if not args.plot_axis_options or 'xcadence' not in args.plot_axis_options:
+        args.plot_axis_options = " -xcadence 2"
+    else:
+      args.xunits = 'years'
 
   ## ~~~~~~ Plot individual histories 
   if run_all or args.history == 1 or args.history == 2:
@@ -344,6 +368,7 @@ def plot_individual_history(args, hist_ind):
   bc_plotHistories += f" -samples {args.history_plot_samples}" if args.history_plot_samples != 'all' else ''
   bc_plotHistories += f" -utstart {args.utstart}" if args.utstart else ''
   bc_plotHistories += f" {args.map_plot_options}" if args.map_plot_options else ''
+  bc_plotHistories += f" -xunits {args.xunits}" if args.xunits else ''
   bc_plotHistories += f" {args.plot_axis_options}" if args.plot_axis_options else ''
 
   histories_directory = os.path.join(args.output_dir, "histories")
@@ -369,6 +394,7 @@ def plot_together_history(args, file_list):
   bc_plotHistories += f" -samples {args.history_plot_samples}" if args.history_plot_samples != 'all' else ''
   bc_plotHistories += f" -utstart {args.utstart}" if args.utstart else ''
   bc_plotHistories += f" {args.map_plot_options}" if args.map_plot_options else ''
+  bc_plotHistories += f" -xunits {args.xunits}" if args.xunits else ''
   bc_plotHistories += f" {args.plot_axis_options}" if args.plot_axis_options else ''
 
   histfiles = ','.join(file_list)
@@ -384,6 +410,7 @@ def plot_summary_history(args, file_list):
   bc_plotHistories += f" -samples {args.history_plot_samples}" if args.history_plot_samples != 'all' else ''
   bc_plotHistories += f" -utstart {args.utstart}" if args.utstart else ''
   bc_plotHistories += f" {args.map_plot_options}" if args.map_plot_options else ''
+  bc_plotHistories += f" -xunits {args.xunits}" if args.xunits else ''
   bc_plotHistories += f" {args.plot_axis_options}" if args.plot_axis_options else ''
 
   histfiles = ','.join(file_list)
@@ -406,6 +433,20 @@ def make_butterfly(args, is3d):
   bc_makeButterfly += f" -tf {args.tf}" if args.tf else ''
   bc_makeButterfly += f" -3d -sall" if is3d else ''
 
+  if args.utstart and not args.maplist:
+    make_mldfile = os.path.join(args.hipft_home, 'hipft_add_dates_to_map_output_list.py')
+    make_mldfile += f' {args.utstart}'
+    make_mldfile += f' -maplist {os.path.join(args.rundir, "hipft_output_map_list.out")}'
+    make_mldfile += f' -o {os.path.join(args.output_dir, "hipft_output_map_list")}'
+    os.system(make_mldfile)
+    mldfile = os.path.join(args.output_dir, 'hipft_output_map_list_utc.out')
+    args.maplist = mldfile
+  elif args.maplist:
+    mldfile = args.maplist
+
+  if mldfile:
+    bc_makeButterfly += f' -maplist {mldfile}'
+
   os.chdir(os.path.join(args.output_dir, "butterfly"))
   os.system(bc_makeButterfly)
   os.chdir(args.output_dir)
@@ -417,7 +458,7 @@ def plot_butterfly(args, is3d, butterfly_plots):
   bc_plotButterfly = os.path.join(args.hipft_home, 'hipft_plot_butterfly_diagram.py')
   bc_plotButterfly += ' butterfly.h5'
 
-  bc_plotButterfly += f" -ignore_data_uttime" if args.utstart else ''
+  bc_plotButterfly += f" -ignore_data_uttime" if not args.utstart else ''
   bc_plotButterfly += f" -xunits {args.xunits}" if args.xunits else ''
   bc_plotButterfly += f' -np {args.num_threads}'
   if is3d:
@@ -436,15 +477,14 @@ def make_movies(args, movie_ind, isSubset):
 
   mldfile = None
 
-  if args.utstart:
+  if args.utstart and not args.maplist:
     make_mldfile = os.path.join(args.hipft_home, 'hipft_add_dates_to_map_output_list.py')
     make_mldfile += f' {args.utstart}'
     make_mldfile += f' -maplist {os.path.join(args.rundir, "hipft_output_map_list.out")}'
-    make_mldfile += f' -o {os.path.join(args.output_dir, "map_plotting", "hipft_output_map_list")}'
+    make_mldfile += f' -o {os.path.join(args.output_dir, "hipft_output_map_list")}'
     os.system(make_mldfile)
-    mldfile = os.path.join(args.output_dir, "map_plotting", 'hipft_output_map_list_utc.out')
-
-  if args.maplist:
+    mldfile = os.path.join(args.output_dir, 'hipft_output_map_list_utc.out')
+  elif args.maplist:
     mldfile = args.maplist
 
   bc_makeMovie = os.path.join(args.hipft_home, 'hipft_make_plots_and_movies.py')
@@ -471,7 +511,7 @@ def make_movies(args, movie_ind, isSubset):
     r = f'r{str(int(idx)).zfill(6)}'
     images_sub_directory = os.path.join(images_directory, r)
     os.makedirs(images_sub_directory, exist_ok=True)
-    os.system(f'cp {os.path.join(args.outpath, "plots", f"*{r}*.png")} {images_sub_directory}')
+    os.system(f'mv {os.path.join(args.outpath, "plots", f"*{r}*.png")} {images_sub_directory}')
 
   os.chdir(args.output_dir)
 
@@ -488,8 +528,7 @@ if __name__ == '__main__':
   
 # NOTES
 
-# Issue:  No x-axis ticks in butterfly plots
-   # Heuristics shoudl cover this - see inputs)
+
 
 # More and pretty verbosity on steps it is doing.
 # OFT Post Processing
@@ -497,5 +536,6 @@ if __name__ == '__main__':
 # ==> Plotting butterfly diagram using <N> processes...
 # ==> Done!  Results are in [DIRECTORY]
 
-
-  
+# Improvements TODO
+#   encode movies to take up less space??
+#   script option to keep images or not
