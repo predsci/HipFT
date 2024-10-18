@@ -140,6 +140,13 @@ def argParsing():
     dest='output_dir',
     type=str,
     required=False)
+  
+  parser.add_argument('-tai_off',
+    help='Turn off using tai which ignores leap seconds',
+    dest='tai_off',
+    default=False,
+    action='store_true',
+    required=False)
 
   return parser.parse_args()
 
@@ -365,6 +372,7 @@ def plot_individual_history(args, hist_ind):
   print("==> Plotting all individual history plots...")
 
   bc_plotHistories = os.path.join(args.hipft_home, 'hipft_plot_histories.py')
+  bc_plotHistories += f' -tai' if not args.tai_off else ''
   bc_plotHistories += f" -samples {args.history_plot_samples}" if args.history_plot_samples != 'all' else ''
   bc_plotHistories += f" -utstart {args.utstart}" if args.utstart else ''
   bc_plotHistories += f" {args.map_plot_options}" if args.map_plot_options else ''
@@ -391,6 +399,7 @@ def plot_together_history(args, file_list):
   print("==> Plotting all together history plots...")
 
   bc_plotHistories = os.path.join(args.hipft_home, 'hipft_plot_histories.py')
+  bc_plotHistories += f' -tai' if not args.tai_off else ''
   bc_plotHistories += f" -samples {args.history_plot_samples}" if args.history_plot_samples != 'all' else ''
   bc_plotHistories += f" -utstart {args.utstart}" if args.utstart else ''
   bc_plotHistories += f" {args.map_plot_options}" if args.map_plot_options else ''
@@ -407,6 +416,7 @@ def plot_summary_history(args, file_list):
   print("==> Plotting all summary history plots...")
 
   bc_plotHistories = os.path.join(args.hipft_home, 'hipft_plot_histories.py')
+  bc_plotHistories += f' -tai' if not args.tai_off else ''
   bc_plotHistories += f" -samples {args.history_plot_samples}" if args.history_plot_samples != 'all' else ''
   bc_plotHistories += f" -utstart {args.utstart}" if args.utstart else ''
   bc_plotHistories += f" {args.map_plot_options}" if args.map_plot_options else ''
@@ -423,7 +433,7 @@ def make_butterfly(args, is3d):
   print("==> Creating butterfly h5 file...")
 
   bc_makeButterfly = os.path.join(args.hipft_home, 'hipft_make_butterfly_diagram.py')
-
+  bc_makeButterfly += f' -tai' if not args.tai_off else ''
   bc_makeButterfly += f" -rundir {args.rundir}" if args.rundir else ''
   bc_makeButterfly += f" -outpath {args.outpath}" if args.outpath else ''
   bc_makeButterfly += f" -maplist {args.maplist}" if args.maplist else ''
@@ -439,7 +449,8 @@ def make_butterfly(args, is3d):
     make_mldfile += f' -maplist {os.path.join(args.rundir, "hipft_output_map_list.out")}'
     make_mldfile += f' -o {os.path.join(args.output_dir, "hipft_output_map_list")}'
     os.system(make_mldfile)
-    mldfile = os.path.join(args.output_dir, 'hipft_output_map_list_utc.out')
+    map_list_out = 'hipft_output_map_list_utc.out' if args.tai_off else 'hipft_output_map_list_tai.out'
+    mldfile = os.path.join(args.output_dir, map_list_out)
     args.maplist = mldfile
   elif args.maplist:
     mldfile = args.maplist
@@ -456,6 +467,7 @@ def plot_butterfly(args, is3d, butterfly_plots):
   print("==> Plotting butterfly plots...")
 
   bc_plotButterfly = os.path.join(args.hipft_home, 'hipft_plot_butterfly_diagram.py')
+  bc_plotButterfly += f' -tai' if not args.tai_off else ''
   bc_plotButterfly += ' butterfly.h5'
 
   bc_plotButterfly += f" -ignore_data_uttime" if not args.utstart else ''
@@ -483,7 +495,8 @@ def make_movies(args, movie_ind, isSubset):
     make_mldfile += f' -maplist {os.path.join(args.rundir, "hipft_output_map_list.out")}'
     make_mldfile += f' -o {os.path.join(args.output_dir, "hipft_output_map_list")}'
     os.system(make_mldfile)
-    mldfile = os.path.join(args.output_dir, 'hipft_output_map_list_utc.out')
+    map_list_out = 'hipft_output_map_list_utc.out' if args.tai_off else 'hipft_output_map_list_tai.out'
+    mldfile = os.path.join(args.output_dir, map_list_out)
   elif args.maplist:
     mldfile = args.maplist
 
@@ -527,9 +540,6 @@ if __name__ == '__main__':
   
   
 # NOTES
-
-
-
 # More and pretty verbosity on steps it is doing.
 # OFT Post Processing
 # ==> Loading.....
