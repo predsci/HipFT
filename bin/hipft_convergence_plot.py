@@ -21,11 +21,11 @@ def argParsing():
     required=False)
 
   parser.add_argument('-errtype',
-    help='Error to use for plotting: 1: RMSD, 2: MAXABS, 3: CVRMSD, 4: MAPE, 5: MAXAPE, 6: HHABS (Default: 3)',
+    help='Error to use for plotting: 1: RMSD, 2: MAXABS, 3: CVRMSD, 4: MAPE, 5: MAXAPE, 6: HHABS (Default: 6)',
     dest='errtype',
     type=int,
     required=False,
-    default=3) 
+    default=6) 
 
   parser.add_argument('-lgl',
     help='A comma separated list of legend labels',
@@ -161,25 +161,16 @@ def run(args):
 
   if args.orders:
     ORDERS=arg_dict['orders'].split(',')
-    if len(ORDERS) != LABEL_LEN:
-      print('Not enough orders provided')
-      return
 
   if args.order_tethers:
-    ORDER_TETHERS=arg_dict['order_tethers'].split(',')
-    if len(ORDER_TETHERS) != LABEL_LEN:
-      print('Not enough order_tethers provided')
-      return
+    ORDER_TETHERS=arg_dict['order_tethers'].split(',')rn
   elif(args.orders):
-    ORDER_TETHERS = [-1 for i in range(LABEL_LEN)]
+    ORDER_TETHERS = [-1 for i in range(len(ORDERS))]
 
   if args.order_labels:
     ORDER_LABELS=arg_dict['order_labels'].split(',')
-    if len(ORDER_LABELS) != LABEL_LEN:
-      print('Not enough order_labels provided')
-      return
   elif(args.orders):
-    ORDER_LABELS = ['$O(h^'+str(ORDERS[i])+')$' for i in range(LABEL_LEN)]
+    ORDER_LABELS = ['$O(h^'+str(ORDERS[i])+')$' for i in range(len(ORDERS))]
 
   lw=args.lw
 
@@ -245,7 +236,7 @@ def run(args):
 
     plt.scatter(xvec,yvec,s=ms,c=COLORS[idx],edgecolors=COLORS[idx],zorder=3,marker=MARKERS[idx],label=leglabel)
     
-    if args.orders:
+    if args.orders and idx <= len(ORDERS)-1:
       xvec = dsize/np.array(nxl)
       yvec = np.array(err)    
       xtether = xvec[int(ORDER_TETHERS[idx])]
@@ -259,7 +250,7 @@ def run(args):
 
 
   if args.orders:
-    for (idx,cfile) in enumerate(cfile_list):
+    for idx in range(len(ORDERS)):
       leglabel = '$O(h^'+str(ORDERS[idx])+')$'
       ax.plot([ox0[idx],ox1[idx]],[oy0[idx],oy1[idx]],'--',c=COLORS[idx],linewidth=lw,label=leglabel)
 

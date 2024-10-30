@@ -90,11 +90,11 @@ def argParsing():
     required=False)
 
   parser.add_argument('-errtype',
-    help='Error to use for plotting: 1: RMSD, 2: MAXABS, 3: CVRMSD, 4: MAPE, 5: MAXAPE, 6: HHABS (Default: 3)',
+    help='Error to use for plotting: 1: RMSD, 2: MAXABS, 3: CVRMSD, 4: MAPE, 5: MAXAPE, 6: HHABS (Default: 6)',
     dest='errtype',
     type=int,
     required=False,
-    default=3)
+    default=6)
 
   return parser.parse_args()
 
@@ -166,10 +166,11 @@ def run(args):
       text=text+"-weno_eps"+str(args.weno_eps)
     convergencefile = args.ofile if args.ofile else text+'.txt'
     createConFile(text,convergencefile)
-    np_s=args.np if args.np else 64
-    nt=args.nt if args.nt else 512
+    nt_s=args.nt if args.nt else 64
+    np_s=args.np if args.np else nt_s*2
     np_list=[np_s * 2 ** (n - 1) for n in range(1, args.pts + 1)]
-    for np in np_list:
+    nt_list=[nt_s * 2 ** (n - 1) for n in range(1, args.pts + 1)]
+    for nt,np in zip(nt_list,np_list):
       testname=testtype+"-nt"+str(nt)+"-np"+str(np)+"-fnm"+str(args.fnm)
       if args.dt:
         testname=testname+"-dt"+str(args.dt)
