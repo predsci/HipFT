@@ -171,7 +171,8 @@ def run(args):
   print(f'Number of threads running on : {args.num_threads}')
 
   args.rundir = args.rundir or os.getcwd()
-  args.output_dir = os.path.join(os.getcwd(), 'post_processing')
+  if not args.output_dir:
+    args.output_dir = os.path.join(os.getcwd(), 'post_processing')
   os.makedirs(args.output_dir, exist_ok=True)
   print(f'==> Created post processing output folder at :')
   print(f'\t {args.output_dir}')
@@ -355,11 +356,19 @@ def run(args):
             print(f'==>        Found existing movies and images for {r}')
       else:
         if not os.path.exists(os.path.join(args.output_dir, 'hipft_movie.mov')):
-          butterfly_plots.append('1')
+          movie_ind.append('1')
         else:
             print(f'==>        Found existing movies and images for r000001')
       isSubset = len(movie_ind) != len(file_list)
     else:
+      if is3d:
+        movies_directory = os.path.join(args.output_dir, "map_plotting")
+        for file in check_exist:
+          match = re.search(r'r(\d+)', file)
+          r = int(match.group(1)) if match else -1
+          movie_ind.append(str(r))
+      else:
+          movie_ind.append('1')
       isSubset = False
 
     if movie_ind or args.overwrite:
