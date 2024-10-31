@@ -795,6 +795,8 @@ def get_xticks(args,xmn,xmx,init_locs,total_time):
       args.xunits = 'cr'
       if not args.xcadence:
         args.xcadence = 2
+    elif total_time < 2*years:
+        args.xunits = 'days'
     else:
       args.xunits = 'years'
   

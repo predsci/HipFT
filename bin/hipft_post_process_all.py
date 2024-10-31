@@ -210,6 +210,8 @@ def run(args):
       args.xunits = 'cr'
       if not args.plot_axis_options or 'xcadence' not in args.plot_axis_options:
         args.plot_axis_options = " -xcadence 2"
+    elif total_time < 2*years:
+        args.xunits = 'days'
     else:
       args.xunits = 'years'
 
@@ -451,6 +453,8 @@ def make_butterfly(args, is3d):
   bc_makeButterfly += f" -t0 {args.t0}" if args.t0 else ''
   bc_makeButterfly += f" -tf {args.tf}" if args.tf else ''
   bc_makeButterfly += f" -3d -sall" if is3d else ''
+
+  mldfile = None
 
   if args.utstart and not args.maplist:
     make_mldfile = os.path.join(args.hipft_home, 'hipft_add_dates_to_map_output_list.py')
