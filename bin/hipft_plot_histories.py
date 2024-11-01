@@ -238,7 +238,7 @@ def run(args):
   hist_list=[]
 
   for file in temphist_list:
-    if arg_dict['histfiles'] == ' ':
+    if arg_dict['histfiles'] != ' ':
       r=int((file.split('/')[-1]).replace('hipft_history_sol_r','').replace('.out',''))
       if str(r) in rexclude_list:
         continue

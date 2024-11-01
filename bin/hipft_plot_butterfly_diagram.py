@@ -58,7 +58,7 @@ def argParsing():
   parser.add_argument('-unit_label',
     help='Label for colorbar (units)',
     dest='unit_label',
-    default=' ',
+    default='Guass',
     required=False)
 
   parser.add_argument('-unit_fac',
