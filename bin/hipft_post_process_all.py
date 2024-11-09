@@ -357,8 +357,8 @@ def run(args):
           else:
             print(f'==>        Found existing movies and images for {r}')
       else:
-        if not os.path.exists(os.path.join(args.output_dir, 'hipft_movie.mov')):
-          movie_ind.append('1')
+        if not os.path.exists(os.path.join(args.output_dir, "map_plotting",  'movies', 'hipft_movie.mov')):
+          movie_ind.append('individual')
         else:
             print(f'==>        Found existing movies and images for r000001')
       isSubset = len(movie_ind) != len(file_list)
@@ -370,7 +370,7 @@ def run(args):
           r = int(match.group(1)) if match else -1
           movie_ind.append(str(r))
       else:
-          movie_ind.append('1')
+          movie_ind.append('individual')
       isSubset = False
 
     if movie_ind or args.overwrite:
@@ -533,11 +533,16 @@ def make_movies(args, movie_ind, isSubset):
   images_directory = os.path.join(args.output_dir, "map_plotting", "images")
   os.makedirs(images_directory, exist_ok=True)
 
-  for idx in movie_ind:
-    r = f'r{str(int(idx)).zfill(6)}'
-    images_sub_directory = os.path.join(images_directory, r)
+  if movie_ind[0] == 'individual':
+    images_sub_directory = os.path.join(images_directory, 'r000001')
     os.makedirs(images_sub_directory, exist_ok=True)
-    os.system(f'mv {os.path.join(args.outpath, "plots", f"*{r}*.png")} {images_sub_directory}')
+    os.system(f'mv {os.path.join(args.outpath, "plots", f"*.png")} {images_sub_directory}')
+  else:
+    for idx in movie_ind:
+      r = f'r{str(int(idx)).zfill(6)}'
+      images_sub_directory = os.path.join(images_directory, r)
+      os.makedirs(images_sub_directory, exist_ok=True)
+      os.system(f'mv {os.path.join(args.outpath, "plots", f"*{r}*.png")} {images_sub_directory}')
 
   os.chdir(args.output_dir)
 
