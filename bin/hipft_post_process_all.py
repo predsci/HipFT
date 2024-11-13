@@ -8,7 +8,7 @@ import signal
 import numpy as np
 import pandas as pd
 
-# Version 1.0.2
+# Version 1.1.0
 
 def handle_int(signum, frame):
     print('You pressed Ctrl+C! Stopping!')
@@ -214,6 +214,19 @@ def run(args):
         args.xunits = 'days'
     else:
       args.xunits = 'years'
+
+## ~~~~~~ Make realization parameters table
+  if is3d:
+    print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+    print('==> Starting to make realization parameters table')
+    if args.overwrite:
+        print('==> Overwriting any existing realization parameters table!')
+
+    table_flag = args.overwrite or not os.path.exists(os.path.join(args.output_dir, "hipft_realization_parameters_table.pdf"))
+    if table_flag:
+        make_realization_table(args)
+    else:
+        print("==> Realization parameters table already exists")
 
   ## ~~~~~~ Plot individual histories 
   if run_all or args.history == 1 or args.history == 2:
@@ -421,6 +434,14 @@ def plot_together_history(args, file_list):
   os.chdir(os.path.join(args.output_dir, "histories"))
   os.system(f'{bc_plotHistories} -histfiles {histfiles} -runtag together')
   os.chdir(args.output_dir)
+
+
+def make_realization_table(args):
+  print("==> Making realization parameters table...")
+  bc_plotTable = os.path.join(args.hipft_home, 'hipft_make_realization_table.py')
+  rpfile = os.path.join(args.rundir, 'hipft_realization_parameters.out')
+  os.chdir(args.output_dir)
+  os.system(f'{bc_plotTable} -rpfile {rpfile}')
 
 
 def plot_summary_history(args, file_list):
