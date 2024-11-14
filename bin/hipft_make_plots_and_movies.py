@@ -7,8 +7,9 @@ import signal
 import sys
 from pathlib import Path
 import concurrent.futures
+import glob
 
-# Version 2.4.0
+# Version 2.4.1
 
 def handle_int(signum, frame):
     print('You pressed Ctrl+C! Stopping!')
@@ -196,8 +197,8 @@ def run(args):
     if dim3 is not None:
         twoD = False 
 
-  if os.path.exists("tmp_file*.h5"):
-    os.remove("tmp_file*.h5")
+  for file in glob.glob("tmp_file*.h5"):
+    os.remove(file)
 
   if not os.path.exists(args.datadir+'/plots/tmp'):
     os.makedirs(args.datadir+'/plots/tmp')
@@ -234,7 +235,8 @@ def run(args):
 
   os.chdir(args.datadir+'/plots')
   os.rmdir(args.datadir+'/plots/tmp')
-  os.system('rm tmp_file*.h5')
+  for file in glob.glob("tmp_file*.h5"):
+    os.remove(file)
 
 
 def makeMovie(args,odir,r):
