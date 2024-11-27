@@ -4,12 +4,13 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+mpl.use('Agg')
 from astropy.time import Time
 from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_number
 import os
 import itertools
 
-# Version 1.8.3
+# Version 1.9.1
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -80,7 +81,6 @@ def argParsing():
   parser.add_argument('-xunits',
     help='Units of the x-axis (date, seconds, minutes, hours, days, weeks, cr, or years).',
     dest='xunits',
-    default='hours',
     required=False)
 
   parser.add_argument('-xcrpos',
@@ -238,7 +238,7 @@ def run(args):
   hist_list=[]
 
   for file in temphist_list:
-    if arg_dict['histfiles'] == ' ':
+    if arg_dict['histfiles'] != ' ':
       r=int((file.split('/')[-1]).replace('hipft_history_sol_r','').replace('.out',''))
       if str(r) in rexclude_list:
         continue
@@ -271,6 +271,10 @@ def run(args):
       print('ERROR: Can only compare a maximum of 256 runs.')
       quit()
 
+  if args.summary and LABEL_LEN == 1:
+      print('WARNING: Summary mode only works for multiple histories.  Switching to standard mode.')
+      args.summary = False
+
   print("==> Reading history files...")
   time_list=[]
   fluxp_list=[]
@@ -283,7 +287,10 @@ def run(args):
   eq_dipole_list=[]
   brmin_list=[]
   brmax_list=[]
-  valerr_list=[]
+
+  if args.valrun:
+      valerr_list=[]
+
   flux_tot_un_list=[]
   flux_tot_s_list=[]
   flux_imb_list=[]
@@ -316,7 +323,7 @@ def run(args):
 
   for i,dire in enumerate(hist_list):
     h_file_name = dire
-    hist_sol_full = pd.read_table(h_file_name,header=0,sep='\s+')
+    hist_sol_full = pd.read_table(h_file_name,header=0,sep='\\s+')
 
     samples = int(args.samples)
 
@@ -325,6 +332,7 @@ def run(args):
     #thin out data in hist_sol
     if samples > 1:
       indices = np.linspace(0, number_of_data_points-1, samples, endpoint=True, dtype=int)
+      indices = np.unique(indices)
       hist_sol = hist_sol_full.iloc[indices]
     else:
       hist_sol = hist_sol_full
@@ -346,7 +354,9 @@ def run(args):
 
     brmin_list.append(np.array(hist_sol['BR_MIN']))
     brmax_list.append(np.array(hist_sol['BR_MAX']))
-    valerr_list.append(np.array(hist_sol['VALIDATION_ERR_CVRMSD']))
+
+    if args.valrun:
+        valerr_list.append(np.array(hist_sol['VALIDATION_ERR_HHabs']))
 
     #Compute derived quantities:
     flux_tot_un = np.abs(fluxp_list[i]) + np.abs(fluxm_list[i])
@@ -369,20 +379,22 @@ def run(args):
 #
 # ****** Create needed parameters and lists.
 #  
-  time_tfac = np.array(time_list,dtype=object)*tfac
+  time_tfac = np.array(time_list,dtype=np.float64)*tfac
   xmn = np.amin([np.amin(arr) for arr in time_tfac])
   xmx = np.amax([np.amax(arr) for arr in time_tfac])
-  flux_tot_un_FF = np.array(flux_tot_un_list,dtype=object)*flux_fac
-  fluxm_FF = np.abs(np.array(fluxm_list,dtype=object))*flux_fac
-  fluxp_FF = np.array(fluxp_list,dtype=object)*flux_fac
+  total_time = (np.amax([np.amax(arr) for arr in time_list]) - np.amin([np.amin(arr) for arr in time_list]))*tfac*3600
+  flux_tot_un_FF = np.array(flux_tot_un_list,dtype=np.float64)*flux_fac
+  fluxm_FF = np.abs(np.array(fluxm_list,dtype=np.float64))*flux_fac
+  fluxp_FF = np.array(fluxp_list,dtype=np.float64)*flux_fac
 
-  flux_tot_s_FF = np.array(flux_tot_s_list,dtype=object)*flux_fac
-  fluxp_pn_FF = np.array(fluxp_pn_list,dtype=object)*flux_fac
-  fluxm_pn_FF = np.array(fluxm_pn_list,dtype=object)*flux_fac
-  fluxp_ps_FF = np.array(fluxp_ps_list,dtype=object)*flux_fac
-  fluxm_ps_FF = np.array(fluxm_ps_list,dtype=object)*flux_fac
+  flux_tot_s_FF = np.array(flux_tot_s_list,dtype=np.float64)*flux_fac
+  fluxp_pn_FF = np.array(fluxp_pn_list,dtype=np.float64)*flux_fac
+  fluxm_pn_FF = np.array(fluxm_pn_list,dtype=np.float64)*flux_fac
+  fluxp_ps_FF = np.array(fluxp_ps_list,dtype=np.float64)*flux_fac
+  fluxm_ps_FF = np.array(fluxm_ps_list,dtype=np.float64)*flux_fac
 
-  valerr=np.array(valerr_list,dtype=object)*(1e5)
+  if args.valrun:
+      valerr=np.array(valerr_list,dtype=np.float64)*(1e5)
 
 #
 # ****** Total flux imbalance.
@@ -401,7 +413,7 @@ def run(args):
   plt.title('Relative Flux Imbalance', {'fontsize': fsize, 'color': tc})
   plt.ylabel('%', {'fontsize': fsize, 'color': tc})
   init_locs = plt.xticks()[0]
-  locs, labels, utstartSecs = get_xticks(args,xmn,xmx,init_locs)
+  locs, labels, utstartSecs = get_xticks(args,xmn,xmx,init_locs,total_time)
   
   makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,ymin,ymax,fsize)
   fig.savefig('history_'+args.runtag+'_flux_imb_pm.png', bbox_inches='tight', dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
@@ -419,7 +431,7 @@ def run(args):
       NOTindividual,LABEL_LEN,label_list,lgfsize,'Blue','Red',["|Flux (-)|","Flux (+)"])
 
   ymin=0.0#np.amin([np.amin(fluxm_FF),np.amin(fluxp_FF)])
-  ymax = max(np.amax(np.abs(arr)) for arr in fluxm_FF + fluxp_FF)
+  ymax = max(np.amax(np.abs(arr)) for array in (fluxm_FF, fluxp_FF) for arr in array)
   plt.title('Total Positive and Negative Flux', {'fontsize': fsize, 'color': tc})
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})  
   ax.add_artist(legend1)  
@@ -475,7 +487,7 @@ def run(args):
 #
 # ****** Polar +/- fluxes.
 #
-  ymax = max(np.amax(np.abs(arr)) for arr in fluxp_pn_FF + fluxm_pn_FF + fluxp_ps_FF + fluxm_ps_FF)
+  ymax = max(np.amax(np.abs(arr)) for array in (fluxp_pn_FF, fluxm_pn_FF, fluxp_ps_FF, fluxm_ps_FF) for arr in array)
   ymin = -ymax 
   fig = plt.figure(num=None, figsize=(14, 7), dpi=args.dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
@@ -497,7 +509,7 @@ def run(args):
 #
 # ****** Polar average field strengths.
 #
-  ymax = max(np.amax(np.abs(arr)) for arr in np.array(pole_n_avg_field_list,dtype=object) + np.array(pole_s_avg_field_list,dtype=object))
+  ymax = max(np.amax(np.abs(arr)) for array in (np.array(pole_n_avg_field_list,dtype=np.float64), np.array(pole_s_avg_field_list,dtype=np.float64)) for arr in array)
   ymin = -ymax 
   fig = plt.figure(num=None, figsize=(14, 7), dpi=args.dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
@@ -522,12 +534,12 @@ def run(args):
   ax = plt.gca()
 
   if args.summary:
-    legend1 = summaryMode2(brmax_list,np.abs(np.array(brmin_list,dtype=object)),time_tfac[0],LW,FLW,fsize,plt,"blue","red","max(Br)","|min(Br)|")
+    legend1 = summaryMode2(brmax_list,np.abs(np.array(brmin_list,dtype=np.float64)),time_tfac[0],LW,FLW,fsize,plt,"blue","red","max(Br)","|min(Br)|")
   else:
-    legend1 = normalMode2(plt,ax,fig,args,brmax_list,np.abs(np.array(brmin_list,dtype=object)),time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
+    legend1 = normalMode2(plt,ax,fig,args,brmax_list,np.abs(np.array(brmin_list,dtype=np.float64)),time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
       NOTindividual,LABEL_LEN,label_list,lgfsize,'blue','red',["max(Br)","|min(Br)|"])
   
-  ymax = max(np.amax(np.abs(arr)) for arr in brmax_list + brmin_list)
+  ymax = max(np.amax(np.abs(arr)) for array in (brmax_list, brmin_list) for arr in array)
   ymin = 0.0 
   
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
@@ -599,7 +611,7 @@ def run(args):
 
     plt.title('Validation Error', {'fontsize': fsize, 'color': tc})
     xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs)
-    plt.ylabel('(CV)RMSD ($10^{-5}$)', {'fontsize': fsize, 'color': tc})
+    plt.ylabel('HHabs ($10^{-5}$)', {'fontsize': fsize, 'color': tc})
     ax.tick_params(axis='y',labelsize=fsize)
     ax.grid(zorder=0)
 
@@ -619,11 +631,13 @@ def makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,ymin,ymax,fsize)
   xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs)
   ax.tick_params(axis='y',labelsize=fsize)
   ax.grid(zorder=0)
+  t = ax.yaxis.get_offset_text()
+  t.set_size(fsize)
   fig.tight_layout()
 
 
 def summaryMode(llist,xlist,LW,FLW,fsize,plt):
-  summaryHelper1(llist,xlist,LW,FLW,plt,"k",'blue',"$\mu$","$\sigma$","[Min,Max]")
+  summaryHelper1(llist,xlist,LW,FLW,plt,"k",'blue',"$\\mu$","$\\sigma$","[Min,Max]")
   plt.legend(loc='upper left',fontsize=fsize, ncol=3)
 
 
@@ -631,7 +645,7 @@ def summaryMode2(llist1,llist2,xlist,LW,FLW,fsize,plt,CM1,CM2,LT1,LT2):
   summaryHelper1(llist1,xlist,LW,FLW,plt,CM1,CM1,LT1,'_nolegend_','_nolegend_')
   summaryHelper1(llist2,xlist,LW,FLW,plt,CM2,CM2,LT2,'_nolegend_','_nolegend_')
   legend1 = plt.legend(loc='upper right',fontsize=fsize, ncol=2)
-  addLegendGeneric(LW,FLW,fsize,plt,"k","gray","$\mu$","$\sigma$","[Min,Max]")
+  addLegendGeneric(LW,FLW,fsize,plt,"k","gray","$\\mu$","$\\sigma$","[Min,Max]")
   return legend1
 
 
@@ -641,7 +655,7 @@ def summaryMode4(llist1,llist2,llist3,llist4,xlist,LW,FLW,fsize,plt,CM1,CM2,CM3,
   summaryHelper1(llist3,xlist,LW,FLW,plt,CM3,CM3,LT3,'_nolegend_','_nolegend_')
   summaryHelper1(llist4,xlist,LW,FLW,plt,CM4,CM4,LT4,'_nolegend_','_nolegend_')
   legend1 = plt.legend(loc='upper right',fontsize=fsize, ncol=4)
-  addLegendGeneric(LW,FLW,fsize,plt,"k","gray","$\mu$","$\sigma$","[Min,Max]")
+  addLegendGeneric(LW,FLW,fsize,plt,"k","gray","$\\mu$","$\\sigma$","[Min,Max]")
   return legend1
 
 
@@ -658,9 +672,9 @@ def summaryHelper1(llist,xlist,LW,FLW,plt,CM,CF,LT1,LT2,LT3):
 
 
 def addLegendGeneric(LW,FLW,fsize,plt,CM,CF,LT1,LT2,LT3):
-  h1=plt.plot(np.NaN, np.NaN,color=CM,linewidth=LW,label='_nolegend_')
-  h2=plt.fill_between([np.NaN],[0],[0],linewidth=FLW,alpha=0.5,color=CF,label='_nolegend_')
-  h3=plt.fill_between([np.NaN],[0],[0],linewidth=FLW,alpha=0.25,color=CF,label='_nolegend_')
+  h1=plt.plot(np.nan, np.nan,color=CM,linewidth=LW,label='_nolegend_')
+  h2=plt.fill_between([np.nan],[0],[0],linewidth=FLW,alpha=0.5,color=CF,label='_nolegend_')
+  h3=plt.fill_between([np.nan],[0],[0],linewidth=FLW,alpha=0.25,color=CF,label='_nolegend_')
   plt.legend([h1[0],h2,h3],[LT1,LT2,LT3],loc='lower left',fontsize=fsize, ncol=3)
 
 
@@ -757,7 +771,7 @@ def addLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig):
 #  
 
 
-def get_xticks(args,xmn,xmx,init_locs):
+def get_xticks(args,xmn,xmx,init_locs,total_time):
   seconds = 1
   minutes = 60
   hours = 3600
@@ -767,6 +781,24 @@ def get_xticks(args,xmn,xmx,init_locs):
   cr = 2356586
   years = 31556952
   default = hours
+
+  if not args.xunits:
+    if total_time < 2*minutes:
+      args.xunits = 'seconds'
+    elif total_time < 2*hours:
+      args.xunits = 'minutes'
+    elif total_time < 7*days:
+      args.xunits = 'hours'
+    elif total_time < years:
+      args.xunits = 'days'
+    elif total_time < 2*years:
+      args.xunits = 'cr'
+      if not args.xcadence:
+        args.xcadence = 2
+    elif total_time < 2*years:
+        args.xunits = 'days'
+    else:
+      args.xunits = 'years'
   
   xcUnitsSec = default
   if (args.xc_units):

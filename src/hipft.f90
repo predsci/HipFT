@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT_INTEL_GPU'
-      character(*), parameter :: cvers='1.14.0'
-      character(*), parameter :: cdate='09/24/2024'
+      character(*), parameter :: cvers='1.14.1'
+      character(*), parameter :: cdate='10/01/2024'
 !
 end module
 !#######################################################################
@@ -1693,6 +1693,7 @@ subroutine write_welcome_message
       use mesh
       use globals
       use output
+      use mpidefs
 !
 !-----------------------------------------------------------------------
 !
@@ -1723,6 +1724,10 @@ subroutine write_welcome_message
       write (*,*) '        Predictive Science Inc.'
       write (*,*) '        www.predsci.com'
       write (*,*) '        San Diego, California, USA 92121'
+      write (*,*) ''
+      write (*,*) ''
+      write (*,*) 'Number of MPI ranks total:     ',nproc
+      write (*,*) 'Number of MPI ranks per node:  ',nprocsh
       write (*,*) ''
       write (*,*) "Run started at: "
       write (*,*) ''
@@ -2164,8 +2169,8 @@ subroutine set_realization_parameters
 !-----------------------------------------------------------------------
 !
       integer :: i, ierr
-      character(*), parameter :: FMTI='(100(A29))'
-      character(*), parameter :: FMTR='(I29,a,100(1pe16.8e3,a))'
+      character(*), parameter :: FMTI='(100(A41))'
+      character(*), parameter :: FMTR='(I41,a,100(1pe40.16e3,a))'
 !
 !-----------------------------------------------------------------------
 !
@@ -2300,33 +2305,35 @@ subroutine set_realization_parameters
 !
         call ffopen (IO_TMP,'hipft_realization_parameters.out','rw',ierr)
 
-        write (IO_TMP,FMTI) 'realization_number           ', &
-                            'assimilate_data_lat_limits   ', &
-                            'assimilate_data_mu_powers    ', &
-                            'assimilate_data_mu_limits    ', &
-                            'flow_dr_coef_p0_values       ', &
-                            'flow_dr_coef_p2_values       ', &
-                            'flow_dr_coef_p4_values       ', &
-                            'flow_mf_coef_p1_values       ', &
-                            'flow_mf_coef_p3_values       ', &
-                            'flow_mf_coef_p5_values       ', &
-                            'flow_attenuate_values        ', &
-                            'diffusion_coef_constants     '
+        write (IO_TMP,FMTI) '                       realization_number', &
+                            '               assimilate_data_lat_limits', &
+                            '                assimilate_data_mu_powers', &
+                            '                assimilate_data_mu_limits', &
+                            '                   flow_dr_coef_p0_values', &
+                            '                   flow_dr_coef_p2_values', &
+                            '                   flow_dr_coef_p4_values', &
+                            '                   flow_mf_coef_p1_values', &
+                            '                   flow_mf_coef_p3_values', &
+                            '                   flow_mf_coef_p5_values', &
+                            '                    flow_attenuate_values', &
+                            '                 diffusion_coef_constants', &
+                            ' source_rfe_total_unsigned_flux_per_hours'
 !
         do i=1,n_realizations
 !
-          write (IO_TMP,FMTR) i,' ',                                &
-                                assimilate_data_lat_limits(i),' ',  &
-                                assimilate_data_mu_powers(i),' ',   &
-                                assimilate_data_mu_limits(i),' ',   &
-                                flow_dr_coef_p0_values(i),' ',      &
-                                flow_dr_coef_p2_values(i),' ',      &
-                                flow_dr_coef_p4_values(i),' ',      &
-                                flow_mf_coef_p1_values(i),' ',      &
-                                flow_mf_coef_p3_values(i),' ',      &
-                                flow_mf_coef_p5_values(i),' ',      &
-                                flow_attenuate_values(i),' ',       &
-                                diffusion_coef_constants(i),' '
+          write (IO_TMP,FMTR) i,                                          ' ', &
+                              assimilate_data_lat_limits(i),              ' ', &
+                              assimilate_data_mu_powers(i),               ' ', &
+                              assimilate_data_mu_limits(i),               ' ', &
+                              flow_dr_coef_p0_values(i),                  ' ', &
+                              flow_dr_coef_p2_values(i),                  ' ', &
+                              flow_dr_coef_p4_values(i),                  ' ', &
+                              flow_mf_coef_p1_values(i),                  ' ', &
+                              flow_mf_coef_p3_values(i),                  ' ', &
+                              flow_mf_coef_p5_values(i),                  ' ', &
+                              flow_attenuate_values(i),                   ' ', &
+                              diffusion_coef_constants(i),                ' ', &
+                              source_rfe_total_unsigned_flux_per_hours(i),' '
 !
         end do
 !
@@ -4055,10 +4062,13 @@ subroutine assimilate_new_data (new_data)
       call set_periodic_bc_3d (deltaf,ntm,npm,nr)
 !
 ! ****** Balance the added flux if requested.
+! ****** Note this is not optimal (sequential in nr) - fix later.
 !
       if (assimilate_data_balance_flux) then
         if (verbose.gt.0) write(*,*) '   ASSIMILATE_NEW_DATA: About to balance DBr'
-        call balance_flux (deltaf)
+        do i=1,nr
+          call balance_flux (deltaf(:,:,i))
+        enddo
       end if
 !
       do concurrent (i=1:nr,k=1:npm,j=1:ntm)
@@ -9169,7 +9179,7 @@ end subroutine generate_rfe
 !
 ! 09/11/2024, RC, Version 1.12.3:
 !   - Refactored polar boundary conditions for advection and
-!     diffusion.  Now, advection uses the same 
+!     diffusion.  Now, advection uses the same
 !     small angle approximation like the diffusion does.
 !
 ! 09/18/2024, MS+RC, Version 1.13.0:
@@ -9177,13 +9187,19 @@ end subroutine generate_rfe
 !     it will be used for the eps in the WENO3 scheme.
 !     If not set (or set to the default value of 0), the
 !     grid-based eps of the CS-WENO3(h) scheme is used.
-!     This parameter is added to allow testing of the 
+!     This parameter is added to allow testing of the
 !     CS-WENO3(h) versus the standard WENO3 scheme.
 !
 ! 09/24/2024, RC, Version 1.14.0:
-!   - Changed validation history error calculation to use the 
+!   - Changed validation history error calculation to use the
 !     HHabs metric instead of MCV(RMSD).  If the denominator
 !     is zero, the normalized RMSD is used.
+!
+! 10/01/2024, RC, Version 1.14.1:
+!   - BUG FIX: Flux balancing assimilated data when using more than
+!              one realization was not working.
+!   - BUG FIX: Added missing RFE unsigned flux realization parameters to 
+!              realization parameter output text file.
 !
 !-----------------------------------------------------------------------
 !
