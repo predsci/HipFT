@@ -10,7 +10,7 @@ from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_
 import os
 import itertools
 
-# Version 1.9.1
+# Version 1.9.2
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -704,7 +704,7 @@ def normalMode2(plt,ax,fig,args,llist1,llist2,xlist,COLORS,MARKERS,LW,MS,LMS,fsi
     return legend1
   else:
     h1 = plt.plot(xlist[0],llist1[0],color=CL1,linewidth=LW,markersize=MS)
-    h2 = plt.plot(xlist[0],np.abs(llist2[0]),color=CL2,linewidth=LW,markersize=MS)
+    h2 = plt.plot(xlist[0],llist2[0],color=CL2,linewidth=LW,markersize=MS)
     return plt.legend([h1[0],h2[0]],LegT,loc='upper right',fontsize=fsize, ncol=2)
 
 def normalMode4(plt,ax,fig,args,llist1,llist2,llist3,llist4,xlist,COLORS,MARKERS,LW,MS,LMS,fsize,NOTindividual,\
