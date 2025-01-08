@@ -163,7 +163,7 @@ def run(args):
     ORDERS=arg_dict['orders'].split(',')
 
   if args.order_tethers:
-    ORDER_TETHERS=arg_dict['order_tethers'].split(',')rn
+    ORDER_TETHERS=arg_dict['order_tethers'].split(',')
   elif(args.orders):
     ORDER_TETHERS = [-1 for i in range(len(ORDERS))]
 
