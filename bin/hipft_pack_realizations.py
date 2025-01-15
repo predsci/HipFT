@@ -63,7 +63,7 @@ def main():
     else:
         fname = Path(file2d).stem
         fname = re.sub(r'_r\d{6}', '', fname)+'.h5'
-    print(rvec)
+
     ps.wrhdf_3d(fname, pvec, tvec, rvec, data_arr)
 
 
