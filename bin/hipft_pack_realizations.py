@@ -37,7 +37,7 @@ def main():
 
     for file2d in hipft_2d_file_list:
         match = re.search(r'r\d{6}', file2d)
-        print(match)
+
         if match:
             idx = int(match.group(0).replace('r',''))
         else:
