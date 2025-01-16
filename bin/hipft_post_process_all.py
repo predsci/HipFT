@@ -7,6 +7,7 @@ import argparse
 import signal
 import numpy as np
 import pandas as pd
+import shutil
 
 # Version 1.2.0
 
@@ -574,7 +575,7 @@ def make_movies(args, movie_ind, isSubset):
       images_sub_directory = os.path.join(images_directory, r)
       os.makedirs(images_sub_directory, exist_ok=True)
       os.system(f'mv {os.path.join(args.outpath, "plots", f"*{r}*.png")} {images_sub_directory}')
-  os.rmdir(os.path.join(args.outpath, "plots"))
+  shutil.rmtree(os.path.join(args.outpath, "plots"))
 
   os.chdir(args.output_dir)
 

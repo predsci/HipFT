@@ -189,8 +189,13 @@ def sed(match, value, file):
             lines[i] = f"  {match} = {value}\n"
             updated = True
             break
+        if line.strip() == '/':
+            del lines[i]
     if not updated:
         lines.append(f"  {match} = {value}\n")
+        lines.append('/\n')
+        lines = ['!\n' if line == '\n' else line for line in lines]
+        lines.append('!\n')
     with open(file, 'w') as f:
         f.writelines(lines)
 

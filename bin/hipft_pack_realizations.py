@@ -5,7 +5,7 @@ import numpy as np
 import argparse
 from pathlib import Path
 
-# Version 1.0.0
+# Version 1.0.1
 
 def argParsing():
 
@@ -20,7 +20,7 @@ def argParsing():
            dest='ofile',
            type=str,
            required=False)
-            
+
     return parser.parse_args()
 
 def main():
@@ -36,17 +36,18 @@ def main():
     pvec_first, tvec_first = None, None
 
     for file2d in hipft_2d_file_list:
-        match = re.search(r'\d{6}', file2d)
+        match = re.search(r'r\d{6}', file2d)
+
         if match:
-            idx = int(match.group(0))
+            idx = int(match.group(0).replace('r',''))
         else:
             raise ValueError(f"Index not found in filename: {file2d}")
 
 
         pvec, tvec, data = ps.rdhdf_2d(file2d)
-        
+
         if pvec_first is None and tvec_first is None:
-            pvec_first = pvec.copy()  
+            pvec_first = pvec.copy()
             tvec_first = tvec.copy()
         else:
             if not np.array_equal(tvec, tvec_first):
@@ -64,9 +65,7 @@ def main():
         fname = re.sub(r'_r\d{6}', '', fname)+'.h5'
 
     ps.wrhdf_3d(fname, pvec, tvec, rvec, data_arr)
-    
+
 
 if __name__ == '__main__':
     main()
-
-
