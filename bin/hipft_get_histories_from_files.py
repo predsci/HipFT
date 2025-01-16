@@ -6,7 +6,7 @@ import h5py
 import glob
 from datetime import datetime, timezone
 
-# Version 1.0.2
+# Version 1.1.0
 
 def argParsing():
 
@@ -39,6 +39,14 @@ def argParsing():
         dest='cadence',
         default=1.0,
         required=False)
+
+    parser.add_argument('-o',
+        help='Output file name (default: hipft_history_sol.out).',
+        dest='oname',
+        type=str,
+        default='hipft_history_sol.out',
+        required=False)
+
     
     return parser.parse_args()
     
@@ -56,7 +64,7 @@ def run(args):
     cadence = float(args.cadence)
 
     #Calculation constants
-    io_hist_sol_filename = 'hipft_history_sol_r000001.out' # Make this an input parameter!
+    io_hist_sol_filename = args.oname
     pole_flux_lat_limit = 30.  # Make this an input parameter!
     d2r = 0.017453292519943295
     pi = 3.1415926535897932
