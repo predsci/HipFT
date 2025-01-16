@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 import numpy as np
-import pandas as pd
 import argparse
 import h5py
 import glob
-from datetime import datetime, timezone
+import os
+import subprocess
+import sys
+import re
+from pathlib import Path
+import shutil
 
-# Version 1.1.0
+# Version 1.2.0
 
 def argParsing():
 
@@ -58,13 +62,12 @@ def argParsing():
 # Produces the HIPFT history (analysis) file from the maps.
 
 
-def run(args):
-
+def write_file(args, out_filename, file_ending, folder):
     time=0.0
     cadence = float(args.cadence)
 
     #Calculation constants
-    io_hist_sol_filename = args.oname
+    
     pole_flux_lat_limit = 30.  # Make this an input parameter!
     d2r = 0.017453292519943295
     pi = 3.1415926535897932
@@ -76,7 +79,8 @@ def run(args):
     BR_ABS_MIN          FLUX_POSITIVE          FLUX_NEGATIVE    NPOLE_FLUX_POSITIVE    NPOLE_FLUX_NEGATIVE\
     SPOLE_FLUX_POSITIVE    SPOLE_FLUX_NEGATIVE             NPOLE_AREA             SPOLE_AREA          \
     EQ_DIPOLE              AX_DIPOLE  VALIDATION_ERR_CVRMSD \n'
-    f_out = open(io_hist_sol_filename, "w")
+
+    f_out = open(out_filename, "w")
     f_out.write(header_txt)
 
     #Count for writing to history file
@@ -84,7 +88,7 @@ def run(args):
 
     #Loop through files in folder from start to stop time.
     for idx in range(int(args.t0),int(args.tf)+1):
-        filename=args.folder+"/"+args.bfile+"{:06d}".format(idx)+".h5"
+        filename=folder+"/"+args.bfile+"{:06d}".format(idx)+file_ending
     
         #Initialize variables
         h_minbr = 3.40282347e38
@@ -248,8 +252,51 @@ def run(args):
         f_out.write(hist_sol)
         
     f_out.close()
-    
 
+
+def run(args):
+
+    check_file = os.path.join(args.folder, f'{args.bfile}{int(args.t0):06d}.h5')
+    with h5py.File(check_file, 'r') as h5file:
+      f = h5file['Data']
+      ndims = np.ndim(f)
+      is3d = ndims == 3
+
+    if not is3d:
+        file_ending = ".h5"
+        out_filename = args.oname
+        folder = args.folder
+        write_file(args, out_filename, file_ending, folder)
+    else:
+        get_histories_temp_folder = os.path.join(args.folder, 'get_histories_temp')
+        os.makedirs(get_histories_temp_folder, exist_ok=True)
+        os.chdir(get_histories_temp_folder)
+        output_maps_pattern = os.path.join(args.folder, f'{args.bfile}*.h5')
+        output_maps_list = sorted(glob.glob(output_maps_pattern))
+        for output_map in output_maps_list:
+            Command = f'hipft_extract_realization.py {output_map}'
+            ierr = subprocess.run(["bash","-c",Command])
+            check_err(ierr.returncode, 'Failed : '+Command)
+
+        output_maps_pattern_temp = os.path.join(get_histories_temp_folder, f'{args.bfile}*.h5')
+        output_maps_temp_list = sorted(glob.glob(output_maps_pattern_temp))
+        
+        r_list = sorted({match.group(0) for f in output_maps_temp_list if (match := re.search(r'_r(\d+)', f))})
+
+        folder = get_histories_temp_folder
+        for r in r_list:
+            file_ending = f"{r}.h5"
+            out_filename = os.path.join(args.folder, f"{Path(args.oname).stem}{r}{Path(args.oname).suffix}")
+            write_file(args, out_filename, file_ending, folder)
+        shutil.rmtree(get_histories_temp_folder)
+
+
+def check_err(ierr,message):
+  if ierr > 0:
+    print(' ')
+    print(message)
+    print('Value of error code: '+str(ierr))
+    sys.exit(1)
 
 def main():
     ## Get input agruments:
@@ -258,6 +305,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-            
-
-
