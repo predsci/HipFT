@@ -28,6 +28,10 @@
 !
 !       -----> Toggle to flux balance (multiplicitive) the initial map.
 !
+  initial_map_mult_fac = 1.0
+!
+!       -----> Multiply the input map by a factor.
+!
   validation_run = 0
 !
 !       -----> Run a validation test of HipFT.  This will use the input map's
@@ -39,16 +43,16 @@
 !       ----->      such that a full rotation is advected, and the errors in the history can be
 !       ----->      compared at the end of the run.
 !       ----->   2: Gaussian blobs phi rotation:
-!       ----->      Errors reported in history file are not quite right, 
+!       ----->      Errors reported in history file are not quite right,
 !       ----->      but the correct final_analytic hdf5 file is output.
-!       ----->      The rigid rotation phi velocity is automatically computed 
+!       ----->      The rigid rotation phi velocity is automatically computed
 !       ----->      based on the input time_end.
 !       ----->   3: Gaussian blobs theta advection and optional phi rotation:
 !       ----->      Similar initial profile to (2) but here, a constant theta
-!       ----->      velocity is set such that the blobs move pi/2 in the user's 
-!       ----->      time_end.  Setting flow_vp_rigid_omega to any value other than 
+!       ----->      velocity is set such that the blobs move pi/2 in the user's
+!       ----->      time_end.  Setting flow_vp_rigid_omega to any value other than
 !       ----->      zero will auto activate a full rigid rotation in phi as in (2)
-!       ----->      along with the theta movement.  If no phi rotation is set, 
+!       ----->      along with the theta movement.  If no phi rotation is set,
 !       ----->      the history file's validation column is correct.
 !
   validation_run_width = 0.03
@@ -291,14 +295,14 @@
 !
   advance_source = .false.
 !
-!       ----->  Advance source terms.     
+!       ----->  Advance source terms.
 !
   source_rfe_model = 0
 !
-!       ----->  Activate random flux emergence source term.  
+!       ----->  Activate random flux emergence source term.
 !       ----->  1: Spread UF evenly over cells, set cell Br=(UF/Ncells)(1/dA)
 !       ----->  2: Spread UF evenly over area,  set cell Br=(UF/4pi)(dA)/(dA)
-!    
+!
   source_rfe_total_unsigned_flux_per_hour = 0.
 !
 !       ----->  Set the total unsigned flux (full map) per hour
@@ -311,7 +315,7 @@
 !
   source_rfe_seed = -9999
 !
-!       ----->  Set the random seed for the random flux source term.  
+!       ----->  Set the random seed for the random flux source term.
 !
   source_rfe_lifetime = 0.3
 !
@@ -321,12 +325,12 @@
 !
   source_from_file = .false.
 !
-!       ----->  Load a static source term from an HDF5 file.  
-!   
+!       ----->  Load a static source term from an HDF5 file.
+!
   source_filename = ' '
 !
 !       ----->  Filename of the HDF5 static source term.
-!      
+!
 !-----------------------------------------------------------------------
 ! ****** DATA ASSIMILATION ******
 !-----------------------------------------------------------------------
@@ -337,8 +341,8 @@
 !
   assimilate_data_balance_flux = .false.
 !
-!       -----> Balance the flux of the added flux before adding.  
-!  
+!       -----> Balance the flux of the added flux before adding.
+!
   assimilate_data_map_list_filename = ' '
 !
 !       -----> File name for CSV text file listing all data assimilation files and times.
