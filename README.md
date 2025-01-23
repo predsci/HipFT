@@ -23,7 +23,7 @@ It is recommended to use the latest compiler version available.
 
 HipFT requires the [HDF5](https://www.hdfgroup.org/solutions/hdf5) library.  
 When building for GPUs, the library must be compiled by the same compiler HipFT is using (e.g. nvfortran).  
-Often, this requires buildingthe library from source.  Instructions on how to do this will be added to this README in an upcoming update.
+Often, this requires building the library from source.  Instructions on how to do this will be added to this README in an upcoming update.
   
 1. Find the build script from the `build_examples` folder that is closest to your setup and copy it into the top-level directory.  
 2. Modify the script to set the `HDF5` library paths/flags and compiler flags compatible with your system environment.  
@@ -115,11 +115,13 @@ The `/bin` folder contains several python and bash scripts that can be used to p
 
 ## Sample Data for Convective Flows and Data Assimilation
   
-To use HipFT with data assimilation and convective flows requires that these input data be available.  We are working on releasing the software that can generate these required data, so for now we provid sample sets of these data in a zenodo data set located here:  
+To use HipFT with data assimilation and convective flows uses data generated from the [MagMAP](https://github.com/predsci/magmap) and [ConFlow](https://github.com/predsci/conflow) code packages respectively.  
+A sample data set from each code is provided in the zenodo data set:  
   
 [HipFT Sample Input Dataset for Convective Flows and Data Assimilation](https://zenodo.org/doi/10.5281/zenodo.10271120)
   
-This data package contains a Carrington rotation of convective flows at 15 minute cadence as well as a year of HMI-derived data assimilation maps for 2022.  We have also provided an example HipFT input file for running a full year simulation using this data in this repo's `examples/flux_transport_1yr_flowCAa_diff175_data_assim/` folder.  
+This data package contains a Carrington rotation of convective flows at 15 minute cadence as well as a year of HMI-derived data assimilation maps for 2022.  
+We have also provided an example HipFT input file for running a full year simulation using this data in this repo's `examples/flux_transport_1yr_flowCAa_diff175_data_assim/` folder.  
 Note that the flow files are auto-repeated in HipFT when run for longer than a Carrington rotation, so they can be used for arbitrary length runs of HipFT.  
 
 --------------------------------

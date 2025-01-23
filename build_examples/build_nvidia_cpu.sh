@@ -64,10 +64,9 @@ echo="echo -e"
 
 if [ -z "${OMP_NUM_THREADS}" ]
 then
-  ${echo} "${cR}ERROR!  OMP_NUM_THREADS is not set!${cX}"
-  ${echo} "${cR}        For GCC, this is required at compile time in order to run in${cX}"
-  ${echo} "${cR}        parallel across CPU threads.  Set to 1 for single threaded runs.${cX}"
-  exit 1
+  ${echo} "${cR}WARNING!  OMP_NUM_THREADS is not set!${cX}"
+  ${echo} "${cR}          For GCC, this is required at compile time in order to run in${cX}"
+  ${echo} "${cR}          parallel across CPU threads.  Set to 1 for single threaded runs.${cX}"
 fi
 
 HIPFT_HOME=$PWD

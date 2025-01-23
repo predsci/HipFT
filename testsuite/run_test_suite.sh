@@ -382,10 +382,14 @@ do
     # Check that a completed run exists in the run folder
     if [ ! -e ${RUNDIR}/hipft_brmap_final.h5 ]
     then
-      if [ ${norun} == 1 ]
+      if [ ${norun} == 0 ]
       then
         ${echo} "${cR}!!!> ERROR! Test ${TESTNAME} did not run correctly!${cX}"
         ${echo} "${cR}!!!> Check the run folder: ${RUNDIR} ${cX}"
+        ${echo} "${cR}!!!> hipft.log contents: ${cX}"
+        cat ${RUNDIR}/hipft.log
+        ${echo} "${cR}!!!> hipft.err contents: ${cX}"
+        cat ${RUNDIR}/hipft.err
         exit 1
       fi
     fi

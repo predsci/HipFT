@@ -29,9 +29,9 @@ def run(args):
 
 
   if not (args.odir):
-  	dirname = os.getcwd()
+    dirname = os.getcwd()
   else:
-  	dirname = args.odir
+    dirname = args.odir
   print(dirname)
 
   f=open("hipft_combined_reference.txt", "w")
@@ -41,13 +41,13 @@ def run(args):
   for dire in rundir_list:
     for file in sorted(os.listdir(dire)):
       if "hipft_history_sol_r" in file and file.endswith(".out"):
-      	realization="%06d" % r
-      	ifile=dire+'/'+file
-      	nfile=dirname+'/hipft_history_sol_r'+realization+'.out'
-      	print('Copied '+ifile)
-      	shutil.copy2(ifile,nfile)
-      	f.write('hipft_history_sol_r'+realization+'.out'+'  ,  '+ifile+'\n')
-      	r=r+1
+        realization="%06d" % r
+        ifile=dire+'/'+file
+        nfile=dirname+'/hipft_history_sol_r'+realization+'.out'
+        print('Copied '+ifile)
+        shutil.copy2(ifile,nfile)
+        f.write('hipft_history_sol_r'+realization+'.out'+'  ,  '+ifile+'\n')
+        r=r+1
 
   f.close()
 
