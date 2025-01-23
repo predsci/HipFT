@@ -243,6 +243,7 @@ def run(args):
       continue
     elif str(r) in rlist_list or 'all' in rlist_list:
       hist_list.append(file)
+      rList.append(r)
 
   NOTindividual=True
   if len(hist_list) == 1:
