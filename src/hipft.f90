@@ -46,7 +46,7 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.15.0'
+      character(*), parameter :: cvers='1.16.0'
       character(*), parameter :: cdate='01/23/2025'
 !
 end module
@@ -693,6 +693,7 @@ module input_parameters
 !
       logical :: assimilate_data = .false.
       logical :: assimilate_data_balance_flux = .false.
+      real(r_typ) :: assimilate_data_mult_fac = 1.0_r_typ
 !
       character(512) :: assimilate_data_map_list_filename = ' '
       character(512) :: assimilate_data_map_root_dir = '.'
@@ -4056,7 +4057,7 @@ subroutine assimilate_new_data (new_data)
 !
       allocate(deltaf(ntm,npm,nr))
 !$omp target enter data map(alloc:deltaf)
-
+!
       if (assimilate_data_add) then
         do concurrent (i=1:nr,k=1:npm1,j=1:ntm)
           deltaf(j,k,i) = new_data(k,j,2,i)*new_data(k,j,1,i)
@@ -4077,6 +4078,8 @@ subroutine assimilate_new_data (new_data)
           call balance_flux (deltaf(:,:,i))
         enddo
       end if
+!
+! ****** Add in the assimilated data.
 !
       do concurrent (i=1:nr,k=1:npm,j=1:ntm)
         f(j,k,i) = f(j,k,i) + deltaf(j,k,i)
@@ -4166,6 +4169,7 @@ subroutine apply_data_assimilation
 !
 !$omp target enter data map(to:new_data2d)
         allocate(new_data(npm_nd,ntm_nd,nslices,nr))
+
 !$omp target enter data map(alloc:new_data)
         do concurrent(i=1:nr,j=1:nslices,k=1:ntm_nd,l=1:npm_nd)
           new_data(l,k,j,i) = new_data2d(l,k,j)
@@ -4204,6 +4208,12 @@ subroutine apply_data_assimilation
               new_data(l,k,2,i) = zero
             enddo
           end if
+        enddo
+!
+! ****** Apply scale factor to assimilated data.
+!
+        do concurrent(i=1:nr,k=1:ntm_nd,l=1:npm_nd)
+          new_data(l,k,1,i) = assimilate_data_mult_fac*new_data(l,k,1,i)
         enddo
 !
 ! ****** Assimilate the data.
@@ -8185,6 +8195,7 @@ subroutine read_input_file
                diffusion_coef_constants,                               &
                assimilate_data,                                        &
                assimilate_data_balance_flux,                           &
+               assimilate_data_mult_fac,                               &
                assimilate_data_map_list_filename,                      &
                assimilate_data_map_root_dir,                           &
                assimilate_data_custom_from_mu,                         &
@@ -9206,6 +9217,10 @@ end subroutine generate_rfe
 ! 01/15/2025, RC, Version 1.15.0:
 !   - Added INITIAL_MAP_MULT_FAC input parameter to allow user to
 !     have HipFT multiply the input map by a factor (default 1.0).
+!
+! 01/15/2025, RC, Version 1.16.0:
+!   - Added ASSIMILATE_DATA_MULT_FAC input parameter to allow user to
+!     have HipFT multiply the data assimiated by a factor (default 1.0)
 !
 !-----------------------------------------------------------------------
 !
