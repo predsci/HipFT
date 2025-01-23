@@ -10,7 +10,7 @@ from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_
 import os
 import itertools
 
-# Version 1.9.2
+# Version 1.9.3
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -238,16 +238,11 @@ def run(args):
   hist_list=[]
 
   for file in temphist_list:
-    if arg_dict['histfiles'] != ' ':
-      r=int((file.split('/')[-1]).replace('hipft_history_sol_r','').replace('.out',''))
-      if str(r) in rexclude_list:
-        continue
-      elif str(r) in rlist_list or 'all' in rlist_list:
-        hist_list.append(file)
-        rList.append(r)
-    else:
+    r=int((file.split('/')[-1]).replace('hipft_history_sol_r','').replace('.out',''))
+    if str(r) in rexclude_list:
+      continue
+    elif str(r) in rlist_list or 'all' in rlist_list:
       hist_list.append(file)
-      rList.append(1)
 
   NOTindividual=True
   if len(hist_list) == 1:
