@@ -7,8 +7,9 @@ import argparse
 import signal
 import numpy as np
 import pandas as pd
+import shutil
 
-# Version 1.1.1
+# Version 1.2.0
 
 def handle_int(signum, frame):
     print('You pressed Ctrl+C! Stopping!')
@@ -128,6 +129,12 @@ def argParsing():
     type=int,
     required=False)
 
+  parser.add_argument('-hist_dir',
+    help='Location of history files (default is the run folder)',
+    dest='hist_dir',
+    type=str,
+    required=False)
+
   parser.add_argument('-overwrite',
     help='Overwrite selected processing',
     dest='overwrite',
@@ -184,7 +191,11 @@ def run(args):
     print(f'\t {history_folder}')
 
   ## ~~~~~~ Get number of realizations
-  pattern = os.path.join(args.rundir, 'hipft_history_sol*.out')
+  if args.hist_dir is not None:
+    hdir = args.hist_dir
+  else:
+    hdir = args.rundir
+  pattern = os.path.join(hdir, 'hipft_history_sol*.out')
   file_list = sorted(glob.glob(pattern))
   check_exist = [os.path.basename(file) for file in file_list]
   is3d = len(file_list) > 1
@@ -564,7 +575,7 @@ def make_movies(args, movie_ind, isSubset):
       images_sub_directory = os.path.join(images_directory, r)
       os.makedirs(images_sub_directory, exist_ok=True)
       os.system(f'mv {os.path.join(args.outpath, "plots", f"*{r}*.png")} {images_sub_directory}')
-  os.rmdir(os.path.join(args.outpath, "plots"))
+  shutil.rmtree(os.path.join(args.outpath, "plots"))
 
   os.chdir(args.output_dir)
 

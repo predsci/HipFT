@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT_INTEL_GPU'
-      character(*), parameter :: cvers='1.14.1'
-      character(*), parameter :: cdate='10/01/2024'
+      character(*), parameter :: cvers='1.15.0'
+      character(*), parameter :: cdate='01/23/2025'
 !
 end module
 !#######################################################################
@@ -529,7 +529,8 @@ module input_parameters
 ! ****** Initial map ********
 !
       character(512) :: initial_map_filename = ''
-      logical :: initial_map_flux_balance = .false.
+      logical        :: initial_map_flux_balance = .false.
+      real(r_typ)    :: initial_map_mult_fac = 1.0_r_typ
 !
 ! ****** Output options ********
 !
@@ -2127,6 +2128,12 @@ subroutine load_initial_condition
         enddo
       end if
 !
+! ****** Multiply initial map by a chosen factor.
+!
+      do concurrent (i=1:nr,k=1:npm,j=1:ntm)
+        f(j,k,i) = initial_map_mult_fac*f(j,k,i)
+      end do
+!
 ! ****** Clean up memory.
 !
       deallocate (s1)
@@ -3172,17 +3179,17 @@ subroutine analysis_step
 ! ****** Get integrated metrics.
 !
       do k=1,nr
-        h_fluxp_tmp = 0.
-        h_fluxm_tmp = 0.
-        h_fluxp_pn_tmp = 0.
-        h_fluxm_pn_tmp = 0.
-        h_fluxp_ps_tmp = 0.
-        h_fluxm_ps_tmp = 0.
-        h_area_pn_tmp = 0.
-        h_area_ps_tmp = 0.
-        eqd1 = 0.
-        eqd2 = 0.
-        h_ax_dipole_tmp = 0.
+        h_fluxp_tmp = zero
+        h_fluxm_tmp = zero
+        h_fluxp_pn_tmp = zero
+        h_fluxm_pn_tmp = zero
+        h_fluxp_ps_tmp = zero
+        h_fluxm_ps_tmp = zero
+        h_area_pn_tmp = zero
+        h_area_ps_tmp = zero
+        eqd1 = zero
+        eqd2 = zero
+        h_ax_dipole_tmp = zero
 !
         do concurrent (i=1:npm-1,j=1:ntm) reduce(+:h_fluxp_tmp,h_fluxm_tmp,h_fluxp_pn_tmp)&
                                           reduce(+:h_fluxm_pn_tmp,h_area_pn_tmp)          &
@@ -8127,6 +8134,7 @@ subroutine read_input_file
                n_realizations,                                         &
                initial_map_filename,                                   &
                initial_map_flux_balance,                               &
+               initial_map_mult_fac,                                   &
                validation_run,                                         &
                validation_run_width,                                   &
                time_start,                                             &
@@ -9198,8 +9206,12 @@ end subroutine generate_rfe
 ! 10/01/2024, RC, Version 1.14.1:
 !   - BUG FIX: Flux balancing assimilated data when using more than
 !              one realization was not working.
-!   - BUG FIX: Added missing RFE unsigned flux realization parameters to 
+!   - BUG FIX: Added missing RFE unsigned flux realization parameters to
 !              realization parameter output text file.
+!
+! 01/15/2025, RC, Version 1.15.0:
+!   - Added INITIAL_MAP_MULT_FAC input parameter to allow user to
+!     have HipFT multiply the input map by a factor (default 1.0).
 !
 !-----------------------------------------------------------------------
 !
