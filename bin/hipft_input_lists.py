@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ########################################################################
 #
-#  Version 0.0.2
+#  Version 1.0.0
 #
 ########################################################################
 #
@@ -41,8 +41,8 @@ hipft_keys = [
         'assimilate_data_lat_limit',
         'source_rfe_total_unsigned_flux_per_hour',
         'flow_mf_coef_p1_value',
-        'flow_mf_coef_p1_value',
-        'flow_mf_coef_p1_value',
+        'flow_mf_coef_p3_value',
+        'flow_mf_coef_p5_value',
         'flow_dr_coef_p0_value',
         'flow_dr_coef_p2_value',
         'flow_dr_coef_p4_value'
