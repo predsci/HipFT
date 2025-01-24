@@ -10,7 +10,7 @@ from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_
 import os
 import itertools
 
-# Version 1.9.4
+# Version 1.10.4
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -23,8 +23,13 @@ def argParsing():
 
   parser.add_argument('-samples',
     help='Number of points to plot, this helps with larger files (default:all)',
-    default=-1)
+    default=-1,
+    type=int)
 
+  parser.add_argument('-samples_markers',
+    help='Number of marker points to plot, (default: value of -samples)',
+    type=int)
+  
   parser.add_argument('-histfiles',
     help='A comma separated list of history files',
     type=str,
@@ -184,11 +189,11 @@ def argParsing():
     help='Marker size',
     dest='ms',
     type=float,
-    default=6.0,
+    default=8.0,
     required=False)
 
   parser.add_argument('-lms',
-    help='Lend marker size (default is -ms)',
+    help='Legend marker size (default is -ms)',
     dest='lms',
     type=float,
     default=10.0,
@@ -321,7 +326,10 @@ def run(args):
     h_file_name = dire
     hist_sol_full = pd.read_table(h_file_name,header=0,sep='\\s+')
 
-    samples = int(args.samples)
+    samples = args.samples
+    
+    samples_markers = samples if not args.samples_markers else args.samples_markers
+
 
     number_of_data_points = len(hist_sol_full)
     
@@ -329,9 +337,19 @@ def run(args):
     if samples > 1:
       indices = np.linspace(0, number_of_data_points-1, samples, endpoint=True, dtype=int)
       indices = np.unique(indices)
-      hist_sol = hist_sol_full.iloc[indices]
     else:
-      hist_sol = hist_sol_full
+      indices = list(range(number_of_data_points))
+    
+    if samples_markers > 1:
+      indices_markers = np.linspace(0, number_of_data_points-1, samples_markers, endpoint=True, dtype=int)
+      indices_markers = np.unique(indices_markers)
+    else:
+      indices_markers = list(range(number_of_data_points))
+
+    indices_total = np.unique(np.concatenate((indices, indices_markers)))
+    mpts = [np.where(indices_total == marker)[0][0] for marker in indices_markers]
+    
+    hist_sol = hist_sol_full.iloc[indices_total]
 
     time_list.append(np.array(hist_sol['TIME']))
     fluxp_list.append(np.array(hist_sol['FLUX_POSITIVE']))
@@ -399,9 +417,9 @@ def run(args):
   ax = plt.gca()
 
   if args.summary:
-    summaryMode(flux_imb_list,time_tfac[0],LW,FLW,fsize,plt)
+    summaryMode(flux_imb_list,time_tfac[0],LW,FLW,fsize,plt,mpts)
   else:
-    normalMode(plt,ax,fig,args,flux_imb_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-')
+    normalMode(plt,ax,fig,args,flux_imb_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts)
 
   ymax = np.amax([np.amax(np.abs(arr)) for arr in flux_imb_list])
   ymin = -ymax 
@@ -421,10 +439,10 @@ def run(args):
   ax = plt.gca()
 
   if args.summary:
-    legend1 = summaryMode2(fluxm_FF,fluxp_FF,time_tfac[0],LW,FLW,fsize,plt,"Blue","Red","|Flux (-)|","Flux (+)")
+    legend1 = summaryMode2(fluxm_FF,fluxp_FF,time_tfac[0],LW,FLW,fsize,plt,"Blue","Red","|Flux (-)|","Flux (+)",mpts)
   else:
     legend1 = normalMode2(plt,ax,fig,args,fluxm_FF,fluxp_FF,time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
-      NOTindividual,LABEL_LEN,label_list,lgfsize,'Blue','Red',["|Flux (-)|","Flux (+)"])
+      NOTindividual,LABEL_LEN,label_list,lgfsize,'Blue','Red',["|Flux (-)|","Flux (+)"],mpts)
 
   ymin=0.0#np.amin([np.amin(fluxm_FF),np.amin(fluxp_FF)])
   ymax = max(np.amax(np.abs(arr)) for array in (fluxm_FF, fluxp_FF) for arr in array)
@@ -445,9 +463,9 @@ def run(args):
   ax = plt.gca()
 
   if args.summary:
-    summaryMode(flux_tot_un_FF,time_tfac[0],LW,FLW,fsize,plt)
+    summaryMode(flux_tot_un_FF,time_tfac[0],LW,FLW,fsize,plt,mpts)
   else:
-    normalMode(plt,ax,fig,args,flux_tot_un_FF,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-')
+    normalMode(plt,ax,fig,args,flux_tot_un_FF,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts)
   
   plt.title('Total Unsigned Flux', {'fontsize': fsize, 'color': tc})
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})
@@ -465,9 +483,9 @@ def run(args):
   ax = plt.gca()
 
   if args.summary:
-    summaryMode(flux_tot_s_FF,time_tfac[0],LW,FLW,fsize,plt)
+    summaryMode(flux_tot_s_FF,time_tfac[0],LW,FLW,fsize,plt,mpts)
   else:
-    normalMode(plt,ax,fig,args,flux_tot_s_FF,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'b-')
+    normalMode(plt,ax,fig,args,flux_tot_s_FF,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'b-',mpts)
 
   plt.title('Total Signed Flux', {'fontsize': fsize, 'color': tc})
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})
@@ -490,10 +508,10 @@ def run(args):
 
   if args.summary:
     legend1 = summaryMode4(fluxp_pn_FF,fluxm_pn_FF,fluxp_ps_FF,fluxm_ps_FF,time_tfac[0],\
-      LW,FLW,fsize,plt,"Red","Blue","firebrick","navy","N (+)","N (-)","S (+)","S (-)")
+      LW,FLW,fsize,plt,"Red","Blue","firebrick","navy","N (+)","N (-)","S (+)","S (-)",mpts)
   else:
     legend1 = normalMode4(plt,ax,fig,args,fluxp_pn_FF,fluxm_pn_FF,fluxp_ps_FF,fluxm_ps_FF,time_tfac,COLORS,MARKERS,LW,MS,LMS,\
-        fsize,NOTindividual,LABEL_LEN,label_list,lgfsize,"Red","Blue","firebrick","navy",["N (+)","N (-)","S (+)","S (-)"])
+        fsize,NOTindividual,LABEL_LEN,label_list,lgfsize,"Red","Blue","firebrick","navy",["N (+)","N (-)","S (+)","S (-)"],mpts)
 
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})
   plt.title('Polar Flux (within 30 degrees of poles)', {'fontsize': fsize, 'color': tc})
@@ -511,10 +529,10 @@ def run(args):
   ax = plt.gca()
 
   if args.summary:
-    legend1 = summaryMode2(pole_n_avg_field_list,pole_s_avg_field_list,time_tfac[0],LW,FLW,fsize,plt,"Black","Blue","North","South")
+    legend1 = summaryMode2(pole_n_avg_field_list,pole_s_avg_field_list,time_tfac[0],LW,FLW,fsize,plt,"Black","Blue","North","South",mpts)
   else:
     legend1 = normalMode2(plt,ax,fig,args,pole_n_avg_field_list,pole_s_avg_field_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
-      NOTindividual,LABEL_LEN,label_list,lgfsize,'Black','Blue',["North","South"])
+      NOTindividual,LABEL_LEN,label_list,lgfsize,'Black','Blue',["North","South"],mpts)
 
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
   plt.title('Polar Average Field (within 30 degrees of poles)', {'fontsize': fsize, 'color': tc})
@@ -530,10 +548,10 @@ def run(args):
   ax = plt.gca()
 
   if args.summary:
-    legend1 = summaryMode2(np.abs(np.array(brmin_list,dtype=np.float64)),brmax_list,time_tfac[0],LW,FLW,fsize,plt,"blue","red","|min(Br)|","max(Br)")
+    legend1 = summaryMode2(np.abs(np.array(brmin_list,dtype=np.float64)),brmax_list,time_tfac[0],LW,FLW,fsize,plt,"blue","red","|min(Br)|","max(Br)",mpts)
   else:
     legend1 = normalMode2(plt,ax,fig,args,np.abs(np.array(brmin_list,dtype=np.float64)),brmax_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
-      NOTindividual,LABEL_LEN,label_list,lgfsize,'blue','red',["|min(Br)|","max(Br)"])
+      NOTindividual,LABEL_LEN,label_list,lgfsize,'blue','red',["|min(Br)|","max(Br)"],mpts)
   
   ymax = max(np.amax(np.abs(arr)) for array in (brmax_list, brmin_list) for arr in array)
   ymin = 0.0 
@@ -556,9 +574,9 @@ def run(args):
   ax = plt.gca()
 
   if args.summary:
-    summaryMode(ax_dipole_list,time_tfac[0],LW,FLW,fsize,plt)
+    summaryMode(ax_dipole_list,time_tfac[0],LW,FLW,fsize,plt,mpts)
   else:
-    normalMode(plt,ax,fig,args,ax_dipole_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-')
+    normalMode(plt,ax,fig,args,ax_dipole_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts)
 
   plt.title('Axial Dipole Strength', {'fontsize': fsize, 'color': tc})
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
@@ -580,9 +598,9 @@ def run(args):
   ax = plt.gca()
 
   if args.summary:
-    summaryMode(eq_dipole_list,time_tfac[0],LW,FLW,fsize,plt)
+    summaryMode(eq_dipole_list,time_tfac[0],LW,FLW,fsize,plt,mpts)
   else:
-    normalMode(plt,ax,fig,args,eq_dipole_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-')
+    normalMode(plt,ax,fig,args,eq_dipole_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts)
  
   ymin = np.amin([np.amin(arr) for arr in eq_dipole_list])
   ymax = np.amax([np.amax(arr) for arr in eq_dipole_list])
@@ -601,9 +619,9 @@ def run(args):
     ax = plt.gca()
 
     if args.summary:
-      summaryMode(valerr,time_tfac[0],LW,FLW,fsize,plt)
+      summaryMode(valerr,time_tfac[0],LW,FLW,fsize,plt,mpts)
     else:
-      normalMode(plt,ax,fig,args,valerr,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-')
+      normalMode(plt,ax,fig,args,valerr,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts)
 
     plt.title('Validation Error', {'fontsize': fsize, 'color': tc})
     xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs)
@@ -655,92 +673,92 @@ def summaryMode4(llist1,llist2,llist3,llist4,xlist,LW,FLW,fsize,plt,CM1,CM2,CM3,
   return legend1
 
 
-def summaryHelper1(llist,xlist,LW,FLW,plt,CM,CF,LT1,LT2,LT3):
+def summaryHelper1(llist,xlist,LW,FLW,plt,CM,CF,LT1,LT2,LT3,mpts):
   upperBound=np.max(llist,axis=0)
   lowerBound=np.min(llist,axis=0)
   middleVal=np.mean(llist,axis=0)
   stdVal=np.std(llist,axis=0)
   stdVal0=middleVal - stdVal
   stdVal1=middleVal + stdVal
-  plt.plot(xlist, middleVal,color=CM,linewidth=LW,label=LT1)
+  plt.plot(xlist, middleVal, color=CM, linewidth=LW, label=LT1, markevery=mpts)
   plt.fill_between(xlist,stdVal0,stdVal1,linewidth=FLW,alpha=0.5,color=CF,label=LT2)
   plt.fill_between(xlist,lowerBound,upperBound,linewidth=FLW,alpha=0.25,color=CF,label=LT3)
 
 
-def addLegendGeneric(LW,FLW,fsize,plt,CM,CF,LT1,LT2,LT3):
-  h1=plt.plot(np.nan, np.nan,color=CM,linewidth=LW,label='_nolegend_')
+def addLegendGeneric(LW,FLW,fsize,plt,CM,CF,LT1,LT2,LT3,mpts):
+  h1=plt.plot(np.nan, np.nan,color=CM,linewidth=LW,label='_nolegend_', markevery=mpts)
   h2=plt.fill_between([np.nan],[0],[0],linewidth=FLW,alpha=0.5,color=CF,label='_nolegend_')
   h3=plt.fill_between([np.nan],[0],[0],linewidth=FLW,alpha=0.25,color=CF,label='_nolegend_')
   plt.legend([h1[0],h2,h3],[LT1,LT2,LT3],loc='lower left',fontsize=fsize, ncol=3)
 
 
-def normalMode(plt,ax,fig,args,llist,xlist,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,CL):
+def normalMode(plt,ax,fig,args,llist,xlist,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,CL,mpts):
   if NOTindividual:
     for run in range(len(xlist)):
-      plothelper1(xlist[run],llist[run],COLORS[run],MARKERS[run],LW,MS)
+      plothelper1(xlist[run],llist[run],COLORS[run],MARKERS[run],LW,MS,mpts)
     addLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
   else:
-    plt.plot(xlist[0],llist[0],CL,linewidth=LW,markersize=MS)
+    plt.plot(xlist[0],llist[0],CL,linewidth=LW,markersize=MS, markevery=mpts)
 
 
 def normalMode2(plt,ax,fig,args,llist1,llist2,xlist,COLORS,MARKERS,LW,MS,LMS,fsize,NOTindividual,\
-                LABEL_LEN,label_list,lgfsize,CL1,CL2,LegT):
+                LABEL_LEN,label_list,lgfsize,CL1,CL2,LegT,mpts):
   if NOTindividual:
     firstRun=True
     for run in range(len(xlist)):
       if firstRun:
-        h1=plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS)
-        h2=plothelper4(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS)
+        h1=plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS,mpts)
+        h2=plothelper4(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS,mpts)
         firstRun=False
       else:
-        plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS)
-        plothelper3(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS)
+        plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS,mpts)
+        plothelper3(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS,mpts)
     legend1 = plt.legend([h1[0],h2[0]],LegT,loc='upper right',fontsize=fsize, ncol=2)
     addLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
     return legend1
   else:
-    h1 = plt.plot(xlist[0],llist1[0],color=CL1,linewidth=LW,markersize=MS)
-    h2 = plt.plot(xlist[0],llist2[0],color=CL2,linewidth=LW,markersize=MS)
+    h1 = plt.plot(xlist[0],llist1[0],color=CL1,linewidth=LW,markersize=MS, markevery=mpts)
+    h2 = plt.plot(xlist[0],llist2[0],color=CL2,linewidth=LW,markersize=MS, markevery=mpts)
     return plt.legend([h1[0],h2[0]],LegT,loc='upper right',fontsize=fsize, ncol=2)
 
 def normalMode4(plt,ax,fig,args,llist1,llist2,llist3,llist4,xlist,COLORS,MARKERS,LW,MS,LMS,fsize,NOTindividual,\
-                LABEL_LEN,label_list,lgfsize,CL1,CL2,CL3,CL4,LegT):
+                LABEL_LEN,label_list,lgfsize,CL1,CL2,CL3,CL4,LegT,mpts):
   if NOTindividual:
     firstRun=True
     for run in range(len(xlist)):
       if firstRun:
-        h1=plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS)
-        h2=plothelper4(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS)
-        h3=plothelper4(xlist[run],llist3[run],CL3,COLORS[run],MARKERS[run],LW,MS)
-        h4=plothelper4(xlist[run],llist4[run],CL4,COLORS[run],MARKERS[run],LW,MS)
+        h1=plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS,mpts)
+        h2=plothelper4(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS,mpts)
+        h3=plothelper4(xlist[run],llist3[run],CL3,COLORS[run],MARKERS[run],LW,MS,mpts)
+        h4=plothelper4(xlist[run],llist4[run],CL4,COLORS[run],MARKERS[run],LW,MS,mpts)
         firstRun=False
       else:
-        plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS)
-        plothelper3(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS)
-        plothelper3(xlist[run],llist3[run],CL3,COLORS[run],MARKERS[run],LW,MS)
-        plothelper3(xlist[run],llist4[run],CL4,COLORS[run],MARKERS[run],LW,MS)
+        plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS,mpts)
+        plothelper3(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS,mpts)
+        plothelper3(xlist[run],llist3[run],CL3,COLORS[run],MARKERS[run],LW,MS,mpts)
+        plothelper3(xlist[run],llist4[run],CL4,COLORS[run],MARKERS[run],LW,MS,mpts)
     legend1 = plt.legend([h1[0],h2[0],h3[0],h4[0]],LegT,loc='upper right',fontsize=fsize, ncol=4)
     addLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
     return legend1
   else:
-    h1 = plt.plot(xlist[0],llist1[0],color=CL1,linewidth=LW,markersize=MS)
-    h2 = plt.plot(xlist[0],llist2[0],color=CL2,linewidth=LW,markersize=MS) 
-    h3 = plt.plot(xlist[0],llist3[0],color=CL3,linewidth=LW,markersize=MS)
-    h4 = plt.plot(xlist[0],llist4[0],color=CL4,linewidth=LW,markersize=MS)
+    h1 = plt.plot(xlist[0],llist1[0],color=CL1,linewidth=LW,markersize=MS, markevery=mpts)
+    h2 = plt.plot(xlist[0],llist2[0],color=CL2,linewidth=LW,markersize=MS, markevery=mpts)
+    h3 = plt.plot(xlist[0],llist3[0],color=CL3,linewidth=LW,markersize=MS, markevery=mpts)
+    h4 = plt.plot(xlist[0],llist4[0],color=CL4,linewidth=LW,markersize=MS, markevery=mpts)
     return plt.legend([h1[0],h2[0],h3[0],h4[0]],LegT,loc='upper right',fontsize=fsize, ncol=4)
 
 
-def plothelper1(x,l,c,m,LW,MS):
-  plt.plot(x,l,color=c,linewidth=LW,marker=m,markersize=MS,markeredgewidth=0.0,fillstyle='full',markeredgecolor=c)
+def plothelper1(x,l,c,m,LW,MS,mpts):
+  plt.plot(x,l,color=c,linewidth=LW,marker=m,markersize=MS,markeredgewidth=0.0,fillstyle='full',markeredgecolor=c, markevery=mpts)
 
-def plothelper2(x,l,c1,c2,m,LW,MS):
-  return plt.plot(x,l,color=c1,linewidth=LW,marker=m,markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=c2,markeredgecolor=c1)
+def plothelper2(x,l,c1,c2,m,LW,MS,mpts):
+  return plt.plot(x,l,color=c1,linewidth=LW,marker=m,markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=c2,markeredgecolor=c1, markevery=mpts)
 
-def plothelper3(x,l,c1,c2,m,LW,MS):
-  plt.plot(x,l,color=c1,linewidth=LW,marker=m,markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=c2,markeredgecolor=c1,label='_nolegend_')
+def plothelper3(x,l,c1,c2,m,LW,MS,mpts):
+  plt.plot(x,l,color=c1,linewidth=LW,marker=m,markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=c2,markeredgecolor=c1,label='_nolegend_', markevery=mpts)
 
-def plothelper4(x,l,c1,c2,m,LW,MS):
-  return plt.plot(x,l,color=c1,linewidth=LW,marker=m,markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=c2,markeredgecolor=c1,label='_nolegend_')
+def plothelper4(x,l,c1,c2,m,LW,MS,mpts):
+  return plt.plot(x,l,color=c1,linewidth=LW,marker=m,markersize=MS,markeredgewidth=0.0,fillstyle='full',markerfacecolor=c2,markeredgecolor=c1,label='_nolegend_', markevery=mpts)
 
 
 def addLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig):

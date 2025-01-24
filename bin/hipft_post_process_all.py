@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import shutil
 
-# Version 1.2.0
+# Version 1.3.0
 
 def handle_int(signum, frame):
     print('You pressed Ctrl+C! Stopping!')
@@ -96,6 +96,11 @@ def argParsing():
     default=300,
     required=False)
 
+  parser.add_argument('-history_plot_samples_markers',
+    help='Number of marker points to plot (default: value of -history_plot_samples) (Can set to "all" to plot all points)',
+    dest='history_plot_samples_markers',
+    required=False)
+  
   parser.add_argument('-serial',
     help='Set the number of threads to use to 1 instead of using the environment variable OMP_NUM_THREADS.',
     dest='serial',
@@ -168,6 +173,8 @@ def run(args):
   print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 
   args.num_threads = 1 if args.serial else int(os.getenv('OMP_NUM_THREADS', os.cpu_count() or 1))
+
+  args.history_plot_samples_markers = args.history_plot_samples if not args.history_plot_samples_markers else args.history_plot_samples_markers
 
   run_all = not (args.butterfly or args.movies or args.history)
 
@@ -409,6 +416,7 @@ def plot_individual_history(args, hist_ind):
   bc_plotHistories = os.path.join(args.hipft_home, 'hipft_plot_histories.py')
   bc_plotHistories += f' -tai' if not args.tai_off else ''
   bc_plotHistories += f" -samples {args.history_plot_samples}" if args.history_plot_samples != 'all' else ''
+  bc_plotHistories += f" -samples_markers {args.history_plot_samples_markers}" if args.history_plot_samples_markers != 'all' else ''
   bc_plotHistories += f" -utstart {args.utstart}" if args.utstart else ''
   bc_plotHistories += f" {args.map_plot_options}" if args.map_plot_options else ''
   bc_plotHistories += f" -xunits {args.xunits}" if args.xunits else ''
@@ -436,6 +444,7 @@ def plot_together_history(args, file_list):
   bc_plotHistories = os.path.join(args.hipft_home, 'hipft_plot_histories.py')
   bc_plotHistories += f' -tai' if not args.tai_off else ''
   bc_plotHistories += f" -samples {args.history_plot_samples}" if args.history_plot_samples != 'all' else ''
+  bc_plotHistories += f" -samples_markers {args.history_plot_samples_markers}" if args.history_plot_samples_markers != 'all' else ''
   bc_plotHistories += f" -utstart {args.utstart}" if args.utstart else ''
   bc_plotHistories += f" {args.map_plot_options}" if args.map_plot_options else ''
   bc_plotHistories += f" -xunits {args.xunits}" if args.xunits else ''
@@ -461,6 +470,7 @@ def plot_summary_history(args, file_list):
   bc_plotHistories = os.path.join(args.hipft_home, 'hipft_plot_histories.py')
   bc_plotHistories += f' -tai' if not args.tai_off else ''
   bc_plotHistories += f" -samples {args.history_plot_samples}" if args.history_plot_samples != 'all' else ''
+  bc_plotHistories += f" -samples_markers {args.history_plot_samples_markers}" if args.history_plot_samples_markers != 'all' else ''
   bc_plotHistories += f" -utstart {args.utstart}" if args.utstart else ''
   bc_plotHistories += f" {args.map_plot_options}" if args.map_plot_options else ''
   bc_plotHistories += f" -xunits {args.xunits}" if args.xunits else ''
