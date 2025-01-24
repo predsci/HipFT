@@ -10,7 +10,7 @@ from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_
 import os
 import itertools
 
-# Version 1.9.3
+# Version 1.9.4
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -530,10 +530,10 @@ def run(args):
   ax = plt.gca()
 
   if args.summary:
-    legend1 = summaryMode2(brmax_list,np.abs(np.array(brmin_list,dtype=np.float64)),time_tfac[0],LW,FLW,fsize,plt,"blue","red","max(Br)","|min(Br)|")
+    legend1 = summaryMode2(np.abs(np.array(brmin_list,dtype=np.float64)),brmax_list,time_tfac[0],LW,FLW,fsize,plt,"blue","red","|min(Br)|","max(Br)")
   else:
-    legend1 = normalMode2(plt,ax,fig,args,brmax_list,np.abs(np.array(brmin_list,dtype=np.float64)),time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
-      NOTindividual,LABEL_LEN,label_list,lgfsize,'blue','red',["max(Br)","|min(Br)|"])
+    legend1 = normalMode2(plt,ax,fig,args,np.abs(np.array(brmin_list,dtype=np.float64)),brmax_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
+      NOTindividual,LABEL_LEN,label_list,lgfsize,'blue','red',["|min(Br)|","max(Br)"])
   
   ymax = max(np.amax(np.abs(arr)) for array in (brmax_list, brmin_list) for arr in array)
   ymin = 0.0 
