@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ########################################################################
 #
-#  Version 0.0.1
+#  Version 0.0.2
 #
 ########################################################################
 #
@@ -161,12 +161,18 @@ def write_hipft_file(output_list, hipft_key_dict, hipft_file):
                 match = hipft_key_dict.get(key)
                 match_found = False
                 for i, line in enumerate(lines):
-                    if match in line:
+                    stripped_line = line.strip()
+                    if match in stripped_line:
                         lines[i] = f"  {match}s = {', '.join(map(str, value))}\n"
                         match_found = True
                         break
+                    elif stripped_line == '/':
+                        del lines[i]
                 if not match_found:
                     lines.append(f"  {match}s = {', '.join(map(str, value))}\n")
+                    lines.append('/\n')
+            if lines[-1] != '!\n':
+                lines.append('!\n')
             with open(hipft_file, 'w') as f:
                 f.writelines(lines)
         except FileNotFoundError:
@@ -183,18 +189,19 @@ def write_hipft_file(output_list, hipft_key_dict, hipft_file):
 def sed(match, value, file):
     with open(file, 'r') as f:
         lines = f.readlines()
-    updated = False
+    match_found = False
     for i, line in enumerate(lines):
-        if match in line:
+        stripped_line = line.strip()
+        if match in stripped_line:
             lines[i] = f"  {match} = {value}\n"
-            updated = True
+            match_found = True
             break
-        if line.strip() == '/':
+        elif stripped_line == '/':
             del lines[i]
-    if not updated:
+    if not match_found:
         lines.append(f"  {match} = {value}\n")
         lines.append('/\n')
-        lines = ['!\n' if line == '\n' else line for line in lines]
+    if lines[-1] != '!\n':
         lines.append('!\n')
     with open(file, 'w') as f:
         f.writelines(lines)
