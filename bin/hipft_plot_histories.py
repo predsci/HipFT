@@ -10,7 +10,7 @@ from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_
 import os
 import itertools
 
-# Version 1.10.4
+# Version 1.10.5
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -417,7 +417,7 @@ def run(args):
   ax = plt.gca()
 
   if args.summary:
-    summaryMode(flux_imb_list,time_tfac[0],LW,FLW,fsize,plt,mpts)
+    summaryMode(flux_imb_list,time_tfac[0],LW,FLW,fsize,plt)
   else:
     normalMode(plt,ax,fig,args,flux_imb_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts)
 
@@ -439,7 +439,7 @@ def run(args):
   ax = plt.gca()
 
   if args.summary:
-    legend1 = summaryMode2(fluxm_FF,fluxp_FF,time_tfac[0],LW,FLW,fsize,plt,"Blue","Red","|Flux (-)|","Flux (+)",mpts)
+    legend1 = summaryMode2(fluxm_FF,fluxp_FF,time_tfac[0],LW,FLW,fsize,plt,"Blue","Red","|Flux (-)|","Flux (+)")
   else:
     legend1 = normalMode2(plt,ax,fig,args,fluxm_FF,fluxp_FF,time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
       NOTindividual,LABEL_LEN,label_list,lgfsize,'Blue','Red',["|Flux (-)|","Flux (+)"],mpts)
@@ -463,7 +463,7 @@ def run(args):
   ax = plt.gca()
 
   if args.summary:
-    summaryMode(flux_tot_un_FF,time_tfac[0],LW,FLW,fsize,plt,mpts)
+    summaryMode(flux_tot_un_FF,time_tfac[0],LW,FLW,fsize,plt)
   else:
     normalMode(plt,ax,fig,args,flux_tot_un_FF,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts)
   
@@ -483,7 +483,7 @@ def run(args):
   ax = plt.gca()
 
   if args.summary:
-    summaryMode(flux_tot_s_FF,time_tfac[0],LW,FLW,fsize,plt,mpts)
+    summaryMode(flux_tot_s_FF,time_tfac[0],LW,FLW,fsize,plt)
   else:
     normalMode(plt,ax,fig,args,flux_tot_s_FF,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'b-',mpts)
 
@@ -508,7 +508,7 @@ def run(args):
 
   if args.summary:
     legend1 = summaryMode4(fluxp_pn_FF,fluxm_pn_FF,fluxp_ps_FF,fluxm_ps_FF,time_tfac[0],\
-      LW,FLW,fsize,plt,"Red","Blue","firebrick","navy","N (+)","N (-)","S (+)","S (-)",mpts)
+      LW,FLW,fsize,plt,"Red","Blue","firebrick","navy","N (+)","N (-)","S (+)","S (-)")
   else:
     legend1 = normalMode4(plt,ax,fig,args,fluxp_pn_FF,fluxm_pn_FF,fluxp_ps_FF,fluxm_ps_FF,time_tfac,COLORS,MARKERS,LW,MS,LMS,\
         fsize,NOTindividual,LABEL_LEN,label_list,lgfsize,"Red","Blue","firebrick","navy",["N (+)","N (-)","S (+)","S (-)"],mpts)
@@ -529,7 +529,7 @@ def run(args):
   ax = plt.gca()
 
   if args.summary:
-    legend1 = summaryMode2(pole_n_avg_field_list,pole_s_avg_field_list,time_tfac[0],LW,FLW,fsize,plt,"Black","Blue","North","South",mpts)
+    legend1 = summaryMode2(pole_n_avg_field_list,pole_s_avg_field_list,time_tfac[0],LW,FLW,fsize,plt,"Black","Blue","North","South")
   else:
     legend1 = normalMode2(plt,ax,fig,args,pole_n_avg_field_list,pole_s_avg_field_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
       NOTindividual,LABEL_LEN,label_list,lgfsize,'Black','Blue',["North","South"],mpts)
@@ -548,7 +548,7 @@ def run(args):
   ax = plt.gca()
 
   if args.summary:
-    legend1 = summaryMode2(np.abs(np.array(brmin_list,dtype=np.float64)),brmax_list,time_tfac[0],LW,FLW,fsize,plt,"blue","red","|min(Br)|","max(Br)",mpts)
+    legend1 = summaryMode2(np.abs(np.array(brmin_list,dtype=np.float64)),brmax_list,time_tfac[0],LW,FLW,fsize,plt,"blue","red","|min(Br)|","max(Br)")
   else:
     legend1 = normalMode2(plt,ax,fig,args,np.abs(np.array(brmin_list,dtype=np.float64)),brmax_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
       NOTindividual,LABEL_LEN,label_list,lgfsize,'blue','red',["|min(Br)|","max(Br)"],mpts)
@@ -574,7 +574,7 @@ def run(args):
   ax = plt.gca()
 
   if args.summary:
-    summaryMode(ax_dipole_list,time_tfac[0],LW,FLW,fsize,plt,mpts)
+    summaryMode(ax_dipole_list,time_tfac[0],LW,FLW,fsize,plt)
   else:
     normalMode(plt,ax,fig,args,ax_dipole_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts)
 
@@ -598,7 +598,7 @@ def run(args):
   ax = plt.gca()
 
   if args.summary:
-    summaryMode(eq_dipole_list,time_tfac[0],LW,FLW,fsize,plt,mpts)
+    summaryMode(eq_dipole_list,time_tfac[0],LW,FLW,fsize,plt)
   else:
     normalMode(plt,ax,fig,args,eq_dipole_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts)
  
@@ -619,7 +619,7 @@ def run(args):
     ax = plt.gca()
 
     if args.summary:
-      summaryMode(valerr,time_tfac[0],LW,FLW,fsize,plt,mpts)
+      summaryMode(valerr,time_tfac[0],LW,FLW,fsize,plt)
     else:
       normalMode(plt,ax,fig,args,valerr,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts)
 
