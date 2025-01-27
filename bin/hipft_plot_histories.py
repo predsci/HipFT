@@ -10,7 +10,7 @@ from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_
 import os
 import itertools
 
-# Version 1.10.5
+# Version 1.10.6
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -673,7 +673,7 @@ def summaryMode4(llist1,llist2,llist3,llist4,xlist,LW,FLW,fsize,plt,CM1,CM2,CM3,
   return legend1
 
 
-def summaryHelper1(llist,xlist,LW,FLW,plt,CM,CF,LT1,LT2,LT3,mpts):
+def summaryHelper1(llist,xlist,LW,FLW,plt,CM,CF,LT1,LT2,LT3):
   upperBound=np.max(llist,axis=0)
   lowerBound=np.min(llist,axis=0)
   middleVal=np.mean(llist,axis=0)
