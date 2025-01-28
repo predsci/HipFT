@@ -23,7 +23,7 @@
 ! -------------------------------
 !
 ! This run uses a built-in analytic validation mode of HipFT
-! to run two Guassians moving in theta.
+! to run two Gaussians moving in theta.
 !
 ! The analytic solution is output.
 !
