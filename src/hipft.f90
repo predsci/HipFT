@@ -8827,7 +8827,7 @@ end subroutine generate_rfe
 ! 05/20/2022, RC+MS, Version 0.9.0:
 !   - vrun has been changed to an integer to select which validation
 !     run initial condition to use.
-!   - Added Guassian blob initial validation condition (-vrun 2).
+!   - Added Gaussian blob initial validation condition (-vrun 2).
 !   - Added -vt_const to allow adding a constant velocity in theta
 !     in km/s (used for validation runs).
 !   - BUG FIX: GPU issue with -vrun 1 initial condition.

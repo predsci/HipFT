@@ -24,7 +24,7 @@
 ! -------------------------------
 !
 ! This run uses the built-in analytic validation mode of HipFT
-! to run two Guassians in the theta direction for pi/2.
+! to run two Gaussians in the theta direction for pi/2.
 !
 ! A ridged rotation velocity in the phi direction is set to 
 ! rotate the solution exactly one revolution.

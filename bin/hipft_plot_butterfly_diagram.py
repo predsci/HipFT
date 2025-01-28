@@ -15,7 +15,7 @@ import psipals
 import psimath
 import multiprocessing as mp
 
-# Version 1.3.0
+# Version 1.3.1
 
 def signal_handler(signal, frame):
   print('You pressed Ctrl+C! Stopping!')
@@ -58,7 +58,7 @@ def argParsing():
   parser.add_argument('-unit_label',
     help='Label for colorbar (units)',
     dest='unit_label',
-    default='Guass',
+    default='Gauss',
     required=False)
 
   parser.add_argument('-unit_fac',
