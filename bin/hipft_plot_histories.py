@@ -10,7 +10,7 @@ from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_
 import os
 import itertools
 
-# Version 1.10.5
+# Version 1.10.7
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -673,20 +673,20 @@ def summaryMode4(llist1,llist2,llist3,llist4,xlist,LW,FLW,fsize,plt,CM1,CM2,CM3,
   return legend1
 
 
-def summaryHelper1(llist,xlist,LW,FLW,plt,CM,CF,LT1,LT2,LT3,mpts):
+def summaryHelper1(llist,xlist,LW,FLW,plt,CM,CF,LT1,LT2,LT3):
   upperBound=np.max(llist,axis=0)
   lowerBound=np.min(llist,axis=0)
   middleVal=np.mean(llist,axis=0)
   stdVal=np.std(llist,axis=0)
   stdVal0=middleVal - stdVal
   stdVal1=middleVal + stdVal
-  plt.plot(xlist, middleVal, color=CM, linewidth=LW, label=LT1, markevery=mpts)
+  plt.plot(xlist, middleVal, color=CM, linewidth=LW, label=LT1)
   plt.fill_between(xlist,stdVal0,stdVal1,linewidth=FLW,alpha=0.5,color=CF,label=LT2)
   plt.fill_between(xlist,lowerBound,upperBound,linewidth=FLW,alpha=0.25,color=CF,label=LT3)
 
 
-def addLegendGeneric(LW,FLW,fsize,plt,CM,CF,LT1,LT2,LT3,mpts):
-  h1=plt.plot(np.nan, np.nan,color=CM,linewidth=LW,label='_nolegend_', markevery=mpts)
+def addLegendGeneric(LW,FLW,fsize,plt,CM,CF,LT1,LT2,LT3):
+  h1=plt.plot(np.nan, np.nan,color=CM,linewidth=LW,label='_nolegend_')
   h2=plt.fill_between([np.nan],[0],[0],linewidth=FLW,alpha=0.5,color=CF,label='_nolegend_')
   h3=plt.fill_between([np.nan],[0],[0],linewidth=FLW,alpha=0.25,color=CF,label='_nolegend_')
   plt.legend([h1[0],h2,h3],[LT1,LT2,LT3],loc='lower left',fontsize=fsize, ncol=3)
