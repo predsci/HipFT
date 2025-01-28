@@ -9,7 +9,7 @@ from pathlib import Path
 import concurrent.futures
 import glob
 
-# Version 2.4.2
+# Version 2.4.3
 
 def handle_int(signum, frame):
     print('You pressed Ctrl+C! Stopping!')
@@ -258,7 +258,7 @@ def ffmpefMovie(args,odir,name):
   if os.path.dirname(os.path.normpath(os.popen('which ffmpeg').read().strip())) == '':
     print("Warning - ffmpeg not detected, not making movie file.")
   else:
-    os.system('ffmpeg -nostats -y -framerate 15 -i "movie%d.png" -pix_fmt yuv420p -c:a copy -crf 20 -r 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -codec:v libx264 "'+name+'.mov"')
+    os.system('ffmpeg -hide_banner -loglevel error -y -framerate 15 -i "movie%d.png" -pix_fmt yuv420p -c:a copy -crf 20 -r 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -codec:v libx264 "'+name+'.mov"')
     os.system('cp '+args.datadir+'/plots/tmp/'+name+'.mov '+odir+'/'+name+'.mov')
 
 
