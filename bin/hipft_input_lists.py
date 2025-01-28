@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ########################################################################
 #
-#  Version 1.0.0
+#  Version 1.0.1
 #
 ########################################################################
 #
@@ -98,9 +98,20 @@ def expand_sweep1d(repeat, arr, oarr):
     return arr
 
 
-def check_lengths(output_dict):
-    lengths = [len(value) for value in output_dict.values()]
-    return all(length == lengths[0] for length in lengths)
+def expand_manual(non_empty):
+    lengths = [len(value) for value in non_empty.values() if value is not None]    
+    if not (len(lengths) > 0 and all(length >= 1 for length in lengths) and len(set(length for length in lengths if length > 1)) <= 1):
+        check_err(1,'The inputs for manual mode are not equal lengths for lengths greater than one.')
+    max_length = max(lengths)
+    for item in non_empty:
+        if len(non_empty[item]) == 1:
+            non_empty[item] = np.tile(non_empty[item], max_length)
+    
+
+    lengths = [len(value) for value in non_empty.values()]
+    if not all(length == lengths[0] for length in lengths):
+        check_err(1,'The inputs for manual mode are not equal lengths.')
+    return non_empty 
 
 
 def expand(real_params, type, keys):
@@ -142,10 +153,7 @@ def expand(real_params, type, keys):
             for item in non_empty:
                 output_list = expand_sweep1d(item, output_list, non_empty)
         elif type == 'manual':
-            equal_lengths = check_lengths(non_empty)
-            if not equal_lengths:
-                check_err(1,'The inputs for manual mode are not equal lengths.')
-            output_list = non_empty
+            output_list = expand_manual(non_empty)
         else:
             check_err(1,'realization_parameters must be "crossall", "sweep1d", or "manual"!')
     return output_list
