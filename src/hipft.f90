@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.16.0'
-      character(*), parameter :: cdate='01/23/2025'
+      character(*), parameter :: cvers='1.17.0'
+      character(*), parameter :: cdate='01/28/2025'
 !
 end module
 !#######################################################################
@@ -323,7 +323,7 @@ module data_assimilation
       real(r_typ), dimension(:), allocatable :: assimilate_data_mu_limit_rvec
       real(r_typ), dimension(:), allocatable :: assimilate_data_mu_power_rvec
 !
-      real(r_typ) :: map_time_initial_hr
+      real(r_typ) :: map_time_initial_hr,map_time_final_hr
       real(r_typ), dimension(:), allocatable :: map_times_actual_ut_jd
       character(19), dimension(:), allocatable :: &
                      map_times_requested_ut_str, map_times_actual_ut_str
@@ -3974,20 +3974,34 @@ subroutine load_data_assimilation
       enddo
       CLOSE (IO_DATA_IN)
 !
-! ******* Initialize assimilation time.
-!  RMC: This only works for exact times!  If inbetween files,
-!       need to interpolate two assimilation frames, or modify
-!       start_time?
+! ****** Initialize assimilation time.
+! ****** Assumes HipFT time "0" is the time of the first assimilation map
+! ****** in the map database.  The time_start shoudl be set accordingly.
 !
       map_time_initial_hr = twentyfour*map_times_actual_ut_jd(1)
+      map_time_final_hr   = twentyfour*map_times_actual_ut_jd(num_maps_in_list)
 !
-      i = MINLOC(ABS( (twentyfour*map_times_actual_ut_jd(:) &
-                       - map_time_initial_hr)               &
-                      - time_start),1)
+      i = MINLOC(ABS( (twentyfour*map_times_actual_ut_jd(:)   &
+                         - map_time_initial_hr)               &
+                       - time_start),DIM=1)
 !
-      current_map_input_idx = i
-!
-      time_of_next_input_map = time_start
+      if (time_start .le. zero) then
+        current_map_input_idx = 1
+        time_of_next_input_map = zero
+      else if (time_start .gt. map_time_final_hr - map_time_initial_hr) then
+        ! The time is past the assimilation data, so turn off assimilation.
+        assimilate_data=.false.
+        current_map_input_idx = -9999
+        time_of_next_input_map = -9999.9
+      else
+        if (time_start .le. twentyfour*map_times_actual_ut_jd(i) - map_time_initial_hr) then
+          current_map_input_idx = i
+          time_of_next_input_map = (twentyfour*map_times_actual_ut_jd(i) - map_time_initial_hr)
+        else
+          current_map_input_idx = i+1
+          time_of_next_input_map = (twentyfour*map_times_actual_ut_jd(i+1) - map_time_initial_hr)
+        end if
+      end if
 !
 ! ******* Print some diagnostics.
 !
@@ -4005,6 +4019,12 @@ subroutine load_data_assimilation
                      trim(map_files_rel_path(i))
         write (*,*) '   LOAD_DATA_ASSIMILATION: Map root directory:     ', &
                      trim(assimilate_data_map_root_dir)
+        write (*,*) '   LOAD_DATA_ASSIMILATION: Current time:     ', &
+                     time_start
+        write (*,*) '   LOAD_DATA_ASSIMILATION: Time to next map:     ', &
+                     time_of_next_input_map
+        write (*,*) '   LOAD_DATA_ASSIMILATION: Index for next map:     ', &
+                     current_map_input_idx
       end if
 !
 ! ****** Find indices of latitude limit in main mesh tvec.
@@ -9221,6 +9241,11 @@ end subroutine generate_rfe
 ! 01/15/2025, RC, Version 1.16.0:
 !   - Added ASSIMILATE_DATA_MULT_FAC input parameter to allow user to
 !     have HipFT multiply the data assimiated by a factor (default 1.0)
+!
+! 01/28/2025, RC, Version 1.17.0:
+!   - Added ability to specify a start time that is not perfectly
+!     aligned with an assimilation map time, including starting with a
+!     negative time.
 !
 !-----------------------------------------------------------------------
 !
