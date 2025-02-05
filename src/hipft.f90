@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.17.0'
-      character(*), parameter :: cdate='01/28/2025'
+      character(*), parameter :: cvers='1.18.0'
+      character(*), parameter :: cdate='02/04/2025'
 !
 end module
 !#######################################################################
@@ -529,6 +529,7 @@ module input_parameters
 ! ****** Initial map ********
 !
       character(512) :: initial_map_filename = ''
+      logical        :: initial_map_is_3d = .false.
       logical        :: initial_map_flux_balance = .false.
       real(r_typ)    :: initial_map_mult_fac = 1.0_r_typ
 !
@@ -1752,6 +1753,7 @@ subroutine load_initial_condition
       use mesh
       use globals
       use read_2d_file_interface
+      use read_3d_file_interface
       use output
       use diffusion
       use constants
@@ -1768,9 +1770,9 @@ subroutine load_initial_condition
       real(r_typ) :: d1,d2, st_i_val
       real(r_typ) :: vt_end_loc
       real(r_typ), dimension(:), allocatable :: fn1,fs1,fn2,fs2
-      real(r_typ), dimension(:,:,:), allocatable :: f_local,gout
+      real(r_typ), dimension(:,:,:), allocatable :: f_local,gout,f_global
       real(r_typ), dimension(:,:), allocatable :: f_tmp2d
-      real(r_typ), dimension(:), allocatable :: s1,s2,s3,s3t,tfout,gfout
+      real(r_typ), dimension(:), allocatable :: s1,s2,s3,s3t,s3g,tfout,gfout
 !
 !-----------------------------------------------------------------------
 !
@@ -1795,12 +1797,10 @@ subroutine load_initial_condition
         n3 = nr
 
         allocate (f_local(n1,n2,n3))
-        allocate (f_tmp2d(n1,n2))
 !
 ! ****** Can add other inital conditon options here.
 !
         f_local(:,:,:) = 0.
-        f_tmp2d(:,:) = 0.
 
         allocate (s1(n1))
         do i=1,n1
@@ -1821,34 +1821,67 @@ subroutine load_initial_condition
 !
 ! ****** Read the initial magnetic map.
 !
-        if (iamp0) then
-          call read_2d_file (initial_map_filename,n1,n2,f_tmp2d,s1,s2,ierr)
-        endif
+        if (.not.initial_map_is_3d) then
 !
-        wtime_tmp_mpi = MPI_Wtime()
-        call MPI_Bcast (n1,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-        call MPI_Bcast (n2,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-        wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
-        if (.not.iamp0) then
-          allocate (s1(n1))
-          allocate (s2(n2))
-          allocate (f_tmp2d(n1,n2))
-        endif
-        wtime_tmp_mpi = MPI_Wtime()
-        call MPI_Bcast (f_tmp2d,n1*n2,ntype_real,0,MPI_COMM_WORLD,ierr)
-        call MPI_Bcast (s1,n1,ntype_real,0,MPI_COMM_WORLD,ierr)
-        call MPI_Bcast (s2,n2,ntype_real,0,MPI_COMM_WORLD,ierr)
-        wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+          if (iamp0) then
+            call read_2d_file (initial_map_filename,n1,n2,f_tmp2d,s1,s2,ierr)
+          endif
 !
-        n3 = nr
-        allocate (f_local(n1,n2,n3))
-
-        do i=1,n3
-          f_local(:,:,i) = f_tmp2d(:,:)
-        enddo
+          wtime_tmp_mpi = MPI_Wtime()
+          call MPI_Bcast (n1,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+          call MPI_Bcast (n2,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+          wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+          if (.not.iamp0) then
+            allocate (s1(n1))
+            allocate (s2(n2))
+            allocate (f_tmp2d(n1,n2))
+          endif
+          wtime_tmp_mpi = MPI_Wtime()
+          call MPI_Bcast (f_tmp2d,n1*n2,ntype_real,0,MPI_COMM_WORLD,ierr)
+          call MPI_Bcast (s1,n1,ntype_real,0,MPI_COMM_WORLD,ierr)
+          call MPI_Bcast (s2,n2,ntype_real,0,MPI_COMM_WORLD,ierr)
+          wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
 !
-        allocate (s3(n3))
-        do i=1,n3
+          allocate (f_local(n1,n2,nr))
+          do i=1,nr
+            f_local(:,:,i) = f_tmp2d(:,:)
+          enddo
+          deallocate (f_tmp2d)
+        else
+          if (iamp0) then
+            call read_3d_file (initial_map_filename,n1,n2,n3,f_global,s1,s2,s3g,ierr)
+            deallocate(s3g)
+          endif
+          wtime_tmp_mpi = MPI_Wtime()
+          call MPI_Bcast (n1,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+          call MPI_Bcast (n2,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+          call MPI_Bcast (n3,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+          wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+          if (n3.ne.n_realizations) then
+             write(*,*) 'ERROR!  Number of realization in input map not equal to n_realizations!'
+             write(*,*) 'NR_init: ',n3,' n_realizations: ',n_realizations
+             call endrun (.true.)
+          end if
+          if (.not.iamp0) then
+            allocate (s1(n1))
+            allocate (s2(n2))
+            allocate (f_global(n1,n2,n3))
+          endif
+          wtime_tmp_mpi = MPI_Wtime()
+          call MPI_Bcast (f_global,n1*n2*n3,ntype_real,0,MPI_COMM_WORLD,ierr)
+          call MPI_Bcast (s1,n1,ntype_real,0,MPI_COMM_WORLD,ierr)
+          call MPI_Bcast (s2,n2,ntype_real,0,MPI_COMM_WORLD,ierr)
+          wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+!
+          allocate (f_local(n1,n2,nr))
+          do i=1,nr
+            f_local(:,:,i) = f_global(:,:,local_realization_indices(i))
+          enddo
+          deallocate (f_global)
+        end if
+!
+        allocate (s3(nr))
+        do i=1,nr
           s3(i) = real(i,r_typ)
         enddo
 !
@@ -1857,6 +1890,7 @@ subroutine load_initial_condition
       if (validation_run .eq. 1) then
 !
         allocate (fval_u0(n1,n2,n3))
+        allocate (f_tmp2d(n1,n2))
 !
 ! ****** Make initial solution f and output.
 !
@@ -1877,6 +1911,7 @@ subroutine load_initial_condition
         enddo
 !$omp target update from(f_local,fval_u0)
 !$omp target exit data map(delete:f_local,fval_u0,f_tmp2d,s1,s2)
+        deallocate (f_tmp2d)
 !
         fval_u0(:,:,:) = f_local(:,:,:) +                             &
                          sqrt(14.0_r_typ/11.0_r_typ)*fval_u0(:,:,:)
@@ -2142,7 +2177,6 @@ subroutine load_initial_condition
       deallocate (s3)
       deallocate (fn1,fs1)
       deallocate (f_local)
-      deallocate (f_tmp2d)
 !
 ! ****** Write out initial condition.
 !
@@ -8157,6 +8191,7 @@ subroutine read_input_file
                res_np,                                                 &
                n_realizations,                                         &
                initial_map_filename,                                   &
+               initial_map_is_3d,                                      &
                initial_map_flux_balance,                               &
                initial_map_mult_fac,                                   &
                validation_run,                                         &
@@ -9246,6 +9281,13 @@ end subroutine generate_rfe
 !   - Added ability to specify a start time that is not perfectly
 !     aligned with an assimilation map time, including starting with a
 !     negative time.
+!
+! 02/04/2025, RC, Version 1.18.0:
+!   - Added logical input parameter INITIAL_MAP_IS_3D to specify
+!     that the initial map file is 3D (has realizations).
+!     The number of realizations must match the number specified in the
+!     input file.
+!     This should be changed later to be automatic based on the file.
 !
 !-----------------------------------------------------------------------
 !

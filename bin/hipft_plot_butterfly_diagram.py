@@ -753,7 +753,7 @@ def date_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime):
     for loc in locs:
       labels.append(Time(loc, format='unix').strftime(args.xformat))
   return locs, labels
-  
+
 
 def since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,secTimeUnit):
   locs = []
@@ -1046,7 +1046,6 @@ def main():
   ## Get input agruments:
   args = argParsing()
   run(args)
-
 
 if __name__ == '__main__':
   main()
