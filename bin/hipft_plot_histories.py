@@ -10,7 +10,7 @@ from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_
 import os
 import itertools
 
-# Version 1.11.0
+# Version 1.12.0
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -68,7 +68,7 @@ def argParsing():
     required=False)
 
   parser.add_argument('-utstart',
-    help='Start Date of full data assimilation csv file (not start date of run) in UT: YYYY-MM-DDTHH:MM:SS',
+    help='Start Date of intial HipFT history output in UT: YYYY-MM-DDTHH:MM:SS',
     dest='utstart',
     required=False)
     
@@ -364,7 +364,10 @@ def run(args):
     
     hist_sol = hist_sol_full.iloc[indices_total]
 
-    time_list.append(np.array(hist_sol['TIME']))
+    time_tmp = np.array(hist_sol['TIME'])
+    time_tmp = time_tmp - time_tmp[0]
+    time_list.append(time_tmp)
+
     fluxp_list.append(np.array(hist_sol['FLUX_POSITIVE']))
     fluxm_list.append(np.array(hist_sol['FLUX_NEGATIVE']))
   
@@ -975,6 +978,27 @@ def date_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime):
       labels.append(Time(loc, format='unix').strftime(args.xformat))
   return locs, labels
 
+def format_labels(locs, secTimeUnit, labelOffSet):
+    precision = 0
+    formatted_labels = []
+    while True:
+        seen = set()
+        formatted_labels.clear()
+        unique = True
+        for loc in locs:
+            if precision == 0:
+              label = int(round(loc / secTimeUnit - labelOffSet, precision))
+            else:
+              label = round(loc / secTimeUnit - labelOffSet, precision)
+            if label in seen:
+                unique = False
+                break
+            seen.add(label)
+            formatted_labels.append(str(label))
+
+        if unique:
+            return formatted_labels
+        precision += 1 
 
 def since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,secTimeUnit):
   locs = []
@@ -992,8 +1016,7 @@ def since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,secTimeUn
     locs.append(currDate)
     currDate = currDate + skip
   labelOffSet = int(locs[0]/secTimeUnit)
-  for loc in locs:
-      labels.append(str(int(loc/secTimeUnit)-labelOffSet))
+  labels = format_labels(locs, secTimeUnit, labelOffSet)
   return locs, labels
 
 

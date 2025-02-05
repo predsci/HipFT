@@ -15,7 +15,7 @@ import psipals
 import psimath
 import multiprocessing as mp
 
-# Version 1.3.1
+# Version 1.4.0
 
 def signal_handler(signal, frame):
   print('You pressed Ctrl+C! Stopping!')
@@ -372,12 +372,20 @@ def process_file(args, islice, oFile, xvec, yvec, data_in, zvec_i):
   plot(args, xvec, yvec, data, oFileNew)
 
 
+def skip_keep_ends(data, skip):
+    if len(data) <= 2:
+        return data  
+    result = data[::skip]  
+    if not np.array_equal(result[-1], data[-1]):
+        result.append(data[-1])
+    return result
+
 def plot(args, xvec, yvec, data, oFile):
 
   #thin out data
   skip = int(args.cadence)+1
-  xvec = xvec[::skip]
-  data = data[:,::skip]
+  xvec = skip_keep_ends(xvec, skip)
+  data = skip_keep_ends(data, skip)
 
   if (len(xvec) == 0):
     xvec = np.array(range(0, len(data[0, :])))
@@ -754,6 +762,27 @@ def date_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime):
       labels.append(Time(loc, format='unix').strftime(args.xformat))
   return locs, labels
 
+def format_labels(locs, secTimeUnit, labelOffSet):
+    precision = 0
+    formatted_labels = []
+    while True:
+        seen = set()
+        formatted_labels.clear()
+        unique = True
+        for loc in locs:
+            if precision == 0:
+              label = int(round(loc / secTimeUnit - labelOffSet, precision))
+            else:
+              label = round(loc / secTimeUnit - labelOffSet, precision)
+            if label in seen:
+                unique = False
+                break
+            seen.add(label)
+            formatted_labels.append(str(label))
+
+        if unique:
+            return formatted_labels
+        precision += 1 
 
 def since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,secTimeUnit):
   locs = []
@@ -771,8 +800,7 @@ def since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,secTimeUn
     locs.append(currDate)
     currDate = currDate + skip
   labelOffSet = int(locs[0]/secTimeUnit)
-  for loc in locs:
-      labels.append(str(int(loc/secTimeUnit)-labelOffSet))
+  labels = format_labels(locs, secTimeUnit, labelOffSet)
   return locs, labels
 
 
