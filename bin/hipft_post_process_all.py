@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import shutil
 
-# Version 1.3.0
+# Version 1.4.0
 
 def handle_int(signum, frame):
     print('You pressed Ctrl+C! Stopping!')
@@ -77,7 +77,13 @@ def argParsing():
     help='String of plot options for the images and movies plotted.',
     dest='movie_plot_options',
     required=False)
-  
+
+  parser.add_argument('-butterfly_make_options',
+    help='String of options for the butterfly make script.',
+    dest='butterfly_make_options',
+    default="",
+    required=False)
+
   parser.add_argument('-butterfly_plot_options',
     help='String of plot options for the butterfly plots.',
     dest='butterfly_plot_options',
@@ -495,6 +501,7 @@ def make_butterfly(args, is3d):
   bc_makeButterfly += f" -t0 {args.t0}" if args.t0 else ''
   bc_makeButterfly += f" -tf {args.tf}" if args.tf else ''
   bc_makeButterfly += f" -3d -sall" if is3d else ''
+  bc_makeButterfly += f' {args.butterfly_make_options}'
 
   mldfile = None
 
