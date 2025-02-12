@@ -93,7 +93,8 @@ def argParsing():
   parser.add_argument('-al',
     help='Time length to average over in hours.',
     dest='al',
-    default=0,
+    default=0.0,
+    type=float,
     required=False)
 
   parser.add_argument('-c',
