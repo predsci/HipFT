@@ -8,9 +8,8 @@ mpl.use('Agg')
 from astropy.time import Time
 from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_number
 import os
-import itertools
 
-# Version 1.12.0
+# Version 1.13.0
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFt History Plots.')
@@ -301,6 +300,7 @@ def run(args):
   eq_dipole_list=[]
   brmin_list=[]
   brmax_list=[]
+  mpts_list=[]
 
   if args.valrun:
       valerr_list=[]
@@ -360,7 +360,7 @@ def run(args):
       indices_markers = list(range(number_of_data_points))
 
     indices_total = np.unique(np.concatenate((indices, indices_markers)))
-    mpts = [np.where(indices_total == marker)[0][0] for marker in indices_markers]
+    mpts_list.append([np.where(indices_total == marker)[0][0] for marker in indices_markers])
     
     hist_sol = hist_sol_full.iloc[indices_total]
 
@@ -409,19 +409,19 @@ def run(args):
 #
 # ****** Create needed parameters and lists.
 #  
-  time_tfac = np.array(time_list,dtype=np.float64)*tfac
+  time_tfac = [arr.astype(np.float64) * tfac for arr in time_list]
   xmn = np.amin([np.amin(arr) for arr in time_tfac])
   xmx = np.amax([np.amax(arr) for arr in time_tfac])
   total_time = (np.amax([np.amax(arr) for arr in time_list]) - np.amin([np.amin(arr) for arr in time_list]))*tfac*3600
-  flux_tot_un_FF = np.array(flux_tot_un_list,dtype=np.float64)*flux_fac
-  fluxm_FF = np.abs(np.array(fluxm_list,dtype=np.float64))*flux_fac
-  fluxp_FF = np.array(fluxp_list,dtype=np.float64)*flux_fac
+  flux_tot_un_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in flux_tot_un_list]
+  fluxm_FF = [np.abs(np.array(arr, dtype=np.float64)) * flux_fac for arr in fluxm_list]
+  fluxp_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in fluxp_list]
 
-  flux_tot_s_FF = np.array(flux_tot_s_list,dtype=np.float64)*flux_fac
-  fluxp_pn_FF = np.array(fluxp_pn_list,dtype=np.float64)*flux_fac
-  fluxm_pn_FF = np.array(fluxm_pn_list,dtype=np.float64)*flux_fac
-  fluxp_ps_FF = np.array(fluxp_ps_list,dtype=np.float64)*flux_fac
-  fluxm_ps_FF = np.array(fluxm_ps_list,dtype=np.float64)*flux_fac
+  flux_tot_s_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in flux_tot_s_list]
+  fluxp_pn_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in fluxp_pn_list]
+  fluxm_pn_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in fluxm_pn_list]
+  fluxp_ps_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in fluxp_ps_list]
+  fluxm_ps_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in fluxm_ps_list]
 
   if args.valrun:
       valerr=np.array(valerr_list,dtype=np.float64)*(1e5)
@@ -435,7 +435,7 @@ def run(args):
   if args.summary:
     summaryMode(flux_imb_list,time_tfac[0],LW,FLW,fsize,plt)
   else:
-    normalMode(plt,ax,fig,args,flux_imb_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts)
+    normalMode(plt,ax,fig,args,flux_imb_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts_list)
 
   ymax = np.amax([np.amax(np.abs(arr)) for arr in flux_imb_list])
   ymin = -ymax 
@@ -458,7 +458,7 @@ def run(args):
     legend1 = summaryMode2(fluxm_FF,fluxp_FF,time_tfac[0],LW,FLW,fsize,plt,"Blue","Red","|Flux (-)|","Flux (+)")
   else:
     legend1 = normalMode2(plt,ax,fig,args,fluxm_FF,fluxp_FF,time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
-      NOTindividual,LABEL_LEN,label_list,lgfsize,'Blue','Red',["|Flux (-)|","Flux (+)"],mpts)
+      NOTindividual,LABEL_LEN,label_list,lgfsize,'Blue','Red',["|Flux (-)|","Flux (+)"],mpts_list)
 
   ymin=0.0#np.amin([np.amin(fluxm_FF),np.amin(fluxp_FF)])
   ymax = max(np.amax(np.abs(arr)) for array in (fluxm_FF, fluxp_FF) for arr in array)
@@ -481,7 +481,7 @@ def run(args):
   if args.summary:
     summaryMode(flux_tot_un_FF,time_tfac[0],LW,FLW,fsize,plt)
   else:
-    normalMode(plt,ax,fig,args,flux_tot_un_FF,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts)
+    normalMode(plt,ax,fig,args,flux_tot_un_FF,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts_list)
   
   plt.title('Total Unsigned Flux', {'fontsize': fsize, 'color': tc})
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})
@@ -501,7 +501,7 @@ def run(args):
   if args.summary:
     summaryMode(flux_tot_s_FF,time_tfac[0],LW,FLW,fsize,plt)
   else:
-    normalMode(plt,ax,fig,args,flux_tot_s_FF,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'b-',mpts)
+    normalMode(plt,ax,fig,args,flux_tot_s_FF,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'b-',mpts_list)
 
   plt.title('Total Signed Flux', {'fontsize': fsize, 'color': tc})
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})
@@ -527,7 +527,7 @@ def run(args):
       LW,FLW,fsize,plt,"Red","Blue","firebrick","navy","N (+)","N (-)","S (+)","S (-)")
   else:
     legend1 = normalMode4(plt,ax,fig,args,fluxp_pn_FF,fluxm_pn_FF,fluxp_ps_FF,fluxm_ps_FF,time_tfac,COLORS,MARKERS,LW,MS,LMS,\
-        fsize,NOTindividual,LABEL_LEN,label_list,lgfsize,"Red","Blue","firebrick","navy",["N (+)","N (-)","S (+)","S (-)"],mpts)
+        fsize,NOTindividual,LABEL_LEN,label_list,lgfsize,"Red","Blue","firebrick","navy",["N (+)","N (-)","S (+)","S (-)"],mpts_list)
 
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})
   plt.title('Polar Flux (within 30 degrees of poles)', {'fontsize': fsize, 'color': tc})
@@ -539,7 +539,9 @@ def run(args):
 #
 # ****** Polar average field strengths.
 #
-  ymax = max(np.amax(np.abs(arr)) for array in (np.array(pole_n_avg_field_list,dtype=np.float64), np.array(pole_s_avg_field_list,dtype=np.float64)) for arr in array)
+  pole_n_arrays = [np.array(arr, dtype=np.float64) for arr in pole_n_avg_field_list]
+  pole_s_arrays = [np.array(arr, dtype=np.float64) for arr in pole_s_avg_field_list]
+  ymax = max(np.amax(np.abs(arr)) for lst in (pole_n_arrays, pole_s_arrays) for arr in lst)
   ymin = -ymax 
   fig = plt.figure(num=None, figsize=(14, 7), dpi=args.dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
@@ -548,7 +550,7 @@ def run(args):
     legend1 = summaryMode2(pole_n_avg_field_list,pole_s_avg_field_list,time_tfac[0],LW,FLW,fsize,plt,"Black","Blue","North","South")
   else:
     legend1 = normalMode2(plt,ax,fig,args,pole_n_avg_field_list,pole_s_avg_field_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
-      NOTindividual,LABEL_LEN,label_list,lgfsize,'Black','Blue',["North","South"],mpts)
+      NOTindividual,LABEL_LEN,label_list,lgfsize,'Black','Blue',["North","South"],mpts_list)
 
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
   plt.title('Polar Average Field (within 30 degrees of poles)', {'fontsize': fsize, 'color': tc})
@@ -563,11 +565,13 @@ def run(args):
   fig = plt.figure(num=None, figsize=(14, 7), dpi=args.dpi, facecolor=fc,frameon=True)
   ax = plt.gca()
 
+  brmin_arrays = [np.array(arr, dtype=np.float64) for arr in brmin_list]
+
   if args.summary:
-    legend1 = summaryMode2(np.abs(np.array(brmin_list,dtype=np.float64)),brmax_list,time_tfac[0],LW,FLW,fsize,plt,"blue","red","|min(Br)|","max(Br)")
+    legend1 = summaryMode2([np.abs(arr) for arr in brmin_arrays],brmax_list,time_tfac[0],LW,FLW,fsize,plt,"blue","red","|min(Br)|","max(Br)")
   else:
-    legend1 = normalMode2(plt,ax,fig,args,np.abs(np.array(brmin_list,dtype=np.float64)),brmax_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
-      NOTindividual,LABEL_LEN,label_list,lgfsize,'blue','red',["|min(Br)|","max(Br)"],mpts)
+    legend1 = normalMode2(plt,ax,fig,args,[np.abs(arr) for arr in brmin_arrays],brmax_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,fsize,\
+      NOTindividual,LABEL_LEN,label_list,lgfsize,'blue','red',["|min(Br)|","max(Br)"],mpts_list)
   
   ymax = max(np.amax(np.abs(arr)) for array in (brmax_list, brmin_list) for arr in array)
   ymin = 0.0 
@@ -592,7 +596,7 @@ def run(args):
   if args.summary:
     summaryMode(ax_dipole_list,time_tfac[0],LW,FLW,fsize,plt)
   else:
-    normalMode(plt,ax,fig,args,ax_dipole_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts)
+    normalMode(plt,ax,fig,args,ax_dipole_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts_list)
 
   plt.title('Axial Dipole Strength', {'fontsize': fsize, 'color': tc})
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
@@ -616,7 +620,7 @@ def run(args):
   if args.summary:
     summaryMode(eq_dipole_list,time_tfac[0],LW,FLW,fsize,plt)
   else:
-    normalMode(plt,ax,fig,args,eq_dipole_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts)
+    normalMode(plt,ax,fig,args,eq_dipole_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts_list)
  
   ymin = np.amin([np.amin(arr) for arr in eq_dipole_list])
   ymax = np.amax([np.amax(arr) for arr in eq_dipole_list])
@@ -637,7 +641,7 @@ def run(args):
     if args.summary:
       summaryMode(valerr,time_tfac[0],LW,FLW,fsize,plt)
     else:
-      normalMode(plt,ax,fig,args,valerr,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts)
+      normalMode(plt,ax,fig,args,valerr,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts_list)
 
     plt.title('Validation Error', {'fontsize': fsize, 'color': tc})
     xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs)
@@ -708,59 +712,59 @@ def addLegendGeneric(LW,FLW,fsize,plt,CM,CF,LT1,LT2,LT3):
   plt.legend([h1[0],h2,h3],[LT1,LT2,LT3],loc='lower left',fontsize=fsize, ncol=3)
 
 
-def normalMode(plt,ax,fig,args,llist,xlist,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,CL,mpts):
+def normalMode(plt,ax,fig,args,llist,xlist,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,CL,mpts_list):
   if NOTindividual:
     for run in range(len(xlist)):
-      plothelper1(xlist[run],llist[run],COLORS[run],MARKERS[run],LW,MS,mpts)
+      plothelper1(xlist[run],llist[run],COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
     addLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
   else:
-    plt.plot(xlist[0],llist[0],CL,linewidth=LW,markersize=MS, markevery=mpts)
+    plt.plot(xlist[0],llist[0],CL,linewidth=LW,markersize=MS, markevery=mpts_list[0])
 
 
 def normalMode2(plt,ax,fig,args,llist1,llist2,xlist,COLORS,MARKERS,LW,MS,LMS,fsize,NOTindividual,\
-                LABEL_LEN,label_list,lgfsize,CL1,CL2,LegT,mpts):
+                LABEL_LEN,label_list,lgfsize,CL1,CL2,LegT,mpts_list):
   if NOTindividual:
     firstRun=True
     for run in range(len(xlist)):
       if firstRun:
-        h1=plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS,mpts)
-        h2=plothelper4(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS,mpts)
+        h1=plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
+        h2=plothelper4(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
         firstRun=False
       else:
-        plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS,mpts)
-        plothelper3(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS,mpts)
+        plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
+        plothelper3(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
     legend1 = plt.legend([h1[0],h2[0]],LegT,loc='upper right',fontsize=fsize, ncol=2)
     addLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
     return legend1
   else:
-    h1 = plt.plot(xlist[0],llist1[0],color=CL1,linewidth=LW,markersize=MS, markevery=mpts)
-    h2 = plt.plot(xlist[0],llist2[0],color=CL2,linewidth=LW,markersize=MS, markevery=mpts)
+    h1 = plt.plot(xlist[0],llist1[0],color=CL1,linewidth=LW,markersize=MS, markevery=mpts_list[0])
+    h2 = plt.plot(xlist[0],llist2[0],color=CL2,linewidth=LW,markersize=MS, markevery=mpts_list[0])
     return plt.legend([h1[0],h2[0]],LegT,loc='upper right',fontsize=fsize, ncol=2)
 
 def normalMode4(plt,ax,fig,args,llist1,llist2,llist3,llist4,xlist,COLORS,MARKERS,LW,MS,LMS,fsize,NOTindividual,\
-                LABEL_LEN,label_list,lgfsize,CL1,CL2,CL3,CL4,LegT,mpts):
+                LABEL_LEN,label_list,lgfsize,CL1,CL2,CL3,CL4,LegT,mpts_list):
   if NOTindividual:
     firstRun=True
     for run in range(len(xlist)):
       if firstRun:
-        h1=plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS,mpts)
-        h2=plothelper4(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS,mpts)
-        h3=plothelper4(xlist[run],llist3[run],CL3,COLORS[run],MARKERS[run],LW,MS,mpts)
-        h4=plothelper4(xlist[run],llist4[run],CL4,COLORS[run],MARKERS[run],LW,MS,mpts)
+        h1=plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
+        h2=plothelper4(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
+        h3=plothelper4(xlist[run],llist3[run],CL3,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
+        h4=plothelper4(xlist[run],llist4[run],CL4,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
         firstRun=False
       else:
-        plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS,mpts)
-        plothelper3(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS,mpts)
-        plothelper3(xlist[run],llist3[run],CL3,COLORS[run],MARKERS[run],LW,MS,mpts)
-        plothelper3(xlist[run],llist4[run],CL4,COLORS[run],MARKERS[run],LW,MS,mpts)
+        plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
+        plothelper3(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
+        plothelper3(xlist[run],llist3[run],CL3,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
+        plothelper3(xlist[run],llist4[run],CL4,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
     legend1 = plt.legend([h1[0],h2[0],h3[0],h4[0]],LegT,loc='upper right',fontsize=fsize, ncol=4)
     addLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
     return legend1
   else:
-    h1 = plt.plot(xlist[0],llist1[0],color=CL1,linewidth=LW,markersize=MS, markevery=mpts)
-    h2 = plt.plot(xlist[0],llist2[0],color=CL2,linewidth=LW,markersize=MS, markevery=mpts)
-    h3 = plt.plot(xlist[0],llist3[0],color=CL3,linewidth=LW,markersize=MS, markevery=mpts)
-    h4 = plt.plot(xlist[0],llist4[0],color=CL4,linewidth=LW,markersize=MS, markevery=mpts)
+    h1 = plt.plot(xlist[0],llist1[0],color=CL1,linewidth=LW,markersize=MS, markevery=mpts_list[0])
+    h2 = plt.plot(xlist[0],llist2[0],color=CL2,linewidth=LW,markersize=MS, markevery=mpts_list[0])
+    h3 = plt.plot(xlist[0],llist3[0],color=CL3,linewidth=LW,markersize=MS, markevery=mpts_list[0])
+    h4 = plt.plot(xlist[0],llist4[0],color=CL4,linewidth=LW,markersize=MS, markevery=mpts_list[0])
     return plt.legend([h1[0],h2[0],h3[0],h4[0]],LegT,loc='upper right',fontsize=fsize, ncol=4)
 
 
@@ -959,7 +963,7 @@ def date_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime):
       cadence = xcUnitsSec*int(args.xcadence)
     else:
       tempArray = np.array(initLocs_uttime)
-      cadence = np.average(np.diff(tempArray)) 
+      cadence = int(np.average(np.diff(tempArray))/xcUnitsSec)*xcUnitsSec
     if (args.utstartxtick):
       currDate = getSec(args.tai,args.utstartxtick,'%Y-%m-%dT%H:%M:%S')
     else:
@@ -1007,7 +1011,7 @@ def since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,secTimeUn
     cadence = xcUnitsSec*int(args.xcadence)
   else:
     tempArray = np.array(initLocs_uttime)
-    cadence = np.average(np.diff(tempArray)) 
+    cadence = int(np.average(np.diff(tempArray))/xcUnitsSec)*xcUnitsSec
   currDate = xmn_uttime
   locs.append(currDate)
   skip = int(cadence)
@@ -1028,7 +1032,7 @@ def cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime):
   if (args.utstartxtick):
     currDateSeconds = getSec(args.tai,args.utstartxtick,xformat)
   else:
-    currDateSec = xmn_uttime
+    currDateSeconds = xmn_uttime
 
   if (args.xcadence):
     if (args.xc_units):
@@ -1037,9 +1041,9 @@ def cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime):
         if (args.xcrpos == 'end'):
           endOffset = 1
         if args.tai:
-          cr_num = int(carrington_rotation_number(Time(currDateSec, format='unix_tai')))
+          cr_num = int(carrington_rotation_number(Time(currDateSeconds, format='unix_tai')))
         else:
-          cr_num = int(carrington_rotation_number(Time(currDateSec, format='unix')))
+          cr_num = int(carrington_rotation_number(Time(currDateSeconds, format='unix')))
         if (args.xcrpos == 'center'):
           cr_num = cr_num-0.5
           currDate = int(carrington_rotation_time(cr_num).unix)
@@ -1065,9 +1069,9 @@ def cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime):
         if (args.xcrpos == 'end'):
           endOffset = 1
         if args.tai:
-          cr_num = int(carrington_rotation_number(Time(currDateSec, format='unix_tai')))
+          cr_num = int(carrington_rotation_number(Time(currDateSeconds, format='unix_tai')))
         else:
-          cr_num = int(carrington_rotation_number(Time(currDateSec, format='unix')))
+          cr_num = int(carrington_rotation_number(Time(currDateSeconds, format='unix')))
         if (args.xcrpos == 'center'):
           cr_num = cr_num-0.5
           currDate = int(carrington_rotation_time(cr_num).unix)
@@ -1101,9 +1105,9 @@ def cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime):
       if (args.xcrpos == 'end'):
         endOffset = 1
       if args.tai:
-        cr_num = int(carrington_rotation_number(Time(currDateSec, format='unix_tai')))
+        cr_num = int(carrington_rotation_number(Time(currDateSeconds, format='unix_tai')))
       else:
-        cr_num = int(carrington_rotation_number(Time(currDateSec, format='unix')))
+        cr_num = int(carrington_rotation_number(Time(currDateSeconds, format='unix')))
       if (args.xcrpos == 'center'):
         cr_num = cr_num-0.5
         currDate = int(carrington_rotation_time(cr_num).unix)
@@ -1129,9 +1133,9 @@ def cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime):
     if (args.xcrpos == 'end'):
       endOffset = 1
     if args.tai:
-      cr_num = int(carrington_rotation_number(Time(currDateSec, format='unix_tai')))
+      cr_num = int(carrington_rotation_number(Time(currDateSeconds, format='unix_tai')))
     else:
-      cr_num = int(carrington_rotation_number(Time(currDateSec, format='unix')))
+      cr_num = int(carrington_rotation_number(Time(currDateSeconds, format='unix')))
     if (args.xcrpos == 'center'):
       cr_num = cr_num-0.5
       currDate = int(carrington_rotation_time(cr_num).unix)

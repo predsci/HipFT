@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.18.0'
-      character(*), parameter :: cdate='02/04/2025'
+      character(*), parameter :: cvers='1.19.0'
+      character(*), parameter :: cdate='02/08/2025'
 !
 end module
 !#######################################################################
@@ -529,7 +529,6 @@ module input_parameters
 ! ****** Initial map ********
 !
       character(512) :: initial_map_filename = ''
-      logical        :: initial_map_is_3d = .false.
       logical        :: initial_map_flux_balance = .false.
       real(r_typ)    :: initial_map_mult_fac = 1.0_r_typ
 !
@@ -1773,6 +1772,7 @@ subroutine load_initial_condition
       real(r_typ), dimension(:,:,:), allocatable :: f_local,gout,f_global
       real(r_typ), dimension(:,:), allocatable :: f_tmp2d
       real(r_typ), dimension(:), allocatable :: s1,s2,s3,s3t,s3g,tfout,gfout
+      logical :: is_2d
 !
 !-----------------------------------------------------------------------
 !
@@ -1821,7 +1821,9 @@ subroutine load_initial_condition
 !
 ! ****** Read the initial magnetic map.
 !
-        if (.not.initial_map_is_3d) then
+        call check_2d_or_3d (initial_map_filename,is_2d,ierr)
+!
+        if (is_2d) then
 !
           if (iamp0) then
             call read_2d_file (initial_map_filename,n1,n2,f_tmp2d,s1,s2,ierr)
@@ -6016,6 +6018,140 @@ subroutine rdh5 (fname,s,ierr)
 !
 end subroutine
 !#######################################################################
+subroutine check_2d_or_3d (fname,is_2d,ierr)
+!
+!-----------------------------------------------------------------------
+!
+! ****** Check if an input HDF5 file is 2D or 3D.
+!
+!-----------------------------------------------------------------------
+!
+! ****** Input arguments:
+!
+!          FNAME   : [character(*)]
+!                    File name to read from.
+!
+! ****** Output arguments:
+!
+!          IS_2D   : [logical]
+!                    If 2D HDF5 file, IS_2D=.true.
+!                    If 3D HDF5 file, IS_2D=.false.
+!                    Else will have an error
+!
+!          IERR    : [integer]
+!                    IERR=0 is returned if the data set was read
+!                    successfully.  Otherwise, IERR is set to a
+!                    nonzero value.
+!
+!-----------------------------------------------------------------------
+!
+      use hdf5
+      use h5ds
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      character(*) :: fname
+!
+!-----------------------------------------------------------------------
+!
+      integer :: ierr
+!
+!-----------------------------------------------------------------------
+!
+      integer :: n_members,obj_type
+      integer :: s_ndim=0
+!
+      integer(HID_T) :: file_id       ! File identifier
+      integer(HID_T) :: dset_id       ! Dataset identifier
+      integer(HID_T) :: dspace_id     ! Dataspace identifier
+!
+      character(512) :: obj_name
+      character(14), parameter :: cname='check_2d_or_3d'
+!
+      logical :: is_scale
+      logical :: is_2d
+!
+!-----------------------------------------------------------------------
+!
+! ****** Initialize hdf5 interface.
+!
+      call h5open_f (ierr)
+!
+! ****** Open hdf5 file.
+!
+      call h5Fopen_f (trim(fname),H5F_ACC_RDONLY_F,file_id,ierr)
+!
+! ****** Get information about the hdf5 file.
+!
+      call h5Gn_members_f (file_id,"/",n_members,ierr)
+!
+! ****** Make sure there is (at maximum) one 3D dataset with scales.
+!
+      if (n_members.eq.0.or.n_members.gt.4) then
+        write (*,*)
+        write (*,*) '### ERROR in ',cname,':'
+        write (*,*) '### Input file contains too few/many datasets.'
+        write (*,*) 'File name: ',trim(fname)
+        return
+      end if
+!
+! ****** Assume the Dataset is in index 0 and get its name.
+!
+      call h5Gget_obj_info_idx_f (file_id,"/",0,obj_name,obj_type,ierr)
+!
+! ****** Open Dataset.
+!
+      call h5Dopen_f (file_id,trim(obj_name),dset_id,ierr)
+!
+! ****** Make sure the Dataset is not a scale.
+!
+      call h5DSis_scale_f(dset_id,is_scale,ierr)
+!
+      if (is_scale) then
+        write (*,*)
+        write (*,*) '### ERROR in ',cname,':'
+        write (*,*) '### Input file Dataset at index 0 is a scale.'
+        write (*,*) 'File name: ',trim(fname)
+        return
+      end if
+!
+! ****** Get dimensions.
+!
+      call h5Dget_space_f (dset_id,dspace_id,ierr)
+      call h5Sget_simple_extent_ndims_f (dspace_id,s_ndim,ierr)
+!
+! ****** Check if the dataset is 2D or 3D.
+!
+      if (s_ndim == 2) then
+        is_2d = .true.  
+      else if (s_ndim == 3) then
+        is_2d = .false.  
+      else
+        write (*,*) 'Error: Unsupported number of dimensions.'
+        call h5Dclose_f (dset_id,ierr)
+        call h5Fclose_f (file_id,ierr)
+        call h5close_f (ierr)
+        return
+      end if
+!
+! ****** Close the dataset.
+!
+      call h5Dclose_f (dset_id,ierr)
+!
+! ****** Close the file.
+!
+      call h5Fclose_f (file_id,ierr)
+!
+! ****** Close FORTRAN interface.
+!
+      call h5close_f (ierr)
+!
+end subroutine
+!#######################################################################
 subroutine wrh5 (fname,s,ierr)
 !
 !-----------------------------------------------------------------------
@@ -8191,7 +8327,6 @@ subroutine read_input_file
                res_np,                                                 &
                n_realizations,                                         &
                initial_map_filename,                                   &
-               initial_map_is_3d,                                      &
                initial_map_flux_balance,                               &
                initial_map_mult_fac,                                   &
                validation_run,                                         &
@@ -9288,6 +9423,10 @@ end subroutine generate_rfe
 !     The number of realizations must match the number specified in the
 !     input file.
 !     This should be changed later to be automatic based on the file.
+!
+! 02/08/2025, MS, Version 1.19.0:
+!   - Removed logical input parameter INITIAL_MAP_IS_3D.
+!     Instead, the code auto-detects if the file is 2D or 3D.
 !
 !-----------------------------------------------------------------------
 !
