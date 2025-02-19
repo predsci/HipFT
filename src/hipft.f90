@@ -45,7 +45,7 @@ module ident
 ! ****** Set the name, version, and date of code.
 !-----------------------------------------------------------------------
 !
-      character(*), parameter :: cname='HipFT_INTEL_TMP'
+      character(*), parameter :: cname='HipFT_INTEL_GPU'
       character(*), parameter :: cvers='1.19.0'
       character(*), parameter :: cdate='02/08/2025'
 !     BRANCH INFO:
