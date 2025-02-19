@@ -5,7 +5,7 @@ import numpy as np
 from astropy.time import Time
 import os
 
-# Version 1.2.0
+# Version 1.2.1
 
 def argParsing():
   parser = argparse.ArgumentParser(description='hipft_make_butterfly_diagram:  This tool makes the data for a butterfly diagram by averaging each hipft map along longitude, and then taking a running average of the results over the files.  The result is a single 2D file where each column is the running average of logitudinal averages.  By specifying a UT start time, the x-axis scales is set correctly for easy plotting.')
@@ -145,7 +145,7 @@ def run(args):
   ######################
 
   time = []
-  hasTime = False
+  hasSecs = False
   with open(args.mapfile, 'r') as infile:
     FirstLine=True
     for line in infile:
