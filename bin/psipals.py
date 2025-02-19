@@ -10,7 +10,7 @@ def load(N=1024):
     # Check for tools or corhel directory and set path root accordingly.
     rootdir=sys.path[0]+"/"
     rgbdir="psi_color_palettes/"
-    
+    ierr=1 
     if (N<1):
         print("Error in psipals!  Must have N>=1")
         ierr=0
