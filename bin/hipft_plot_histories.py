@@ -8,11 +8,14 @@ mpl.use('Agg')
 from astropy.time import Time
 from sunpy.coordinates.sun import carrington_rotation_time, carrington_rotation_number
 import os
+from pathlib import Path
+from packaging import version
+import matplotlib
 
-# Version 1.13.0
+# Version 1.15.0
 
 def argParsing():
-  parser = argparse.ArgumentParser(description='HipFt History Plots.')
+  parser = argparse.ArgumentParser(description='HipFT History Plots.')
 
   parser.add_argument('-runtag',
     help='Add a run tag to the output plot file names.',
@@ -67,7 +70,7 @@ def argParsing():
     required=False)
 
   parser.add_argument('-utstart',
-    help='Start Date of intial HipFT history output in UT: YYYY-MM-DDTHH:MM:SS',
+    help='Start Date of intial HipFT history output in UT: YYYY-MM-DDTHH:MM:SS if not contained in history files',
     dest='utstart',
     required=False)
     
@@ -212,7 +215,28 @@ def argParsing():
     default=False,
     required=False)
 
+  parser.add_argument('-ignore_time_diff',
+    help='Assume all history files start at the same time and/or date.',
+    dest='ignore_time_diff',
+    action='store_true',
+    default=False,
+    required=False)
+
   return parser.parse_args()
+
+
+def find_history_files(args):
+    """Finds HipFT history files in the current directory."""
+    files = list(Path.cwd().glob("hipft_history_sol*.out"))
+    non_utc = [file for file in files if not file.stem.endswith(("_utc", "_tai"))]
+    utc = [file for file in files if file.stem.endswith("_utc")]
+    tai = [file for file in files if file.stem.endswith("_tai")]
+    if utc and not args.tai:
+        return utc, "UTC"
+    elif tai:
+        return tai, "TAI"
+    else:
+        return non_utc, None
 
 
 def run(args):  
@@ -231,13 +255,17 @@ def run(args):
   rList = []
 
   if arg_dict['histfiles'] == ' ':
-    temphist_list=[]
-    wDir=os.getcwd()
-    for file in os.listdir(wDir):
-      if "hipft_history_sol_r" in file and file.endswith(".out"):
-        temphist_list.append(wDir+'/'+file)
+    temphist_list, time_type = find_history_files(args)
     temphist_list = sorted(temphist_list)
-
+  else:
+    temphist_list = [Path(file) for file in temphist_list]
+    time_type = None
+    if temphist_list:
+      if all(file.stem.endswith("_utc") for file in temphist_list):
+          time_type = "UTC"
+      elif all(file.stem.endswith("_tai") for file in temphist_list):
+          time_type = "TAI"
+          args.tai = True
 
   hist_list=[]
 
@@ -313,7 +341,6 @@ def run(args):
 
   ###### PLOTTING ######
 
-  width = 0.3
   fsize = args.fsize
   lgfsize = args.lgfsize
   MS = args.ms
@@ -364,8 +391,17 @@ def run(args):
     
     hist_sol = hist_sol_full.iloc[indices_total]
 
-    time_tmp = np.array(hist_sol['TIME'])
-    time_tmp = time_tmp - time_tmp[0]
+    if time_type == 'TAI':
+      args.timeset = True
+      time_tmp = np.array(hist_sol['TAI(sec)'])
+    elif time_type == 'UTC':
+      args.timeset = True
+      time_tmp = np.array(hist_sol['UTC(sec)'])
+    else:
+      args.timeset = False
+      time_tmp = np.array(hist_sol['TIME'])
+    if args.ignore_time_diff:
+      time_tmp = time_tmp - time_tmp[0]
     time_list.append(time_tmp)
 
     fluxp_list.append(np.array(hist_sol['FLUX_POSITIVE']))
@@ -409,10 +445,24 @@ def run(args):
 #
 # ****** Create needed parameters and lists.
 #  
-  time_tfac = [arr.astype(np.float64) * tfac for arr in time_list]
+
+  if time_type in ['TAI', 'UTC']:
+    args.utstartsecs = max(np.amax(arr) for arr in time_list)
+    time_list = [np.array(temp_time) / 3600 for temp_time in time_list]
+
+  if not args.ignore_time_diff:
+    min_time = min(arr[0] for arr in time_list)
+    time_list = [arr - min_time for arr in time_list]
+
+  # Convert to float64 once to avoid redundant conversions
+  time_tfac = [arr.astype(np.float64) for arr in time_list]
+
+  # Compute total time more efficiently
+  time_range = max(np.amax(arr) for arr in time_list) - min(np.amin(arr) for arr in time_list)
+  total_time = time_range * (3600 if time_type in ['TAI', 'UTC'] else tfac * 3600)
+
   xmn = np.amin([np.amin(arr) for arr in time_tfac])
   xmx = np.amax([np.amax(arr) for arr in time_tfac])
-  total_time = (np.amax([np.amax(arr) for arr in time_list]) - np.amin([np.amin(arr) for arr in time_list]))*tfac*3600
   flux_tot_un_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in flux_tot_un_list]
   fluxm_FF = [np.abs(np.array(arr, dtype=np.float64)) * flux_fac for arr in fluxm_list]
   fluxp_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in fluxp_list]
@@ -784,7 +834,7 @@ def plothelper4(x,l,c1,c2,m,LW,MS,mpts):
 def addLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig):
   renderer = fig.canvas.get_renderer()
   for ncol in range(1,LABEL_LEN+1):
-    lg = fig.legend(label_list,loc='outside lower center', ncol=ncol,fontsize=lgfsize)
+    lg = fig.legend(label_list, loc='lower center', ncol=ncol, fontsize=lgfsize)
     fig.canvas.draw()
     lgbbox = lg.get_window_extent(renderer).transformed(ax.transAxes.inverted())
     lg.remove()
@@ -794,8 +844,7 @@ def addLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig):
   lg = fig.legend(label_list,ncol=ncol,fontsize=lgfsize) 
   lgh = args.lgyoffset - lg.get_window_extent().height/(7*args.dpi)
   lg.remove()
-  lg = fig.legend(label_list,loc='outside lower center', bbox_to_anchor=(0.5,lgh), ncol=ncol,fontsize=lgfsize) 
-  
+  lg = fig.legend(label_list, loc='lower center', bbox_to_anchor=(0.5, lgh), ncol=ncol, fontsize=lgfsize)
   for handle in lg.legend_handles:
     handle.set_markersize(LMS)
     handle.set_linestyle("")
@@ -869,15 +918,24 @@ def get_xticks(args,xmn,xmx,init_locs,total_time):
     elif args.xunits == 'seconds':
       xcUnitsSec = seconds
       
-  if (args.utstart):
+  if args.utstart:
+    if args.timeset:
+      print(f' WARNING: Ignoring UT times in history sol files! ')
     utstartSecs = getSec(args.tai,args.utstart,'%Y-%m-%dT%H:%M:%S')
+  elif args.timeset:
+    utstartSecs = args.utstartsecs
   else:
     utstartSecs = 0
   initLocs_uttime = init_locs*hours+utstartSecs
   xmn_uttime = xmn*hours+utstartSecs
   xmx_uttime = xmx*hours+utstartSecs
   if args.xunits == "date":
-    if (args.utstart):
+    if (args.utstart or args.timeset):
+      if not args.xlabel:
+        if args.tai:
+          args.xlabel = 'Data in TAI'
+        else:
+          args.xlabel = 'Data in UTC'
       locs, labels = date_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime)
     else:
       raise Exception("Did not specify a utstart")
@@ -892,7 +950,7 @@ def get_xticks(args,xmn,xmx,init_locs,total_time):
   elif args.xunits == "weeks":
     locs, labels = since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,weeks)
   elif args.xunits == "cr":
-    if (args.utstart): 
+    if (args.utstart or args.timeset): 
       locs, labels = cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime)
     else:
       locs, labels = since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,cr)
@@ -1179,7 +1237,7 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
       plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
     if (args.xlabel):
       plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
-    elif (args.utstart): 
+    elif (args.utstart or args.timeset): 
       tlabel = gettLabel(args.tai,utstartSecs)
       plt.xlabel('Seconds since '+ tlabel, {'fontsize': args.fsize, 'color': tc})
     else:
@@ -1192,7 +1250,7 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
       plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
     if (args.xlabel):
       plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
-    elif (args.utstart): 
+    elif (args.utstart or args.timeset): 
       tlabel = gettLabel(args.tai,utstartSecs)
       plt.xlabel('Minutes since '+ tlabel, {'fontsize': args.fsize, 'color': tc})
     else:
@@ -1205,7 +1263,7 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
       plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
     if (args.xlabel):
       plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
-    elif (args.utstart): 
+    elif (args.utstart or args.timeset): 
       tlabel = gettLabel(args.tai,utstartSecs)
       plt.xlabel('Hours since '+ tlabel, {'fontsize': args.fsize, 'color': tc})
     else:
@@ -1218,7 +1276,7 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
       plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
     if (args.xlabel):
       plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
-    elif (args.utstart): 
+    elif (args.utstart or args.timeset): 
       tlabel = gettLabel(args.tai,utstartSecs)
       plt.xlabel('Days since '+ tlabel, {'fontsize': args.fsize, 'color': tc})
     else:
@@ -1231,7 +1289,7 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
       plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
     if (args.xlabel):
       plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
-    elif (args.utstart): 
+    elif (args.utstart or args.timeset): 
       tlabel = gettLabel(args.tai,utstartSecs)
       plt.xlabel('Weeks since '+ tlabel, {'fontsize': args.fsize, 'color': tc})
     else:
@@ -1244,7 +1302,7 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
       plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
     if (args.xlabel):
       plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
-    elif (args.utstart): 
+    elif (args.utstart or args.timeset): 
       if (args.xcrpos == 'start'):
         plt.xlabel('Carrington Rotation', {'fontsize': args.fsize, 'color': tc})
       else: 
@@ -1262,7 +1320,7 @@ def xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs):
       plt.xticks(locs,labels, ha=args.ha, ma=args.ma) 
     if (args.xlabel):
       plt.xlabel(args.xlabel, {'fontsize': args.fsize, 'color': tc})
-    elif (args.utstart): 
+    elif (args.utstart or args.timeset): 
       tlabel = gettLabel(args.tai,utstartSecs)
       plt.xlabel('Years since '+ tlabel, {'fontsize': args.fsize, 'color': tc})
     else:
