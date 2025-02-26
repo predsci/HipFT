@@ -12,7 +12,7 @@ from pathlib import Path
 from packaging import version
 import matplotlib
 
-# Version 1.15.0
+# Version 1.16.0
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFT History Plots.')
@@ -239,7 +239,168 @@ def find_history_files(args):
         return non_utc, None
 
 
-def run(args):  
+def read_file_ind(h_file_name, args, time_type):
+  with open(h_file_name) as f:
+    number_of_data_points = sum(1 for _ in f) - 1
+
+  samples = args.samples
+  samples_markers = samples if not args.samples_markers else args.samples_markers
+
+  if samples > 1:
+    indices = np.linspace(0, number_of_data_points - 1, samples, endpoint=True, dtype=int)
+  else:
+    indices = np.arange(number_of_data_points)
+
+  if samples_markers > 1:
+    indices_markers = np.linspace(0, number_of_data_points - 1, samples_markers, endpoint=True, dtype=int)
+  else:
+    indices_markers = np.arange(number_of_data_points)
+
+  indices_total = np.unique(np.concatenate((indices, indices_markers)))
+
+  hist_sol = pd.read_table(
+    h_file_name,
+    header=0,
+    sep=r'\s+',
+    skiprows=lambda x: x > 0 and x not in indices_total
+  )
+
+  mpts_i = np.array([np.searchsorted(indices_total, marker) for marker in indices_markers]) - 1
+  
+
+  if time_type == 'TAI':
+    args.timeset = True
+    time_tmp = np.array(hist_sol['TAI(sec)'])
+  elif time_type == 'UTC':
+    args.timeset = True
+    time_tmp = np.array(hist_sol['UTC(sec)'])
+  else:
+    args.timeset = False
+    time_tmp = np.array(hist_sol['TIME'])
+  if args.ignore_time_diff:
+    time_tmp = time_tmp - time_tmp[0]
+  time_i = time_tmp
+
+  fluxp_i = np.array(hist_sol['FLUX_POSITIVE'])
+  fluxm_i = np.array(hist_sol['FLUX_NEGATIVE'])
+  
+  fluxp_pn_i = np.array(hist_sol['NPOLE_FLUX_POSITIVE'])
+  fluxm_pn_i = np.array(hist_sol['NPOLE_FLUX_NEGATIVE'])
+  area_pn = np.array(hist_sol['NPOLE_AREA'])
+  
+  fluxp_ps_i = np.array(hist_sol['SPOLE_FLUX_POSITIVE'])
+  fluxm_ps_i = np.array(hist_sol['SPOLE_FLUX_NEGATIVE'])
+  area_ps = np.array(hist_sol['SPOLE_AREA'])
+  
+  ax_dipole_i = np.array(hist_sol['AX_DIPOLE'])
+  eq_dipole_i = np.array(hist_sol['EQ_DIPOLE'])
+
+  brmin_i = np.array(hist_sol['BR_MIN'])
+  brmax_i = np.array(hist_sol['BR_MAX'])
+
+  valerr_i = np.array(hist_sol['VALIDATION_ERR_HHabs']) if args.valrun else None
+
+  flux_tot_un = np.abs(fluxp_i) + np.abs(fluxm_i)
+  flux_tot_un_i = flux_tot_un
+  flux_tot_s = fluxp_i + fluxm_i
+  flux_tot_s_i = flux_tot_s
+  flux_imb = flux_tot_un*0.0
+  flux_imb[flux_tot_un < 1e-15] = 0.0
+  flux_imb[flux_tot_un >= 1e-15] = 100.0*flux_tot_s[flux_tot_un >= 1e-15]/flux_tot_un[flux_tot_un >= 1e-15]
+  flux_imb_i = flux_imb
+    
+  pole_n_avg_field_i = (fluxp_pn_i + fluxm_pn_i) / area_pn
+  pole_s_avg_field_i = (fluxp_ps_i + fluxm_ps_i) / area_ps
+
+  return flux_tot_un_i, fluxm_i, fluxp_i, flux_tot_s_i,fluxp_pn_i, \
+      fluxm_pn_i, fluxp_ps_i, fluxm_ps_i, valerr_i, time_i, \
+      pole_n_avg_field_i,pole_s_avg_field_i, brmax_i, brmin_i, \
+      flux_imb_i, ax_dipole_i, eq_dipole_i, mpts_i
+      
+
+def get_lists(args, hist_list, time_type, flux_fac, tfac):
+  time_list=[]
+  mpts_list=[]
+  fluxp_list=[]
+  fluxm_list=[]
+  fluxp_pn_list=[]
+  fluxm_pn_list=[]
+  fluxp_ps_list=[]
+  fluxm_ps_list=[]
+  ax_dipole_list=[]
+  eq_dipole_list=[]
+  brmin_list=[]
+  brmax_list=[]
+  flux_tot_un_list=[]
+  flux_tot_s_list=[]
+  flux_imb_list=[]
+  pole_n_avg_field_list=[]
+  pole_s_avg_field_list=[]
+  valerr_list = [] if args.valrun else None
+  
+  for dire in hist_list:
+    flux_tot_un_i, fluxm_i, fluxp_i, flux_tot_s_i,fluxp_pn_i, \
+      fluxm_pn_i, fluxp_ps_i, fluxm_ps_i, valerr_i, time_i, \
+      pole_n_avg_field_i,pole_s_avg_field_i, brmax_i, brmin_i, \
+      flux_imb_i, ax_dipole_i, eq_dipole_i, mpts_i  = read_file_ind(dire, args, time_type)
+    flux_tot_un_list.append(flux_tot_un_i)
+    fluxm_list.append(fluxm_i)
+    fluxp_list.append(fluxp_i)
+    flux_tot_s_list.append(flux_tot_s_i)
+    fluxp_pn_list.append(fluxp_pn_i)
+    fluxm_pn_list.append(fluxm_pn_i)
+    fluxp_ps_list.append(fluxp_ps_i)
+    fluxm_ps_list.append(fluxm_ps_i)
+    if args.valrun:
+      valerr_list.append(valerr_i)
+    pole_n_avg_field_list.append(pole_n_avg_field_i)
+    pole_s_avg_field_list.append(pole_s_avg_field_i)
+    brmax_list.append(brmax_i)
+    brmin_list.append(brmin_i)
+    flux_imb_list.append(flux_imb_i)
+    ax_dipole_list.append(ax_dipole_i)
+    eq_dipole_list.append(eq_dipole_i)
+    mpts_list.append(mpts_i)
+    time_list.append(time_i)
+    
+
+  if time_type in ['TAI', 'UTC']:
+    args.utstartsecs = max(np.amax(arr) for arr in time_list)
+    time_list = [np.array(temp_time) / 3600 for temp_time in time_list]
+
+  if not args.ignore_time_diff:
+    min_time = min(arr[0] for arr in time_list)
+    time_list = [arr - min_time for arr in time_list]
+
+  # Convert to float64 once to avoid redundant conversions
+  time_tfac = [arr.astype(np.float64) for arr in time_list]
+
+  # Compute total time more efficiently
+  time_range = max(np.amax(arr) for arr in time_list) - min(np.amin(arr) for arr in time_list)
+  total_time = time_range * (3600 if time_type in ['TAI', 'UTC'] else tfac * 3600)
+
+  xmn = np.amin([np.amin(arr) for arr in time_tfac])
+  xmx = np.amax([np.amax(arr) for arr in time_tfac])
+  flux_tot_un_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in flux_tot_un_list]
+  fluxm_FF = [np.abs(np.array(arr, dtype=np.float64)) * flux_fac for arr in fluxm_list]
+  fluxp_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in fluxp_list]
+
+  flux_tot_s_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in flux_tot_s_list]
+  fluxp_pn_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in fluxp_pn_list]
+  fluxm_pn_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in fluxm_pn_list]
+  fluxp_ps_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in fluxp_ps_list]
+  fluxm_ps_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in fluxm_ps_list]
+
+  valerr = np.array(valerr_list, dtype=np.float64) * 1e5 if args.valrun else None
+  
+  return xmn, xmx, total_time, flux_imb_list, time_tfac, mpts_list, \
+    fluxm_FF, fluxp_FF, flux_tot_un_FF, flux_tot_s_FF, \
+    fluxp_pn_FF, fluxm_pn_FF, fluxp_ps_FF, fluxm_ps_FF, \
+    pole_n_avg_field_list,pole_s_avg_field_list, brmax_list, brmin_list, \
+    ax_dipole_list, eq_dipole_list, valerr    
+  
+
+def run(args):
 
   flux_fac=1e-21
 
@@ -317,28 +478,7 @@ def run(args):
       args.summary = False
 
   print("==> Reading history files...")
-  time_list=[]
-  fluxp_list=[]
-  fluxm_list=[]
-  fluxp_pn_list=[]
-  fluxm_pn_list=[]
-  fluxp_ps_list=[]
-  fluxm_ps_list=[]
-  ax_dipole_list=[]
-  eq_dipole_list=[]
-  brmin_list=[]
-  brmax_list=[]
-  mpts_list=[]
-
-  if args.valrun:
-      valerr_list=[]
-
-  flux_tot_un_list=[]
-  flux_tot_s_list=[]
-  flux_imb_list=[]
-  pole_n_avg_field_list=[]
-  pole_s_avg_field_list=[]
-
+  
   ###### PLOTTING ######
 
   fsize = args.fsize
@@ -362,81 +502,6 @@ def run(args):
 
   ######################
 
-  for i,dire in enumerate(hist_list):
-    h_file_name = dire
-    hist_sol_full = pd.read_table(h_file_name,header=0,sep='\\s+')
-
-    samples = args.samples
-    
-    samples_markers = samples if not args.samples_markers else args.samples_markers
-
-
-    number_of_data_points = len(hist_sol_full)
-    
-    #thin out data in hist_sol
-    if samples > 1:
-      indices = np.linspace(0, number_of_data_points-1, samples, endpoint=True, dtype=int)
-      indices = np.unique(indices)
-    else:
-      indices = list(range(number_of_data_points))
-    
-    if samples_markers > 1:
-      indices_markers = np.linspace(0, number_of_data_points-1, samples_markers, endpoint=True, dtype=int)
-      indices_markers = np.unique(indices_markers)
-    else:
-      indices_markers = list(range(number_of_data_points))
-
-    indices_total = np.unique(np.concatenate((indices, indices_markers)))
-    mpts_list.append([np.where(indices_total == marker)[0][0] for marker in indices_markers])
-    
-    hist_sol = hist_sol_full.iloc[indices_total]
-
-    if time_type == 'TAI':
-      args.timeset = True
-      time_tmp = np.array(hist_sol['TAI(sec)'])
-    elif time_type == 'UTC':
-      args.timeset = True
-      time_tmp = np.array(hist_sol['UTC(sec)'])
-    else:
-      args.timeset = False
-      time_tmp = np.array(hist_sol['TIME'])
-    if args.ignore_time_diff:
-      time_tmp = time_tmp - time_tmp[0]
-    time_list.append(time_tmp)
-
-    fluxp_list.append(np.array(hist_sol['FLUX_POSITIVE']))
-    fluxm_list.append(np.array(hist_sol['FLUX_NEGATIVE']))
-  
-    fluxp_pn_list.append(np.array(hist_sol['NPOLE_FLUX_POSITIVE']))
-    fluxm_pn_list.append(np.array(hist_sol['NPOLE_FLUX_NEGATIVE']))
-    area_pn = np.array(hist_sol['NPOLE_AREA'])
-  
-    fluxp_ps_list.append(np.array(hist_sol['SPOLE_FLUX_POSITIVE']))
-    fluxm_ps_list.append(np.array(hist_sol['SPOLE_FLUX_NEGATIVE']))
-    area_ps = np.array(hist_sol['SPOLE_AREA'])
-  
-    ax_dipole_list.append(np.array(hist_sol['AX_DIPOLE']))
-    eq_dipole_list.append(np.array(hist_sol['EQ_DIPOLE']))
-
-    brmin_list.append(np.array(hist_sol['BR_MIN']))
-    brmax_list.append(np.array(hist_sol['BR_MAX']))
-
-    if args.valrun:
-        valerr_list.append(np.array(hist_sol['VALIDATION_ERR_HHabs']))
-
-    #Compute derived quantities:
-    flux_tot_un = np.abs(fluxp_list[i]) + np.abs(fluxm_list[i])
-    flux_tot_un_list.append(flux_tot_un)
-    flux_tot_s = fluxp_list[i] + fluxm_list[i]
-    flux_tot_s_list.append(flux_tot_s)
-    flux_imb = flux_tot_un*0.0
-    flux_imb[flux_tot_un < 1e-15] = 0.0
-    flux_imb[flux_tot_un >= 1e-15] = 100.0*flux_tot_s[flux_tot_un >= 1e-15]/flux_tot_un[flux_tot_un >= 1e-15]
-    flux_imb_list.append(flux_imb)
-    pole_n_avg_field_list.append((fluxp_pn_list[i]+fluxm_pn_list[i])/area_pn)
-    pole_s_avg_field_list.append((fluxp_ps_list[i]+fluxm_ps_list[i])/area_ps)
-
-
   cmap = plt.get_cmap('turbo',LABEL_LEN)
   COLORS = [mpl.colors.rgb2hex(cmap(i)) for i in range(cmap.N)]
   MARKERS = ['o','v','^','<','>','8','s','p','*','h','H','D','d','P','X']
@@ -445,36 +510,11 @@ def run(args):
 #
 # ****** Create needed parameters and lists.
 #  
-
-  if time_type in ['TAI', 'UTC']:
-    args.utstartsecs = max(np.amax(arr) for arr in time_list)
-    time_list = [np.array(temp_time) / 3600 for temp_time in time_list]
-
-  if not args.ignore_time_diff:
-    min_time = min(arr[0] for arr in time_list)
-    time_list = [arr - min_time for arr in time_list]
-
-  # Convert to float64 once to avoid redundant conversions
-  time_tfac = [arr.astype(np.float64) for arr in time_list]
-
-  # Compute total time more efficiently
-  time_range = max(np.amax(arr) for arr in time_list) - min(np.amin(arr) for arr in time_list)
-  total_time = time_range * (3600 if time_type in ['TAI', 'UTC'] else tfac * 3600)
-
-  xmn = np.amin([np.amin(arr) for arr in time_tfac])
-  xmx = np.amax([np.amax(arr) for arr in time_tfac])
-  flux_tot_un_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in flux_tot_un_list]
-  fluxm_FF = [np.abs(np.array(arr, dtype=np.float64)) * flux_fac for arr in fluxm_list]
-  fluxp_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in fluxp_list]
-
-  flux_tot_s_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in flux_tot_s_list]
-  fluxp_pn_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in fluxp_pn_list]
-  fluxm_pn_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in fluxm_pn_list]
-  fluxp_ps_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in fluxp_ps_list]
-  fluxm_ps_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in fluxm_ps_list]
-
-  if args.valrun:
-      valerr=np.array(valerr_list,dtype=np.float64)*(1e5)
+  xmn, xmx, total_time, flux_imb_list, time_tfac, mpts_list, \
+    fluxm_FF, fluxp_FF, flux_tot_un_FF, flux_tot_s_FF, \
+    fluxp_pn_FF, fluxm_pn_FF, fluxp_ps_FF, fluxm_ps_FF, \
+    pole_n_avg_field_list,pole_s_avg_field_list, brmax_list, brmin_list, \
+    ax_dipole_list, eq_dipole_list, valerr = get_lists(args, hist_list, time_type, flux_fac, tfac)
 
 #
 # ****** Total flux imbalance.
@@ -701,7 +741,7 @@ def run(args):
 
     fig.tight_layout()  
     fig.savefig('history_'+args.runtag+'_val.png', bbox_inches="tight", dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
-  
+    plt.close('all')
 #
 # ****** Helper Functions
 #
@@ -970,7 +1010,7 @@ def date_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime):
       cadence = int(args.xcadence)
     else:
       tempArray = np.array(initLocs_uttime)
-      cadence = int(np.average(np.diff(tempArray))/2678400)
+      cadence = max(1, int(np.average(np.diff(tempArray))/2678400))
       if cadence == 0:
         cadence = 1 
     t = getTimeObj(args.tai,xmn_uttime)
@@ -1000,7 +1040,7 @@ def date_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime):
       cadence = int(args.xcadence)
     else:
       tempArray = np.array(initLocs_uttime)
-      cadence = int(np.average(np.diff(tempArray))/31556952)
+      cadence = max(1, int(np.average(np.diff(tempArray))/31556952))
       if cadence == 0:
         cadence = 1 
     t = getTimeObj(args.tai,xmn_uttime)
@@ -1021,7 +1061,7 @@ def date_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime):
       cadence = xcUnitsSec*int(args.xcadence)
     else:
       tempArray = np.array(initLocs_uttime)
-      cadence = int(np.average(np.diff(tempArray))/xcUnitsSec)*xcUnitsSec
+      cadence = max(1, int(np.average(np.diff(tempArray))/xcUnitsSec))*xcUnitsSec
     if (args.utstartxtick):
       currDate = getSec(args.tai,args.utstartxtick,'%Y-%m-%dT%H:%M:%S')
     else:
@@ -1069,7 +1109,7 @@ def since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,secTimeUn
     cadence = xcUnitsSec*int(args.xcadence)
   else:
     tempArray = np.array(initLocs_uttime)
-    cadence = int(np.average(np.diff(tempArray))/xcUnitsSec)*xcUnitsSec
+    cadence = max(1, int(np.average(np.diff(tempArray))/xcUnitsSec))*xcUnitsSec
   currDate = xmn_uttime
   locs.append(currDate)
   skip = int(cadence)
