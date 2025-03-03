@@ -7,10 +7,11 @@
 --------------------------------  
   
 ## OVERVIEW ##
-<img align="right" src="hipft_example.gif" alt="HipFT Example"/>
-HipFT is a Fortran 2023 code that is used as the computational core of the upcoming Open-source Flux Transport (OFT) software suite.  OFT is a complete system for generating full-Sun magnetograms through acquiring & processing observational data, generating realistic convective flows, and running the flux transport model.  
+<img align="right" src="hipft_example.gif" alt="HipFT Example">
+
+HipFT is a flux transport model written in modern Fortran that is used as the computational core of the [Open-source Flux Transport (OFT)](https://github.com/predsci/oft) software suite.  OFT is a complete system for generating full-Sun magnetograms through acquiring & processing observational data, generating realistic convective flows, and running the flux transport model.  
   
-HipFT implements advection, diffusion, and data assimilation on the solar surface on a logically rectangular nonuniform spherical grid.  It is parallelized for use with multi-core CPUs and GPUs using a combination of Fortran's standard parallel `do concurrent` (DC), OpenMP Target data directives, and MPI.  It uses high-order numerical methods such as SSPRK(4,3), Strang splitting, WENO3, and the super time-stepping scheme RKG2.  The code is designed to be modular, incorporating various differential rotation, meridional flow, super granular convective flow, and data assimilation models.  It can also compute multiple realizations in a single run spanning multiple choices of parameters.  
+HipFT implements advection, diffusion, and data assimilation on the solar surface on a logically rectangular nonuniform spherical grid.  It is parallelized for use with multi-core CPUs and GPUs using a combination of Fortran's standard parallel `do concurrent` (DC), OpenMP Target data directives, and MPI.  It uses high-order numerical methods such as SSPRK(4,3), Strang splitting, WENO3-CS(h), and the super time-stepping scheme RKG2.  The code is designed to be modular, incorporating various differential rotation, meridional flow, super granular convective flow, and data assimilation models.  It can also compute multiple realizations in a single run spanning multiple choices of parameters.  
   
 HipFT can be used with MacOS, Linux, and Windows (through WSL) on CPUs and GPUs (NVIDIA or Intel).  
   
