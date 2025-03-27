@@ -8,8 +8,9 @@ import sys
 from pathlib import Path
 import concurrent.futures
 import glob
+import subprocess
 
-# Version 2.4.3
+# Version 2.5.0
 
 def handle_int(signum, frame):
     print('You pressed Ctrl+C! Stopping!')
@@ -265,13 +266,16 @@ def ffmpefMovie(args,odir,name):
 def extractANDplot(TITLE, args, file, r, idx):
   tmp_file = f'tmp_file{idx}.h5'
   os.system(f'hipft_extract_realization.py {file} -r {r} -o {tmp_file}')
-  fileOut = os.path.basename(file).replace('.h5', '') + f'_r{r:06d}.png'
-  plot2d(TITLE, args, tmp_file, fileOut)
+  r_annotation = f'r{r:06d}'
+  fileOut = os.path.basename(file).replace('.h5', '') + f'_{r_annotation}.png'
+  plot2d(TITLE, args, tmp_file, fileOut, r_annotation)
 
 
-def plot2d(TITLE,args,file,fileOut):
-  os.system('plot2d -title "'+ TITLE +'" -cmin '+ str(args.cmin) +' -cmax '+ str(args.cmax) +' -dpi ' + str(args.dpi) \
-    +' -tp -ll -finegrid -unit_label '+ args.label + " "+ file +' -o "'+ str(fileOut) +'"')
+def plot2d(TITLE, args, file, fileOut, r_annotation):
+  cmd = f'plot2d -title "{TITLE}" -cmin {args.cmin} -cmax {args.cmax} -dpi {args.dpi} ' \
+      f'-tp -ll -finegrid -unit_label "{args.label}" {file} -o "{fileOut}" -top_right_title "{r_annotation}"'
+
+  os.system(cmd)
 
 
 def main():

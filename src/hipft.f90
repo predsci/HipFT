@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.19.0'
-      character(*), parameter :: cdate='02/08/2025'
+      character(*), parameter :: cvers='1.19.1'
+      character(*), parameter :: cdate='02/27/2025'
 !
 end module
 !#######################################################################
@@ -541,7 +541,7 @@ module input_parameters
       logical        :: output_flows = .false.
       character(512) :: output_flows_root_filename = 'hipft_flow'
       character(512) :: output_flows_directory     = 'output_flows'
-      integer        :: output_map_idx_cadence = 0
+      integer(8)     :: output_map_idx_cadence = 0
       real(r_typ)    :: output_map_time_cadence = zero
       logical        :: output_map_2d = .true.
       real(r_typ)    :: output_history_time_cadence = zero
@@ -2629,7 +2629,7 @@ subroutine output_histories
 !-----------------------------------------------------------------------
 !
       integer :: ierr, i
-      integer*8 :: niters
+      integer(8) :: niters
       character(*), parameter :: FMT='(i10,a,5(1pe23.15e3,a),i15,a,i15)'
       character(*), parameter :: FMT2='(i10,a,15(1pe23.15e3,a))'
 !
@@ -2724,7 +2724,7 @@ subroutine output_map
 !-----------------------------------------------------------------------
 !
       if (output_map_idx_cadence .gt. 0) then
-        if (MODULO(ntime,output_map_idx_cadence).eq.0) then
+        if (MOD(ntime,output_map_idx_cadence) .eq. 0) then
           output_current_map = .true.
         end if
       end if
@@ -4825,9 +4825,9 @@ function wtime ()
 !
 !-----------------------------------------------------------------------
 !
-      integer*8 :: clock_max
-      integer*8 :: clock_rate
-      integer*8 :: clock_reading
+      integer(8) :: clock_max
+      integer(8) :: clock_rate
+      integer(8) :: clock_reading
 !
       real(r_typ) :: wtime
 !
@@ -4857,8 +4857,8 @@ subroutine set_periodic_bc_1d (a,n1)
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ), dimension(n1) :: a
       integer :: n1
+      real(r_typ), dimension(n1) :: a
 !
 !-----------------------------------------------------------------------
 !
@@ -4884,8 +4884,8 @@ subroutine set_periodic_bc_2d (a,n1,n2)
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ), dimension(n1,n2) :: a
       integer :: n1,n2,j
+      real(r_typ), dimension(n1,n2) :: a
 !
 !-----------------------------------------------------------------------
 !
@@ -4913,8 +4913,8 @@ subroutine set_periodic_bc_3d (a,n1,n2,n3)
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ), INTENT(INOUT), dimension(n1,n2,n3) :: a
       integer, INTENT(IN) :: n1,n2,n3
+      real(r_typ), INTENT(INOUT), dimension(n1,n2,n3) :: a
       integer :: i,j
 !
 !-----------------------------------------------------------------------
@@ -5185,7 +5185,7 @@ subroutine diffusion_step_sts_cd (dtime_local)
 !-----------------------------------------------------------------------
 !
       integer :: i,j,el
-      integer*8 :: k
+      integer(8) :: k
       real(r_typ), INTENT(IN) :: dtime_local
 !
 !-----------------------------------------------------------------------
@@ -5274,7 +5274,7 @@ subroutine load_sts_rkl2 (dtime_local)
 !-----------------------------------------------------------------------
 !
       real(r_typ) :: sts_s_real,bj_bjm2,bj_bjm1,w
-      integer*8 :: j
+      integer(8) :: j
       logical, save :: first = .true.
 !
 !-----------------------------------------------------------------------
@@ -5295,7 +5295,7 @@ subroutine load_sts_rkl2 (dtime_local)
 !
 ! ****** Make sure s is odd.
 !
-      if (MOD(sts_s,2).eq.0) then
+      if (MOD(sts_s,2_8).eq.0) then
         sts_s = sts_s + 1
       end if
 !
@@ -5391,7 +5391,7 @@ subroutine load_sts_rkg2 (dtime_local)
 !-----------------------------------------------------------------------
 !
       real(r_typ) :: sts_s_real,bj_bjm2,bj_bjm1,w
-      integer*8 :: j
+      integer(8) :: j
       logical, save :: first = .true.
 !
 !-----------------------------------------------------------------------
@@ -5412,7 +5412,7 @@ subroutine load_sts_rkg2 (dtime_local)
 !
 ! ****** Make sure s is odd.
 !
-      if (MOD(sts_s,2).eq.0) then
+      if (MOD(sts_s,2_8).eq.0) then
         sts_s = sts_s + 1
       end if
 !
@@ -6371,10 +6371,10 @@ subroutine write_2d_file (fname,ln1,ln2,f,s1,s2,ierr)
 !-----------------------------------------------------------------------
 !
       character(*) :: fname
+      integer :: ln1,ln2
       real(r_typ), dimension(ln1,ln2) :: f
       real(r_typ), dimension(ln1) :: s1
       real(r_typ), dimension(ln2) :: s2
-      integer :: ln1,ln2
       real(r_typ) :: t1
 !
 !-----------------------------------------------------------------------
@@ -6442,11 +6442,11 @@ subroutine write_3d_file (fname,ln1,ln2,ln3,f,s1,s2,s3,ierr)
 !-----------------------------------------------------------------------
 !
       character(*) :: fname
+      integer :: ln1,ln2,ln3
       real(r_typ), dimension(ln1,ln2,ln3) :: f
       real(r_typ), dimension(ln1) :: s1
       real(r_typ), dimension(ln2) :: s2
       real(r_typ), dimension(ln3) :: s3
-      integer :: ln1,ln2,ln3
       type(ds) :: s
       integer :: ierr
 !
@@ -7376,7 +7376,7 @@ subroutine diffusion_step_fe_cd (dtime_local)
 !-----------------------------------------------------------------------
 !
       integer :: j,k,el
-      integer*8 :: i
+      integer(8) :: i
       real(r_typ) :: dtime_euler_used
 !
 !-----------------------------------------------------------------------
@@ -9427,6 +9427,9 @@ end subroutine generate_rfe
 ! 02/08/2025, MS, Version 1.19.0:
 !   - Removed logical input parameter INITIAL_MAP_IS_3D.
 !     Instead, the code auto-detects if the file is 2D or 3D.
+!
+! 03/27/2025, RC, Version 1.19.1:
+!   - Small modifications to conform with modern Fortran standards.
 !
 !-----------------------------------------------------------------------
 !

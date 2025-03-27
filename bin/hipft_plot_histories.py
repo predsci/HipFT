@@ -12,7 +12,7 @@ from pathlib import Path
 from packaging import version
 import matplotlib
 
-# Version 1.16.0
+# Version 1.17.0
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFT History Plots.')
@@ -218,6 +218,13 @@ def argParsing():
   parser.add_argument('-ignore_time_diff',
     help='Assume all history files start at the same time and/or date.',
     dest='ignore_time_diff',
+    action='store_true',
+    default=False,
+    required=False)
+
+  parser.add_argument('-no_r_annotation',
+    help='Do not annotate the realization number on the plot.',
+    dest='no_r_annotation',
     action='store_true',
     default=False,
     required=False)
@@ -432,22 +439,17 @@ def run(args):
 
   auto_increment_r = 1
 
-  if (arg_dict['histfiles']):
-    for file in temphist_list:
-      r = auto_increment_r
-      rList.append(r)
-      auto_increment_r += 1
-      hist_list.append(file)
-  else:
-    for file in temphist_list:
-      try:
-        r = int((file.split('/')[-1]).replace('hipft_history_sol_r', '').replace('.out', ''))
-      except ValueError:
+  for file in temphist_list:
+    file_name = str(file).split('/')[-1]
+    try:
+        r = int(file_name.replace('hipft_history_sol_r', '').replace('.out', ''))
+    except ValueError:
         r = auto_increment_r
         auto_increment_r += 1    
-      if str(r) in rexclude_list:
+
+    if str(r) in rexclude_list:
         continue
-      elif str(r) in rlist_list or 'all' in rlist_list:
+    elif str(r) in rlist_list or 'all' in rlist_list:
         hist_list.append(file)
         rList.append(r)
 
@@ -516,6 +518,9 @@ def run(args):
     pole_n_avg_field_list,pole_s_avg_field_list, brmax_list, brmin_list, \
     ax_dipole_list, eq_dipole_list, valerr = get_lists(args, hist_list, time_type, flux_fac, tfac)
 
+  if not args.no_r_annotation and len(rList) == 1:
+    r_annotate = f"r{str(int(rList[0])).zfill(6)}"
+
 #
 # ****** Total flux imbalance.
 #
@@ -531,6 +536,9 @@ def run(args):
   ymin = -ymax 
 
   plt.title('Relative Flux Imbalance', {'fontsize': fsize, 'color': tc})
+  print(rList)
+  if not args.no_r_annotation and len(rList) == 1:
+    plt.annotate(r_annotate, xy=(0.89, 1.01), xycoords='axes fraction', fontsize=fsize, color=tc, fontweight='normal')
   plt.ylabel('%', {'fontsize': fsize, 'color': tc})
   init_locs = plt.xticks()[0]
   locs, labels, utstartSecs = get_xticks(args,xmn,xmx,init_locs,total_time)
@@ -553,6 +561,8 @@ def run(args):
   ymin=0.0#np.amin([np.amin(fluxm_FF),np.amin(fluxp_FF)])
   ymax = max(np.amax(np.abs(arr)) for array in (fluxm_FF, fluxp_FF) for arr in array)
   plt.title('Total Positive and Negative Flux', {'fontsize': fsize, 'color': tc})
+  if not args.no_r_annotation and len(rList) == 1:
+    plt.annotate(r_annotate, xy=(0.89, 1.01), xycoords='axes fraction', fontsize=fsize, color=tc, fontweight='normal')
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})  
   ax.add_artist(legend1)  
 
@@ -574,6 +584,8 @@ def run(args):
     normalMode(plt,ax,fig,args,flux_tot_un_FF,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts_list)
   
   plt.title('Total Unsigned Flux', {'fontsize': fsize, 'color': tc})
+  if not args.no_r_annotation and len(rList) == 1:
+    plt.annotate(r_annotate, xy=(0.89, 1.01), xycoords='axes fraction', fontsize=fsize, color=tc, fontweight='normal')
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})
 
   ymin=0.0 #np.amin(flux_tot_un_FF)
@@ -594,6 +606,8 @@ def run(args):
     normalMode(plt,ax,fig,args,flux_tot_s_FF,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'b-',mpts_list)
 
   plt.title('Total Signed Flux', {'fontsize': fsize, 'color': tc})
+  if not args.no_r_annotation and len(rList) == 1:
+    plt.annotate(r_annotate, xy=(0.89, 1.01), xycoords='axes fraction', fontsize=fsize, color=tc, fontweight='normal')
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})
 
   #ymin=np.amin(flux_tot_s_FF)
@@ -621,6 +635,8 @@ def run(args):
 
   plt.ylabel('$10^{21}$ Mx', {'fontsize': fsize, 'color': tc})
   plt.title('Polar Flux (within 30 degrees of poles)', {'fontsize': fsize, 'color': tc})
+  if not args.no_r_annotation and len(rList) == 1:
+    plt.annotate(r_annotate, xy=(0.89, 1.01), xycoords='axes fraction', fontsize=fsize, color=tc, fontweight='normal')
 
   ax.add_artist(legend1)  
   makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,ymin,ymax,fsize)
@@ -644,6 +660,8 @@ def run(args):
 
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
   plt.title('Polar Average Field (within 30 degrees of poles)', {'fontsize': fsize, 'color': tc})
+  if not args.no_r_annotation and len(rList) == 1:
+    plt.annotate(r_annotate, xy=(0.89, 1.01), xycoords='axes fraction', fontsize=fsize, color=tc, fontweight='normal')
   
   ax.add_artist(legend1)  
   makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,ymin,ymax,fsize)
@@ -668,6 +686,8 @@ def run(args):
   
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
   plt.title('Min and Max Br', {'fontsize': fsize, 'color': tc})
+  if not args.no_r_annotation and len(rList) == 1:
+    plt.annotate(r_annotate, xy=(0.89, 1.01), xycoords='axes fraction', fontsize=fsize, color=tc, fontweight='normal')
 
   ax.add_artist(legend1)  
   makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,ymin,ymax,fsize)
@@ -689,6 +709,8 @@ def run(args):
     normalMode(plt,ax,fig,args,ax_dipole_list,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts_list)
 
   plt.title('Axial Dipole Strength', {'fontsize': fsize, 'color': tc})
+  if not args.no_r_annotation and len(rList) == 1:
+    plt.annotate(r_annotate, xy=(0.89, 1.01), xycoords='axes fraction', fontsize=fsize, color=tc, fontweight='normal')
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
 
   #ymin=np.amin(ax_dipole_list)
@@ -715,6 +737,8 @@ def run(args):
   ymin = np.amin([np.amin(arr) for arr in eq_dipole_list])
   ymax = np.amax([np.amax(arr) for arr in eq_dipole_list])
   plt.title('Equatorial Dipole Strength', {'fontsize': fsize, 'color': tc})
+  if not args.no_r_annotation and len(rList) == 1:
+    plt.annotate(r_annotate, xy=(0.89, 1.01), xycoords='axes fraction', fontsize=fsize, color=tc, fontweight='normal')
   plt.ylabel('Gauss', {'fontsize': fsize, 'color': tc})
 
   makeAxes(args,locs,labels,tc,ax,fig,plt,utstartSecs,xmn,xmx,ymin,ymax,fsize)
@@ -734,6 +758,8 @@ def run(args):
       normalMode(plt,ax,fig,args,valerr,time_tfac,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,'k-',mpts_list)
 
     plt.title('Validation Error', {'fontsize': fsize, 'color': tc})
+    if not args.no_r_annotation and len(rList) == 1:
+      plt.annotate(r_annotate, xy=(0.89, 1.01), xycoords='axes fraction', fontsize=fsize, color=tc, fontweight='normal')
     xaxis_TicksLabel(args,locs,labels,tc,ax,utstartSecs)
     plt.ylabel('HHabs ($10^{-5}$)', {'fontsize': fsize, 'color': tc})
     ax.tick_params(axis='y',labelsize=fsize)
