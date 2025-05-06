@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.19.1'
-      character(*), parameter :: cdate='02/27/2025'
+      character(*), parameter :: cvers='1.19.2'
+      character(*), parameter :: cdate='05/06/2025'
 !
 end module
 !#######################################################################
@@ -6127,9 +6127,9 @@ subroutine check_2d_or_3d (fname,is_2d,ierr)
 ! ****** Check if the dataset is 2D or 3D.
 !
       if (s_ndim == 2) then
-        is_2d = .true.  
+        is_2d = .true.
       else if (s_ndim == 3) then
-        is_2d = .false.  
+        is_2d = .false.
       else
         write (*,*) 'Error: Unsupported number of dimensions.'
         call h5Dclose_f (dset_id,ierr)
@@ -8441,17 +8441,17 @@ subroutine read_input_file
       read (8,hipft_input_parameters)
       close (8)
 !
-! ****** Write the NAMELIST parameter values to file.
+! ****** Check & process input parameters.
+!
+      call process_input_parameters
+!
+! ****** Write the NAMELIST parameter values as used to file.
 !
       if (iamp0) then
         call ffopen (8,'hipft_run_parameters_used.out','rw',ierr)
         write (8,hipft_input_parameters)
         close (8)
       end if
-!
-! ****** Check & process input parameters.
-!
-      call process_input_parameters
 !
 end subroutine
 !#######################################################################
@@ -9430,6 +9430,10 @@ end subroutine generate_rfe
 !
 ! 03/27/2025, RC, Version 1.19.1:
 !   - Small modifications to conform with modern Fortran standards.
+!
+! 05/06/2025, RC, Version 1.19.2:
+!   - Namelist is now written out after processing input so it reflects
+!     the "actual" parameters used in the run.
 !
 !-----------------------------------------------------------------------
 !
