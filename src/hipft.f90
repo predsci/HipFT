@@ -3189,7 +3189,7 @@ subroutine analysis_step
 !
 !$omp target teams distribute parallel do collapse(2) reduction(+:sumfval2,h_valerr_tmp) &
 !$omp&                                                reduction(max:h_maxbr_tmp) &
-!$omp&                                                reduction(min:h_minbr_tmp,h_minabsbr_tmp)
+!$omp&                                                reduction(min:h_minbr_tmp,h_minabsbr_tmp) private(fv,fv2)
        do j=1,npm-2
          do i=1,ntm
           h_minbr_tmp = min(f(i,j,k),h_minbr_tmp)
@@ -3231,10 +3231,12 @@ subroutine analysis_step
         eqd2 = zero
         h_ax_dipole_tmp = zero
 !
-        do concurrent (i=1:npm-1,j=1:ntm) reduce(+:h_fluxp_tmp,h_fluxm_tmp,h_fluxp_pn_tmp)&
-                                          reduce(+:h_fluxm_pn_tmp,h_area_pn_tmp)          &
-                                          reduce(+:h_fluxp_ps_tmp,h_fluxm_ps_tmp)         &
-                                          reduce(+:h_area_ps_tmp,eqd1,eqd2,h_ax_dipole_tmp)
+!$omp target teams distribute parallel do collapse(2) reduction(+:h_fluxp_tmp,h_fluxm_tmp,h_fluxp_pn_tmp) &
+!$omp&                                                reduction(+:h_fluxm_pn_tmp,h_area_pn_tmp) &
+!$omp&                                                reduction(+:h_fluxp_ps_tmp,h_fluxm_ps_tmp) &
+!$omp&                                                reduction(+:h_area_ps_tmp,eqd1,eqd2,h_ax_dipole_tmp)
+        do i=1,npm-1
+          do j=1,ntm
           if (j.eq.1) then
             tav=half*(t(1)+t(2))
             sn_t = sin(tav)
@@ -3301,6 +3303,7 @@ subroutine analysis_step
 !
           h_ax_dipole_tmp = h_ax_dipole_tmp + f(j,i,k)*cs_t*da_t*da_p
 !
+          enddo
         enddo
 !
 ! ****** Set fluxes to be in units of Mx and
@@ -5021,7 +5024,7 @@ subroutine get_dtime_diffusion_euler (dtime_exp)
 !
       max_eig = 0.
 !
-!$omp target teams distribute parallel do collapse(3) reduction(max:max_eig)
+!$omp target teams distribute parallel do collapse(3) reduction(max:max_eig) private(gersh_rad)
        do i=1,nr
          do k=2,npm-1
            do j=2,ntm-1
@@ -5123,7 +5126,7 @@ subroutine get_dtime_diffusion_ptl (dtime_ptl)
 !
       if (axabsmax .gt. zero) then
 !
-!$omp target teams distribute parallel do collapse(3) reduction(min:dtime_ptl)
+!$omp target teams distribute parallel do collapse(3) reduction(min:dtime_ptl) private(deltau,deltaf)
          do i=1,nr
            do k=2,npm-1
              do j=2,ntm-1
@@ -7336,7 +7339,7 @@ subroutine get_flow_dtmax (dtmaxflow)
 !
       dtmax = huge(one)
 !
-!$omp target teams distribute parallel do collapse(3) reduction(min:dtmax)
+!$omp target teams distribute parallel do collapse(3) reduction(min:dtmax) private(kdotv,deltat)
        do i=1,nr
          do k=2,npm-1
            do j=2,ntm-1
@@ -8002,11 +8005,11 @@ subroutine diffusion_operator_cd (x,y)
 !$omp parallel do reduction(+:fn,fs)
         do k=2,npm-1
           fn = fn + (diffusion_coef(1    ,k,i)        &
-                  +  diffusion_coef(2    ,k,i))       &
-                 * (x(2    ,k,i) - x(1  ,k,i))*dp(k)
+                   + diffusion_coef(2    ,k,i))       &
+                  * (x(2  ,k,i) - x(1    ,k,i))*dp(k)
           fs = fs + (diffusion_coef(nt-1 ,k,i)        &
-                  +  diffusion_coef(nt   ,k,i))       &
-                 * (x(ntm-1,k,i) - x(ntm,k,i))*dp(k)
+                   + diffusion_coef(nt   ,k,i))       &
+                  * (x(ntm,k,i) - x(ntm-1,k,i))*dp(k)
         enddo
 !$omp parallel do
         do k=1,npm
@@ -8735,7 +8738,9 @@ subroutine get_flux (map,flux_p,flux_m)
       flux_p = zero
       flux_m = zero
 !
-      do concurrent (k=1:npm-1,j=1:ntm) reduce(+:flux_p,flux_m)
+!$omp target teams distribute parallel do collapse(2) reduction(+:flux_p,flux_m)
+      do k=1,npm-1
+        do j=1,ntm
 !
         if (j.eq.1) then
           tav = half*(t(1) + t(2))
@@ -8767,6 +8772,7 @@ subroutine get_flux (map,flux_p,flux_m)
           flux_m = flux_m + fv
         end if
 !
+        enddo
       enddo
 !
 ! ****** Report flux if in verbose mode.
