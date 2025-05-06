@@ -13,7 +13,7 @@ def signal_handler(signal, frame):
 
 signal.signal(signal.SIGINT, signal_handler)
 
-# Version 2.0.1
+# Version 2.0.2
 
 def argParsing():
   parser = argparse.ArgumentParser(description='hipft_add_dates_to_map_output_list:  This tool converts a hipft map output text file to one with dates based on a chosen start datetime (YYYY-MM-DDTHH:MM:SS).  It outputs both a file using UTC and one using TAI.')
@@ -77,10 +77,10 @@ def run(args):
             FirstLine=False
         else:
             outfile_utc.write(line[:-1] + ' '+\
-                          "{:.3f}".format(24.0*3600.0*out_times_utc[i].to_value('jd'))+' ' +\
+                          "{:.3f}".format(out_times_utc[i].unix)+' ' +\
                           str(out_times_utc[i])+'\n')
             outfile_tai.write(line[:-1] + ' '+\
-                          "{:.3f}".format(24.0*3600.0*out_times_tai[i].to_value('jd'))+' ' +\
+                          "{:.3f}".format(out_times_tai[i].unix_tai)+' ' +\
                           str(out_times_tai[i])+'\n')
             i = i + 1
 

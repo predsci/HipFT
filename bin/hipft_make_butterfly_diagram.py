@@ -5,7 +5,7 @@ import numpy as np
 from astropy.time import Time
 import os
 
-# Version 1.1.0
+# Version 1.2.1
 
 def argParsing():
   parser = argparse.ArgumentParser(description='hipft_make_butterfly_diagram:  This tool makes the data for a butterfly diagram by averaging each hipft map along longitude, and then taking a running average of the results over the files.  The result is a single 2D file where each column is the running average of logitudinal averages.  By specifying a UT start time, the x-axis scales is set correctly for easy plotting.')
@@ -30,7 +30,7 @@ def argParsing():
 #   Could grep for output_map_root_filename in hipft.in, and use default otherwise.
 
   parser.add_argument('-utstart',
-    help='Start Date in UT: YYYY-MM-DDTHH:MM:SS',
+    help='Start Date in UT: YYYY-MM-DDTHH:MM:SS if maplist does not contain utc or tai seconds',
     dest='utstart',
     default='0000-00-00T00:00:00',
     required=False)
@@ -93,7 +93,8 @@ def argParsing():
   parser.add_argument('-al',
     help='Time length to average over in hours.',
     dest='al',
-    default=0,
+    default=0.0,
+    type=float,
     required=False)
 
   parser.add_argument('-c',
@@ -103,13 +104,21 @@ def argParsing():
     required=False)
 
   parser.add_argument('-tai',
-    help='Use tai which ignores leap seconds.',
+    help='Use tai which ignores leap seconds when utstart specified.',
     dest='tai',
     action='store_true',
     default=False,
     required=False)
 
   return parser.parse_args()
+
+def skip_keep_ends(data, skip):
+    if len(data) <= 2:
+        return data  
+    result = data[::skip]  
+    if not np.array_equal(result[-1], data[-1]):
+        result.append(data[-1])
+    return result
 
 def run(args):
 
@@ -135,58 +144,63 @@ def run(args):
 
   ######################
 
-  i = 0
   time = []
-  count = 0
+  hasSecs = False
   with open(args.mapfile, 'r') as infile:
     FirstLine=True
     for line in infile:
         if FirstLine:
+            if "(sec)" in line:
+               hasSecs = True
             FirstLine=False
         else:
-            time.append(int(float(line.split()[1]))*3600*tfac)
-            count = count + 1
+            if hasSecs:
+              time.append(float(line.split()[3]))
+            else:
+              time.append(float(line.split()[1])*3600*tfac)
+
   time = np.array(time)
+  count = len(time)
 
   if (args.tf):
     time = time[int(args.t0)-1:int(args.tf)]
   else:
     time = time[int(args.t0)-1:]
-
-
-  skip = int(args.cadence)+1
-  time = time[::skip]
-
+  
+  if not hasSecs:
+    time -= time[0]
   if (args.tf is None):
-    args.tf = count
-
+      args.tf = count
   iRange = list(range(int(args.t0),int(args.tf)+1))
- 
+
   #thin out range
-  iRange = iRange[::skip]
+  skip = int(args.cadence)+1
+  time = skip_keep_ends(time, skip)
+  iRange = skip_keep_ends(iRange, skip)
   
   liRange=len(iRange)
 
   firstPass = True
+  i = 0
 
   for idx in iRange:
     filename=args.outpath+"/"+args.bfile+"_idx"+"{:06d}".format(idx)+".h5"
     # Read the data:
     if bool(args.dim3):
       if (args.sall):
-        xvec, yvec, zvec, data = ps.rdhdf_3d(filename)
+        _, yvec, zvec, data = ps.rdhdf_3d(filename)
         dim3 = len(zvec)
         if firstPass:
-          new_data=np.zeros((dim3,len(yvec), len(range(int(args.t0),int(args.tf)+1))))
+          new_data=np.zeros((dim3,len(yvec), liRange))
           firstPass = False
         ave_data = np.average(data, axis=2)
         new_data[:,:,i] = ave_data
         i+=1
       elif (args.slices):
-        xvec, yvec, zvec, data_in = ps.rdhdf_3d(filename)
+        _, yvec, zvec, data_in = ps.rdhdf_3d(filename)
         dim3 = len(args.slices)
         if firstPass:
-          new_data=np.zeros((dim3,len(yvec), len(range(int(args.t0),int(args.tf)+1))))
+          new_data=np.zeros((dim3,len(yvec), liRange))
           firstPass = False
         j = 0
         for islice in args.slices:
@@ -196,28 +210,31 @@ def run(args):
           j+=1
         i+=1
       else:
-        xvec, yvec, zvec, data_in = ps.rdhdf_3d(filename)
+        _, yvec, zvec, data_in = ps.rdhdf_3d(filename)
         if firstPass:
-          new_data=np.zeros((len(yvec), len(range(int(args.t0),int(args.tf)+1))))
+          new_data=np.zeros((len(yvec), liRange))
           firstPass = False
         data = np.squeeze(data_in[int(args.slice)-1,:,:])
         ave_data = np.average(data, axis=1)
         new_data[:,i] = ave_data
         i+=1
     else:
-      xvec, yvec, data = ps.rdhdf_2d(filename)
+      _, yvec, data = ps.rdhdf_2d(filename)
       if firstPass:
-        new_data=np.zeros((len(yvec), len(range(int(args.t0),int(args.tf)+1))))
+        new_data=np.zeros((len(yvec), liRange))
         firstPass = False
       ave_data = np.average(data, axis=1)
       new_data[:,i] = ave_data
       i+=1
 
-  if args.utstart == "0000-00-00T00:00:00":
-    sDateSec = 0
+  if not hasSecs:
+    if args.utstart == "0000-00-00T00:00:00":
+      sDateSec = 0
+    else:
+      sDateSec = getSec(args.tai,args.utstart,'%Y-%m-%dT%H:%M:%S')
+    uttime = time+sDateSec
   else:
-    sDateSec = getSec(args.tai,args.utstart,'%Y-%m-%dT%H:%M:%S')
-  uttime = time+sDateSec
+     uttime = time
 
   if (args.sall):
     writeOut3d(args,liRange,time,zvec,new_data,uttime,yvec,dim3)

@@ -15,7 +15,7 @@ import psipals
 import psimath
 import multiprocessing as mp
 
-# Version 1.3.0
+# Version 1.5.0
 
 def signal_handler(signal, frame):
   print('You pressed Ctrl+C! Stopping!')
@@ -58,7 +58,7 @@ def argParsing():
   parser.add_argument('-unit_label',
     help='Label for colorbar (units)',
     dest='unit_label',
-    default='Guass',
+    default='Gauss',
     required=False)
 
   parser.add_argument('-unit_fac',
@@ -206,6 +206,11 @@ def argParsing():
     help='Ignore the UT time data',
     dest='ignore_data_uttime',
     required=False)
+  
+  parser.add_argument('-utstart',
+    help='if ignore_data_uttime can set new Start Date in UT: YYYY-MM-DDTHH:MM:SS',
+    dest='utstart',
+    required=False)
     
   parser.add_argument('-utstartxtick',
     help='UT date of first xtick: YYYY-MM-DDTHH:MM:SS',
@@ -232,6 +237,7 @@ def argParsing():
   parser.add_argument('-xcadence',
     help='Cadence of xc_units for xaxis tick marks (default is matplotlib auto-ticks cadence).',
     dest='xcadence',
+    type=float,
     required=False)
 
   parser.add_argument('-xcadence_units',
@@ -369,15 +375,24 @@ def run(args):
 def process_file(args, islice, oFile, xvec, yvec, data_in, zvec_i):
   oFileNew = oFile.replace('.png','_r'+str(int(zvec_i)).zfill(6)+'.png')
   data = np.squeeze(data_in[islice,:,:])
+  args.title = 'r'+str(int(zvec_i)).zfill(6)
   plot(args, xvec, yvec, data, oFileNew)
 
+
+def skip_keep_ends(data, skip):
+    if len(data) <= 2:
+        return data  
+    result = data[::skip]  
+    if not np.array_equal(result[-1], data[-1]):
+        result.append(data[-1])
+    return result
 
 def plot(args, xvec, yvec, data, oFile):
 
   #thin out data
   skip = int(args.cadence)+1
-  xvec = xvec[::skip]
-  data = data[:,::skip]
+  xvec = skip_keep_ends(xvec, skip)
+  data = skip_keep_ends(data, skip)
 
   if (len(xvec) == 0):
     xvec = np.array(range(0, len(data[0, :])))
@@ -642,7 +657,10 @@ def get_xticks(args,xmn,xmx,init_locs):
       xcUnitsSec = seconds
       
   if (args.ignore_data_uttime):
-    utstartSecs = 0
+    if args.utstart:
+      utstartSecs = getSec(args.tai,args.utstart,'%Y-%m-%dT%H:%M:%S')
+    else:
+      utstartSecs = 0
   else:
     utstartSecs = xmn
   initLocs_uttime = init_locs*3600
@@ -753,7 +771,28 @@ def date_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime):
     for loc in locs:
       labels.append(Time(loc, format='unix').strftime(args.xformat))
   return locs, labels
-  
+
+def format_labels(locs, secTimeUnit, labelOffSet):
+    precision = 0
+    formatted_labels = []
+    while True:
+        seen = set()
+        formatted_labels.clear()
+        unique = True
+        for loc in locs:
+            if precision == 0:
+              label = int(round(loc / secTimeUnit - labelOffSet, precision))
+            else:
+              label = round(loc / secTimeUnit - labelOffSet, precision)
+            if label in seen:
+                unique = False
+                break
+            seen.add(label)
+            formatted_labels.append(str(label))
+
+        if unique:
+            return formatted_labels
+        precision += 1 
 
 def since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,secTimeUnit):
   locs = []
@@ -771,8 +810,7 @@ def since_xticks(args,xcUnitsSec,initLocs_uttime,xmn_uttime,xmx_uttime,secTimeUn
     locs.append(currDate)
     currDate = currDate + skip
   labelOffSet = int(locs[0]/secTimeUnit)
-  for loc in locs:
-      labels.append(str(int(loc/secTimeUnit)-labelOffSet))
+  labels = format_labels(locs, secTimeUnit, labelOffSet)
   return locs, labels
 
 
@@ -784,7 +822,7 @@ def cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime):
   if (args.utstartxtick):
     currDateSeconds = getSec(args.tai,args.utstartxtick,xformat)
   else:
-    currDateSec = xmn_uttime
+    currDateSeconds = xmn_uttime
 
   if (args.xcadence):
     if (args.xc_units):
@@ -793,9 +831,9 @@ def cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime):
         if (args.xcrpos == 'end'):
           endOffset = 1
         if args.tai:
-          cr_num = int(carrington_rotation_number(Time(currDateSec, format='unix_tai')))
+          cr_num = int(carrington_rotation_number(Time(currDateSeconds, format='unix_tai')))
         else:
-          cr_num = int(carrington_rotation_number(Time(currDateSec, format='unix')))
+          cr_num = int(carrington_rotation_number(Time(currDateSeconds, format='unix')))
         if (args.xcrpos == 'center'):
           cr_num = cr_num-0.5
           currDate = int(carrington_rotation_time(cr_num).unix)
@@ -821,9 +859,9 @@ def cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime):
         if (args.xcrpos == 'end'):
           endOffset = 1
         if args.tai:
-          cr_num = int(carrington_rotation_number(Time(currDateSec, format='unix_tai')))
+          cr_num = int(carrington_rotation_number(Time(currDateSeconds, format='unix_tai')))
         else:
-          cr_num = int(carrington_rotation_number(Time(currDateSec, format='unix')))
+          cr_num = int(carrington_rotation_number(Time(currDateSeconds, format='unix')))
         if (args.xcrpos == 'center'):
           cr_num = cr_num-0.5
           currDate = int(carrington_rotation_time(cr_num).unix)
@@ -857,9 +895,9 @@ def cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime):
       if (args.xcrpos == 'end'):
         endOffset = 1
       if args.tai:
-        cr_num = int(carrington_rotation_number(Time(currDateSec, format='unix_tai')))
+        cr_num = int(carrington_rotation_number(Time(currDateSeconds, format='unix_tai')))
       else:
-        cr_num = int(carrington_rotation_number(Time(currDateSec, format='unix')))
+        cr_num = int(carrington_rotation_number(Time(currDateSeconds, format='unix')))
       if (args.xcrpos == 'center'):
         cr_num = cr_num-0.5
         currDate = int(carrington_rotation_time(cr_num).unix)
@@ -885,9 +923,9 @@ def cr_xticks(args,xcUnitsSec,xmn_uttime,xmx_uttime):
     if (args.xcrpos == 'end'):
       endOffset = 1
     if args.tai:
-      cr_num = int(carrington_rotation_number(Time(currDateSec, format='unix_tai')))
+      cr_num = int(carrington_rotation_number(Time(currDateSeconds, format='unix_tai')))
     else:
-      cr_num = int(carrington_rotation_number(Time(currDateSec, format='unix')))
+      cr_num = int(carrington_rotation_number(Time(currDateSeconds, format='unix')))
     if (args.xcrpos == 'center'):
       cr_num = cr_num-0.5
       currDate = int(carrington_rotation_time(cr_num).unix)
@@ -1046,7 +1084,6 @@ def main():
   ## Get input agruments:
   args = argParsing()
   run(args)
-
 
 if __name__ == '__main__':
   main()

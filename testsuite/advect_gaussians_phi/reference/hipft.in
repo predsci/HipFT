@@ -23,7 +23,7 @@
 ! -------------------------------
 !
 ! This run uses the built-in analytic validation mode of HipFT
-! to run two Guassians.
+! to run two Gaussians.
 !
 ! A ridged rotation velocity in the phi direction is set to 
 ! rotate the solution exactly one revolution.

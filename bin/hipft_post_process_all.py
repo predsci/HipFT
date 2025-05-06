@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import glob
 import re
 import os
@@ -9,7 +8,7 @@ import numpy as np
 import pandas as pd
 import shutil
 
-# Version 1.2.0
+# Version 1.5.0
 
 def handle_int(signum, frame):
     print('You pressed Ctrl+C! Stopping!')
@@ -77,7 +76,13 @@ def argParsing():
     help='String of plot options for the images and movies plotted.',
     dest='movie_plot_options',
     required=False)
-  
+
+  parser.add_argument('-butterfly_make_options',
+    help='String of options for the butterfly make script.',
+    dest='butterfly_make_options',
+    default="",
+    required=False)
+
   parser.add_argument('-butterfly_plot_options',
     help='String of plot options for the butterfly plots.',
     dest='butterfly_plot_options',
@@ -93,9 +98,15 @@ def argParsing():
   parser.add_argument('-history_plot_samples',
     help='Number of points to plot, this helps with larger files (default: 300) (Can set to "all" to plot all points)',
     dest='history_plot_samples',
-    default=300,
+    default=500,
     required=False)
 
+  parser.add_argument('-history_plot_samples_markers',
+    help='Number of marker points to plot (default: value of -history_plot_samples) (Can set to "all" to plot all points)',
+    dest='history_plot_samples_markers',
+    default=20,
+    required=False)
+  
   parser.add_argument('-serial',
     help='Set the number of threads to use to 1 instead of using the environment variable OMP_NUM_THREADS.',
     dest='serial',
@@ -163,11 +174,13 @@ def run(args):
   print('')
   print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
   print('')
-  print('                         OFT Post Processing                          ')
+  print('                        HipFT Post Processing                         ')
   print('')
   print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 
   args.num_threads = 1 if args.serial else int(os.getenv('OMP_NUM_THREADS', os.cpu_count() or 1))
+
+  args.history_plot_samples_markers = args.history_plot_samples if not args.history_plot_samples_markers else args.history_plot_samples_markers
 
   run_all = not (args.butterfly or args.movies or args.history)
 
@@ -202,6 +215,7 @@ def run(args):
 
   ## ~~~~~~ Get xunits to use if not set
   if not args.xunits and (run_all or args.history or args.butterfly):
+    total_time = get_total_time(file_list[0])
     hist_sol = pd.read_table(file_list[0],header=0,sep='\\s+')
     time_list = np.array(hist_sol['TIME'])
     total_time = (time_list[-1] - time_list[0])*3600
@@ -251,8 +265,8 @@ def run(args):
       hist_ind = []
       histories_directory = os.path.join(args.output_dir, "histories")
       for check, file in zip(check_exist, file_list):
-        match = re.search(r'r(\d+)', file)
-        r = match.group() if match else "r000001"
+        match = re.search(r'_r(\d{6})\.', file)
+        r = f"r{match.group(1)}" if match else "r000001"
         check_file = check.replace('hipft_history_sol', 'history').replace('.out', '*.png')
         pattern = os.path.join(histories_directory, r, check_file)
         found_list = glob.glob(pattern)
@@ -321,12 +335,12 @@ def run(args):
         for file in check_exist:
           check_file = file.replace('hipft_history_sol', 'butterfly').replace('.out', '.png')
           butterfly_file = os.path.join(args.output_dir, "butterfly", check_file)
-          match = re.search(r'r(\d+)', butterfly_file)
+          match = re.search(r'_r(\d{6}).', butterfly_file)
           if not os.path.exists(butterfly_file):
             r = int(match.group(1)) if match else -1
             butterfly_plots.append(str(r))
           else:
-            print(f'==>        Found existing butterfly plots for {match.group()}')
+            print(f'==>        Found existing butterfly plots for {f"r{match.group(1)}"}')
       else:
         if not os.path.exists(os.path.join(args.output_dir, "butterfly", 'butterfly.png')):
             butterfly_plots.append('-1')
@@ -366,8 +380,8 @@ def run(args):
       if is3d:
         movies_directory = os.path.join(args.output_dir, "map_plotting")
         for file in check_exist:
-          match = re.search(r'r(\d+)', file)
-          r = match.group() if match else "r000001"
+          match = re.search(r'_r(\d{6}).', file)
+          r = f"r{match.group(1)}" if match else "r000001"
           check_file = file.replace('hipft_history_sol', 'hipft_movie').replace('.out', '*.mov')
           pattern = os.path.join(movies_directory, 'movies', check_file)
           found_list = glob.glob(pattern)
@@ -390,7 +404,7 @@ def run(args):
       if is3d:
         movies_directory = os.path.join(args.output_dir, "map_plotting")
         for file in check_exist:
-          match = re.search(r'r(\d+)', file)
+          match = re.search(r'_r(\d{6}).', file)
           r = int(match.group(1)) if match else -1
           movie_ind.append(str(r))
       else:
@@ -403,12 +417,26 @@ def run(args):
       print("==> All movies and images already exist")
 
 
+def get_total_time(file_path):
+  first_row = pd.read_table(file_path, sep=r'\s+', nrows=1)
+  col_names = list(first_row.columns)
+  with open(file_path) as f:
+    last_line = f.readlines()[-1]
+  last_row = pd.read_table(pd.io.common.StringIO(last_line), sep=r'\s+', names=col_names)
+
+  time_first = first_row['TIME'].values[0]
+  time_last = last_row['TIME'].values[0]
+  total_time = (time_last - time_first) * 3600
+  return total_time
+
+
 def plot_individual_history(args, hist_ind):
   print("==> Plotting all individual history plots...")
 
   bc_plotHistories = os.path.join(args.hipft_home, 'hipft_plot_histories.py')
   bc_plotHistories += f' -tai' if not args.tai_off else ''
   bc_plotHistories += f" -samples {args.history_plot_samples}" if args.history_plot_samples != 'all' else ''
+  bc_plotHistories += f" -samples_markers {args.history_plot_samples_markers}" if args.history_plot_samples_markers != 'all' else ''
   bc_plotHistories += f" -utstart {args.utstart}" if args.utstart else ''
   bc_plotHistories += f" {args.map_plot_options}" if args.map_plot_options else ''
   bc_plotHistories += f" -xunits {args.xunits}" if args.xunits else ''
@@ -416,15 +444,15 @@ def plot_individual_history(args, hist_ind):
 
   histories_directory = os.path.join(args.output_dir, "histories")
   for file in hist_ind:
-    match = re.search(r'r(\d+)', file)
-    realization = match.group() if match else 'individual'
+    match = re.search(r'_r(\d{6}).', file)
+    realization = f"r{match.group(1)}" if match else 'individual'
     os.chdir(histories_directory)
     os.system(f'{bc_plotHistories} -histfiles {file} -runtag {realization}')
     os.chdir(args.output_dir)
 
   for file in hist_ind:
-    match = re.search(r'r(\d+)', file)
-    r = match.group() if match else "r000001"
+    match = re.search(r'_r(\d{6}).', file)
+    r = f"r{match.group(1)}" if match else "r000001"
     histories_sub_directory = os.path.join(histories_directory, r)
     os.makedirs(histories_sub_directory, exist_ok=True)
     os.system(f'mv {os.path.join(histories_directory,f"*{r}*.png")} {histories_sub_directory}')
@@ -436,6 +464,7 @@ def plot_together_history(args, file_list):
   bc_plotHistories = os.path.join(args.hipft_home, 'hipft_plot_histories.py')
   bc_plotHistories += f' -tai' if not args.tai_off else ''
   bc_plotHistories += f" -samples {args.history_plot_samples}" if args.history_plot_samples != 'all' else ''
+  bc_plotHistories += f" -samples_markers {args.history_plot_samples_markers}" if args.history_plot_samples_markers != 'all' else ''
   bc_plotHistories += f" -utstart {args.utstart}" if args.utstart else ''
   bc_plotHistories += f" {args.map_plot_options}" if args.map_plot_options else ''
   bc_plotHistories += f" -xunits {args.xunits}" if args.xunits else ''
@@ -461,6 +490,7 @@ def plot_summary_history(args, file_list):
   bc_plotHistories = os.path.join(args.hipft_home, 'hipft_plot_histories.py')
   bc_plotHistories += f' -tai' if not args.tai_off else ''
   bc_plotHistories += f" -samples {args.history_plot_samples}" if args.history_plot_samples != 'all' else ''
+  bc_plotHistories += f" -samples_markers {args.history_plot_samples_markers}" if args.history_plot_samples_markers != 'all' else ''
   bc_plotHistories += f" -utstart {args.utstart}" if args.utstart else ''
   bc_plotHistories += f" {args.map_plot_options}" if args.map_plot_options else ''
   bc_plotHistories += f" -xunits {args.xunits}" if args.xunits else ''
@@ -485,6 +515,7 @@ def make_butterfly(args, is3d):
   bc_makeButterfly += f" -t0 {args.t0}" if args.t0 else ''
   bc_makeButterfly += f" -tf {args.tf}" if args.tf else ''
   bc_makeButterfly += f" -3d -sall" if is3d else ''
+  bc_makeButterfly += f' {args.butterfly_make_options}'
 
   mldfile = None
 

@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT_WACCPD'
-      character(*), parameter :: cvers='1.15.0'
-      character(*), parameter :: cdate='01/23/2025'
+      character(*), parameter :: cvers='1.19.2'
+      character(*), parameter :: cdate='05/06/2025'
 !
 end module
 !#######################################################################
@@ -323,7 +323,7 @@ module data_assimilation
       real(r_typ), dimension(:), allocatable :: assimilate_data_mu_limit_rvec
       real(r_typ), dimension(:), allocatable :: assimilate_data_mu_power_rvec
 !
-      real(r_typ) :: map_time_initial_hr
+      real(r_typ) :: map_time_initial_hr,map_time_final_hr
       real(r_typ), dimension(:), allocatable :: map_times_actual_ut_jd
       character(19), dimension(:), allocatable :: &
                      map_times_requested_ut_str, map_times_actual_ut_str
@@ -541,7 +541,7 @@ module input_parameters
       logical        :: output_flows = .false.
       character(512) :: output_flows_root_filename = 'hipft_flow'
       character(512) :: output_flows_directory     = 'output_flows'
-      integer        :: output_map_idx_cadence = 0
+      integer(8)     :: output_map_idx_cadence = 0
       real(r_typ)    :: output_map_time_cadence = zero
       logical        :: output_map_2d = .true.
       real(r_typ)    :: output_history_time_cadence = zero
@@ -693,6 +693,7 @@ module input_parameters
 !
       logical :: assimilate_data = .false.
       logical :: assimilate_data_balance_flux = .false.
+      real(r_typ) :: assimilate_data_mult_fac = 1.0_r_typ
 !
       character(512) :: assimilate_data_map_list_filename = ' '
       character(512) :: assimilate_data_map_root_dir = '.'
@@ -1751,6 +1752,7 @@ subroutine load_initial_condition
       use mesh
       use globals
       use read_2d_file_interface
+      use read_3d_file_interface
       use output
       use diffusion
       use constants
@@ -1767,9 +1769,10 @@ subroutine load_initial_condition
       real(r_typ) :: d1,d2, st_i_val
       real(r_typ) :: vt_end_loc
       real(r_typ), dimension(:), allocatable :: fn1,fs1,fn2,fs2
-      real(r_typ), dimension(:,:,:), allocatable :: f_local,gout
+      real(r_typ), dimension(:,:,:), allocatable :: f_local,gout,f_global
       real(r_typ), dimension(:,:), allocatable :: f_tmp2d
-      real(r_typ), dimension(:), allocatable :: s1,s2,s3,s3t,tfout,gfout
+      real(r_typ), dimension(:), allocatable :: s1,s2,s3,s3t,s3g,tfout,gfout
+      logical :: is_2d
 !
 !-----------------------------------------------------------------------
 !
@@ -1794,12 +1797,10 @@ subroutine load_initial_condition
         n3 = nr
 
         allocate (f_local(n1,n2,n3))
-        allocate (f_tmp2d(n1,n2))
 !
 ! ****** Can add other inital conditon options here.
 !
         f_local(:,:,:) = 0.
-        f_tmp2d(:,:) = 0.
 
         allocate (s1(n1))
         do i=1,n1
@@ -1820,34 +1821,69 @@ subroutine load_initial_condition
 !
 ! ****** Read the initial magnetic map.
 !
-        if (iamp0) then
-          call read_2d_file (initial_map_filename,n1,n2,f_tmp2d,s1,s2,ierr)
-        endif
+        call check_2d_or_3d (initial_map_filename,is_2d,ierr)
 !
-        wtime_tmp_mpi = MPI_Wtime()
-        call MPI_Bcast (n1,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-        call MPI_Bcast (n2,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-        wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
-        if (.not.iamp0) then
-          allocate (s1(n1))
-          allocate (s2(n2))
-          allocate (f_tmp2d(n1,n2))
-        endif
-        wtime_tmp_mpi = MPI_Wtime()
-        call MPI_Bcast (f_tmp2d,n1*n2,ntype_real,0,MPI_COMM_WORLD,ierr)
-        call MPI_Bcast (s1,n1,ntype_real,0,MPI_COMM_WORLD,ierr)
-        call MPI_Bcast (s2,n2,ntype_real,0,MPI_COMM_WORLD,ierr)
-        wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+        if (is_2d) then
 !
-        n3 = nr
-        allocate (f_local(n1,n2,n3))
-
-        do i=1,n3
-          f_local(:,:,i) = f_tmp2d(:,:)
-        enddo
+          if (iamp0) then
+            call read_2d_file (initial_map_filename,n1,n2,f_tmp2d,s1,s2,ierr)
+          endif
 !
-        allocate (s3(n3))
-        do i=1,n3
+          wtime_tmp_mpi = MPI_Wtime()
+          call MPI_Bcast (n1,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+          call MPI_Bcast (n2,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+          wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+          if (.not.iamp0) then
+            allocate (s1(n1))
+            allocate (s2(n2))
+            allocate (f_tmp2d(n1,n2))
+          endif
+          wtime_tmp_mpi = MPI_Wtime()
+          call MPI_Bcast (f_tmp2d,n1*n2,ntype_real,0,MPI_COMM_WORLD,ierr)
+          call MPI_Bcast (s1,n1,ntype_real,0,MPI_COMM_WORLD,ierr)
+          call MPI_Bcast (s2,n2,ntype_real,0,MPI_COMM_WORLD,ierr)
+          wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+!
+          allocate (f_local(n1,n2,nr))
+          do i=1,nr
+            f_local(:,:,i) = f_tmp2d(:,:)
+          enddo
+          deallocate (f_tmp2d)
+        else
+          if (iamp0) then
+            call read_3d_file (initial_map_filename,n1,n2,n3,f_global,s1,s2,s3g,ierr)
+            deallocate(s3g)
+          endif
+          wtime_tmp_mpi = MPI_Wtime()
+          call MPI_Bcast (n1,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+          call MPI_Bcast (n2,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+          call MPI_Bcast (n3,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+          wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+          if (n3.ne.n_realizations) then
+             write(*,*) 'ERROR!  Number of realization in input map not equal to n_realizations!'
+             write(*,*) 'NR_init: ',n3,' n_realizations: ',n_realizations
+             call endrun (.true.)
+          end if
+          if (.not.iamp0) then
+            allocate (s1(n1))
+            allocate (s2(n2))
+            allocate (f_global(n1,n2,n3))
+          endif
+          wtime_tmp_mpi = MPI_Wtime()
+          call MPI_Bcast (f_global,n1*n2*n3,ntype_real,0,MPI_COMM_WORLD,ierr)
+          call MPI_Bcast (s1,n1,ntype_real,0,MPI_COMM_WORLD,ierr)
+          call MPI_Bcast (s2,n2,ntype_real,0,MPI_COMM_WORLD,ierr)
+          wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
+!
+          allocate (f_local(n1,n2,nr))
+          do i=1,nr
+            f_local(:,:,i) = f_global(:,:,local_realization_indices(i))
+          enddo
+          deallocate (f_global)
+        end if
+!
+        allocate (s3(nr))
+        do i=1,nr
           s3(i) = real(i,r_typ)
         enddo
 !
@@ -1856,6 +1892,7 @@ subroutine load_initial_condition
       if (validation_run .eq. 1) then
 !
         allocate (fval_u0(n1,n2,n3))
+        allocate (f_tmp2d(n1,n2))
 !
 ! ****** Make initial solution f and output.
 !
@@ -1876,6 +1913,7 @@ subroutine load_initial_condition
         enddo
 !$omp target update from(f_local,fval_u0)
 !$omp target exit data map(delete:f_local,fval_u0,f_tmp2d,s1,s2)
+        deallocate (f_tmp2d)
 !
         fval_u0(:,:,:) = f_local(:,:,:) +                             &
                          sqrt(14.0_r_typ/11.0_r_typ)*fval_u0(:,:,:)
@@ -2141,7 +2179,6 @@ subroutine load_initial_condition
       deallocate (s3)
       deallocate (fn1,fs1)
       deallocate (f_local)
-      deallocate (f_tmp2d)
 !
 ! ****** Write out initial condition.
 !
@@ -2592,7 +2629,7 @@ subroutine output_histories
 !-----------------------------------------------------------------------
 !
       integer :: ierr, i
-      integer*8 :: niters
+      integer(8) :: niters
       character(*), parameter :: FMT='(i10,a,5(1pe23.15e3,a),i15,a,i15)'
       character(*), parameter :: FMT2='(i10,a,15(1pe23.15e3,a))'
 !
@@ -2687,7 +2724,7 @@ subroutine output_map
 !-----------------------------------------------------------------------
 !
       if (output_map_idx_cadence .gt. 0) then
-        if (MODULO(ntime,output_map_idx_cadence).eq.0) then
+        if (MOD(ntime,output_map_idx_cadence) .eq. 0) then
           output_current_map = .true.
         end if
       end if
@@ -3976,20 +4013,34 @@ subroutine load_data_assimilation
       enddo
       CLOSE (IO_DATA_IN)
 !
-! ******* Initialize assimilation time.
-!  RMC: This only works for exact times!  If inbetween files,
-!       need to interpolate two assimilation frames, or modify
-!       start_time?
+! ****** Initialize assimilation time.
+! ****** Assumes HipFT time "0" is the time of the first assimilation map
+! ****** in the map database.  The time_start shoudl be set accordingly.
 !
       map_time_initial_hr = twentyfour*map_times_actual_ut_jd(1)
+      map_time_final_hr   = twentyfour*map_times_actual_ut_jd(num_maps_in_list)
 !
-      i = MINLOC(ABS( (twentyfour*map_times_actual_ut_jd(:) &
-                       - map_time_initial_hr)               &
-                      - time_start),1)
+      i = MINLOC(ABS( (twentyfour*map_times_actual_ut_jd(:)   &
+                         - map_time_initial_hr)               &
+                       - time_start),DIM=1)
 !
-      current_map_input_idx = i
-!
-      time_of_next_input_map = time_start
+      if (time_start .le. zero) then
+        current_map_input_idx = 1
+        time_of_next_input_map = zero
+      else if (time_start .gt. map_time_final_hr - map_time_initial_hr) then
+        ! The time is past the assimilation data, so turn off assimilation.
+        assimilate_data=.false.
+        current_map_input_idx = -9999
+        time_of_next_input_map = -9999.9
+      else
+        if (time_start .le. twentyfour*map_times_actual_ut_jd(i) - map_time_initial_hr) then
+          current_map_input_idx = i
+          time_of_next_input_map = (twentyfour*map_times_actual_ut_jd(i) - map_time_initial_hr)
+        else
+          current_map_input_idx = i+1
+          time_of_next_input_map = (twentyfour*map_times_actual_ut_jd(i+1) - map_time_initial_hr)
+        end if
+      end if
 !
 ! ******* Print some diagnostics.
 !
@@ -4007,6 +4058,12 @@ subroutine load_data_assimilation
                      trim(map_files_rel_path(i))
         write (*,*) '   LOAD_DATA_ASSIMILATION: Map root directory:     ', &
                      trim(assimilate_data_map_root_dir)
+        write (*,*) '   LOAD_DATA_ASSIMILATION: Current time:     ', &
+                     time_start
+        write (*,*) '   LOAD_DATA_ASSIMILATION: Time to next map:     ', &
+                     time_of_next_input_map
+        write (*,*) '   LOAD_DATA_ASSIMILATION: Index for next map:     ', &
+                     current_map_input_idx
       end if
 !
 ! ****** Find indices of latitude limit in main mesh tvec.
@@ -4059,7 +4116,7 @@ subroutine assimilate_new_data (new_data)
 !
       allocate(deltaf(ntm,npm,nr))
 !$omp target enter data map(alloc:deltaf)
-
+!
       if (assimilate_data_add) then
         do concurrent (i=1:nr,k=1:npm1,j=1:ntm)
           deltaf(j,k,i) = new_data(k,j,2,i)*new_data(k,j,1,i)
@@ -4080,6 +4137,8 @@ subroutine assimilate_new_data (new_data)
           call balance_flux (deltaf(:,:,i))
         enddo
       end if
+!
+! ****** Add in the assimilated data.
 !
       do concurrent (i=1:nr,k=1:npm,j=1:ntm)
         f(j,k,i) = f(j,k,i) + deltaf(j,k,i)
@@ -4169,6 +4228,7 @@ subroutine apply_data_assimilation
 !
 !$omp target enter data map(to:new_data2d)
         allocate(new_data(npm_nd,ntm_nd,nslices,nr))
+
 !$omp target enter data map(alloc:new_data)
         do concurrent(i=1:nr,j=1:nslices,k=1:ntm_nd,l=1:npm_nd)
           new_data(l,k,j,i) = new_data2d(l,k,j)
@@ -4207,6 +4267,12 @@ subroutine apply_data_assimilation
               new_data(l,k,2,i) = zero
             enddo
           end if
+        enddo
+!
+! ****** Apply scale factor to assimilated data.
+!
+        do concurrent(i=1:nr,k=1:ntm_nd,l=1:npm_nd)
+          new_data(l,k,1,i) = assimilate_data_mult_fac*new_data(l,k,1,i)
         enddo
 !
 ! ****** Assimilate the data.
@@ -4762,9 +4828,9 @@ function wtime ()
 !
 !-----------------------------------------------------------------------
 !
-      integer*8 :: clock_max
-      integer*8 :: clock_rate
-      integer*8 :: clock_reading
+      integer(8) :: clock_max
+      integer(8) :: clock_rate
+      integer(8) :: clock_reading
 !
       real(r_typ) :: wtime
 !
@@ -4794,8 +4860,8 @@ subroutine set_periodic_bc_1d (a,n1)
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ), dimension(n1) :: a
       integer :: n1
+      real(r_typ), dimension(n1) :: a
 !
 !-----------------------------------------------------------------------
 !
@@ -4821,8 +4887,8 @@ subroutine set_periodic_bc_2d (a,n1,n2)
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ), dimension(n1,n2) :: a
       integer :: n1,n2,j
+      real(r_typ), dimension(n1,n2) :: a
 !
 !-----------------------------------------------------------------------
 !
@@ -4850,8 +4916,8 @@ subroutine set_periodic_bc_3d (a,n1,n2,n3)
 !
 !-----------------------------------------------------------------------
 !
-      real(r_typ), INTENT(INOUT), dimension(n1,n2,n3) :: a
       integer, INTENT(IN) :: n1,n2,n3
+      real(r_typ), INTENT(INOUT), dimension(n1,n2,n3) :: a
       integer :: i,j
 !
 !-----------------------------------------------------------------------
@@ -5137,7 +5203,7 @@ subroutine diffusion_step_sts_cd (dtime_local)
 !-----------------------------------------------------------------------
 !
       integer :: i,j,el
-      integer*8 :: k
+      integer(8) :: k
       real(r_typ), INTENT(IN) :: dtime_local
 !
 !-----------------------------------------------------------------------
@@ -5226,7 +5292,7 @@ subroutine load_sts_rkl2 (dtime_local)
 !-----------------------------------------------------------------------
 !
       real(r_typ) :: sts_s_real,bj_bjm2,bj_bjm1,w
-      integer*8 :: j
+      integer(8) :: j
       logical, save :: first = .true.
 !
 !-----------------------------------------------------------------------
@@ -5247,7 +5313,7 @@ subroutine load_sts_rkl2 (dtime_local)
 !
 ! ****** Make sure s is odd.
 !
-      if (MOD(sts_s,2).eq.0) then
+      if (MOD(sts_s,2_8).eq.0) then
         sts_s = sts_s + 1
       end if
 !
@@ -5343,7 +5409,7 @@ subroutine load_sts_rkg2 (dtime_local)
 !-----------------------------------------------------------------------
 !
       real(r_typ) :: sts_s_real,bj_bjm2,bj_bjm1,w
-      integer*8 :: j
+      integer(8) :: j
       logical, save :: first = .true.
 !
 !-----------------------------------------------------------------------
@@ -5364,7 +5430,7 @@ subroutine load_sts_rkg2 (dtime_local)
 !
 ! ****** Make sure s is odd.
 !
-      if (MOD(sts_s,2).eq.0) then
+      if (MOD(sts_s,2_8).eq.0) then
         sts_s = sts_s + 1
       end if
 !
@@ -5970,6 +6036,140 @@ subroutine rdh5 (fname,s,ierr)
 !
 end subroutine
 !#######################################################################
+subroutine check_2d_or_3d (fname,is_2d,ierr)
+!
+!-----------------------------------------------------------------------
+!
+! ****** Check if an input HDF5 file is 2D or 3D.
+!
+!-----------------------------------------------------------------------
+!
+! ****** Input arguments:
+!
+!          FNAME   : [character(*)]
+!                    File name to read from.
+!
+! ****** Output arguments:
+!
+!          IS_2D   : [logical]
+!                    If 2D HDF5 file, IS_2D=.true.
+!                    If 3D HDF5 file, IS_2D=.false.
+!                    Else will have an error
+!
+!          IERR    : [integer]
+!                    IERR=0 is returned if the data set was read
+!                    successfully.  Otherwise, IERR is set to a
+!                    nonzero value.
+!
+!-----------------------------------------------------------------------
+!
+      use hdf5
+      use h5ds
+!
+!-----------------------------------------------------------------------
+!
+      implicit none
+!
+!-----------------------------------------------------------------------
+!
+      character(*) :: fname
+!
+!-----------------------------------------------------------------------
+!
+      integer :: ierr
+!
+!-----------------------------------------------------------------------
+!
+      integer :: n_members,obj_type
+      integer :: s_ndim=0
+!
+      integer(HID_T) :: file_id       ! File identifier
+      integer(HID_T) :: dset_id       ! Dataset identifier
+      integer(HID_T) :: dspace_id     ! Dataspace identifier
+!
+      character(512) :: obj_name
+      character(14), parameter :: cname='check_2d_or_3d'
+!
+      logical :: is_scale
+      logical :: is_2d
+!
+!-----------------------------------------------------------------------
+!
+! ****** Initialize hdf5 interface.
+!
+      call h5open_f (ierr)
+!
+! ****** Open hdf5 file.
+!
+      call h5Fopen_f (trim(fname),H5F_ACC_RDONLY_F,file_id,ierr)
+!
+! ****** Get information about the hdf5 file.
+!
+      call h5Gn_members_f (file_id,"/",n_members,ierr)
+!
+! ****** Make sure there is (at maximum) one 3D dataset with scales.
+!
+      if (n_members.eq.0.or.n_members.gt.4) then
+        write (*,*)
+        write (*,*) '### ERROR in ',cname,':'
+        write (*,*) '### Input file contains too few/many datasets.'
+        write (*,*) 'File name: ',trim(fname)
+        return
+      end if
+!
+! ****** Assume the Dataset is in index 0 and get its name.
+!
+      call h5Gget_obj_info_idx_f (file_id,"/",0,obj_name,obj_type,ierr)
+!
+! ****** Open Dataset.
+!
+      call h5Dopen_f (file_id,trim(obj_name),dset_id,ierr)
+!
+! ****** Make sure the Dataset is not a scale.
+!
+      call h5DSis_scale_f(dset_id,is_scale,ierr)
+!
+      if (is_scale) then
+        write (*,*)
+        write (*,*) '### ERROR in ',cname,':'
+        write (*,*) '### Input file Dataset at index 0 is a scale.'
+        write (*,*) 'File name: ',trim(fname)
+        return
+      end if
+!
+! ****** Get dimensions.
+!
+      call h5Dget_space_f (dset_id,dspace_id,ierr)
+      call h5Sget_simple_extent_ndims_f (dspace_id,s_ndim,ierr)
+!
+! ****** Check if the dataset is 2D or 3D.
+!
+      if (s_ndim == 2) then
+        is_2d = .true.
+      else if (s_ndim == 3) then
+        is_2d = .false.
+      else
+        write (*,*) 'Error: Unsupported number of dimensions.'
+        call h5Dclose_f (dset_id,ierr)
+        call h5Fclose_f (file_id,ierr)
+        call h5close_f (ierr)
+        return
+      end if
+!
+! ****** Close the dataset.
+!
+      call h5Dclose_f (dset_id,ierr)
+!
+! ****** Close the file.
+!
+      call h5Fclose_f (file_id,ierr)
+!
+! ****** Close FORTRAN interface.
+!
+      call h5close_f (ierr)
+!
+end subroutine
+!#######################################################################
 subroutine wrh5 (fname,s,ierr)
 !
 !-----------------------------------------------------------------------
@@ -6189,10 +6389,10 @@ subroutine write_2d_file (fname,ln1,ln2,f,s1,s2,ierr)
 !-----------------------------------------------------------------------
 !
       character(*) :: fname
+      integer :: ln1,ln2
       real(r_typ), dimension(ln1,ln2) :: f
       real(r_typ), dimension(ln1) :: s1
       real(r_typ), dimension(ln2) :: s2
-      integer :: ln1,ln2
       real(r_typ) :: t1
 !
 !-----------------------------------------------------------------------
@@ -6260,11 +6460,11 @@ subroutine write_3d_file (fname,ln1,ln2,ln3,f,s1,s2,s3,ierr)
 !-----------------------------------------------------------------------
 !
       character(*) :: fname
+      integer :: ln1,ln2,ln3
       real(r_typ), dimension(ln1,ln2,ln3) :: f
       real(r_typ), dimension(ln1) :: s1
       real(r_typ), dimension(ln2) :: s2
       real(r_typ), dimension(ln3) :: s3
-      integer :: ln1,ln2,ln3
       type(ds) :: s
       integer :: ierr
 !
@@ -7199,7 +7399,7 @@ subroutine diffusion_step_fe_cd (dtime_local)
 !-----------------------------------------------------------------------
 !
       integer :: j,k,el
-      integer*8 :: i
+      integer(8) :: i
       real(r_typ) :: dtime_euler_used
 !
 !-----------------------------------------------------------------------
@@ -8217,6 +8417,7 @@ subroutine read_input_file
                diffusion_coef_constants,                               &
                assimilate_data,                                        &
                assimilate_data_balance_flux,                           &
+               assimilate_data_mult_fac,                               &
                assimilate_data_map_list_filename,                      &
                assimilate_data_map_root_dir,                           &
                assimilate_data_custom_from_mu,                         &
@@ -8272,17 +8473,17 @@ subroutine read_input_file
       read (8,hipft_input_parameters)
       close (8)
 !
-! ****** Write the NAMELIST parameter values to file.
+! ****** Check & process input parameters.
+!
+      call process_input_parameters
+!
+! ****** Write the NAMELIST parameter values as used to file.
 !
       if (iamp0) then
         call ffopen (8,'hipft_run_parameters_used.out','rw',ierr)
         write (8,hipft_input_parameters)
         close (8)
       end if
-!
-! ****** Check & process input parameters.
-!
-      call process_input_parameters
 !
 end subroutine
 !#######################################################################
@@ -8848,7 +9049,7 @@ end subroutine generate_rfe
 ! 05/20/2022, RC+MS, Version 0.9.0:
 !   - vrun has been changed to an integer to select which validation
 !     run initial condition to use.
-!   - Added Guassian blob initial validation condition (-vrun 2).
+!   - Added Gaussian blob initial validation condition (-vrun 2).
 !   - Added -vt_const to allow adding a constant velocity in theta
 !     in km/s (used for validation runs).
 !   - BUG FIX: GPU issue with -vrun 1 initial condition.
@@ -9238,6 +9439,33 @@ end subroutine generate_rfe
 ! 01/15/2025, RC, Version 1.15.0:
 !   - Added INITIAL_MAP_MULT_FAC input parameter to allow user to
 !     have HipFT multiply the input map by a factor (default 1.0).
+!
+! 01/15/2025, RC, Version 1.16.0:
+!   - Added ASSIMILATE_DATA_MULT_FAC input parameter to allow user to
+!     have HipFT multiply the data assimiated by a factor (default 1.0)
+!
+! 01/28/2025, RC, Version 1.17.0:
+!   - Added ability to specify a start time that is not perfectly
+!     aligned with an assimilation map time, including starting with a
+!     negative time.
+!
+! 02/04/2025, RC, Version 1.18.0:
+!   - Added logical input parameter INITIAL_MAP_IS_3D to specify
+!     that the initial map file is 3D (has realizations).
+!     The number of realizations must match the number specified in the
+!     input file.
+!     This should be changed later to be automatic based on the file.
+!
+! 02/08/2025, MS, Version 1.19.0:
+!   - Removed logical input parameter INITIAL_MAP_IS_3D.
+!     Instead, the code auto-detects if the file is 2D or 3D.
+!
+! 03/27/2025, RC, Version 1.19.1:
+!   - Small modifications to conform with modern Fortran standards.
+!
+! 05/06/2025, RC, Version 1.19.2:
+!   - Namelist is now written out after processing input so it reflects
+!     the "actual" parameters used in the run.
 !
 !-----------------------------------------------------------------------
 !

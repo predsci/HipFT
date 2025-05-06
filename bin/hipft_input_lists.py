@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ########################################################################
 #
-#  Version 0.0.1
+#  Version 1.0.1
 #
 ########################################################################
 #
@@ -41,8 +41,8 @@ hipft_keys = [
         'assimilate_data_lat_limit',
         'source_rfe_total_unsigned_flux_per_hour',
         'flow_mf_coef_p1_value',
-        'flow_mf_coef_p1_value',
-        'flow_mf_coef_p1_value',
+        'flow_mf_coef_p3_value',
+        'flow_mf_coef_p5_value',
         'flow_dr_coef_p0_value',
         'flow_dr_coef_p2_value',
         'flow_dr_coef_p4_value'
@@ -98,9 +98,20 @@ def expand_sweep1d(repeat, arr, oarr):
     return arr
 
 
-def check_lengths(output_dict):
-    lengths = [len(value) for value in output_dict.values()]
-    return all(length == lengths[0] for length in lengths)
+def expand_manual(non_empty):
+    lengths = [len(value) for value in non_empty.values() if value is not None]    
+    if not (len(lengths) > 0 and all(length >= 1 for length in lengths) and len(set(length for length in lengths if length > 1)) <= 1):
+        check_err(1,'The inputs for manual mode are not equal lengths for lengths greater than one.')
+    max_length = max(lengths)
+    for item in non_empty:
+        if len(non_empty[item]) == 1:
+            non_empty[item] = np.tile(non_empty[item], max_length)
+    
+
+    lengths = [len(value) for value in non_empty.values()]
+    if not all(length == lengths[0] for length in lengths):
+        check_err(1,'The inputs for manual mode are not equal lengths.')
+    return non_empty 
 
 
 def expand(real_params, type, keys):
@@ -142,10 +153,7 @@ def expand(real_params, type, keys):
             for item in non_empty:
                 output_list = expand_sweep1d(item, output_list, non_empty)
         elif type == 'manual':
-            equal_lengths = check_lengths(non_empty)
-            if not equal_lengths:
-                check_err(1,'The inputs for manual mode are not equal lengths.')
-            output_list = non_empty
+            output_list = expand_manual(non_empty)
         else:
             check_err(1,'realization_parameters must be "crossall", "sweep1d", or "manual"!')
     return output_list
@@ -161,12 +169,18 @@ def write_hipft_file(output_list, hipft_key_dict, hipft_file):
                 match = hipft_key_dict.get(key)
                 match_found = False
                 for i, line in enumerate(lines):
-                    if match in line:
+                    stripped_line = line.strip()
+                    if match in stripped_line:
                         lines[i] = f"  {match}s = {', '.join(map(str, value))}\n"
                         match_found = True
                         break
+                    elif stripped_line == '/':
+                        del lines[i]
                 if not match_found:
                     lines.append(f"  {match}s = {', '.join(map(str, value))}\n")
+                    lines.append('/\n')
+            if lines[-1] != '!\n':
+                lines.append('!\n')
             with open(hipft_file, 'w') as f:
                 f.writelines(lines)
         except FileNotFoundError:
@@ -183,18 +197,19 @@ def write_hipft_file(output_list, hipft_key_dict, hipft_file):
 def sed(match, value, file):
     with open(file, 'r') as f:
         lines = f.readlines()
-    updated = False
+    match_found = False
     for i, line in enumerate(lines):
-        if match in line:
+        stripped_line = line.strip()
+        if match in stripped_line:
             lines[i] = f"  {match} = {value}\n"
-            updated = True
+            match_found = True
             break
-        if line.strip() == '/':
+        elif stripped_line == '/':
             del lines[i]
-    if not updated:
+    if not match_found:
         lines.append(f"  {match} = {value}\n")
         lines.append('/\n')
-        lines = ['!\n' if line == '\n' else line for line in lines]
+    if lines[-1] != '!\n':
         lines.append('!\n')
     with open(file, 'w') as f:
         f.writelines(lines)

@@ -14,7 +14,7 @@ import psipals
 import psimath
 
 ################################
-#  PSI_PLOT2D:  Version 1.4.0  #
+#  PSI_PLOT2D:  Version 1.5.0  #
 ################################
 ########################################################################
 #          Predictive Science Inc.
@@ -144,7 +144,7 @@ def argParsing():
             required=False)
 
   parser.add_argument('-noax',
-            help='Turn off axis and display image flush with border.',
+            help='Turn off axis and display image flush with border. If using this, do not set nocb or noscales.',
             dest='noax',
             action='store_true',
             default=False,
@@ -344,6 +344,12 @@ def argParsing():
             help='Dimension to slice (1-indexed)',
             dest='slicedim',
             type=int,
+            required=False)
+
+  parser.add_argument('-top_right_title',
+            help='Add a top right title.',
+            dest='top_right_title',
+            type=str,
             required=False)
 
 
@@ -731,6 +737,8 @@ def run(args):
     xv = np.double(args.x_vline)
     plt.plot([xv, xv], [ymin, ymax], '--', linewidth=2, color='magenta')
 
+  pos = ax.get_position()
+
   ax_divider = make_axes_locatable(ax)
   if (args.x_cbar):
     cb_ax = ax_divider.append_axes("bottom", size="5%", pad=.8)
@@ -793,6 +801,16 @@ def run(args):
 
   if (args.nocb):
     cb.remove()
+
+  if args.top_right_title:
+    pos = ax.get_position()
+    if (args.nocb or args.noax):
+      top_right_x = pos.x1 - 0.01
+    else:
+      top_right_x = - 5
+    top_right_y = pos.y1 + 0.135
+    plt.annotate(args.top_right_title, xy=(top_right_x, top_right_y), xycoords='axes fraction', fontsize=fsize, color=tc, fontweight='normal')
+
 
   if (args.oFile is None):
     if (args.tp):
