@@ -6514,7 +6514,7 @@ subroutine set_mesh
 !
 ! ****** Tolerance for precision of coordinates.
 !
-      real(r_typ), parameter :: eps=1.e-6_r_typ
+      real(r_typ), parameter :: eps=1.e-5_r_typ
 !
 !-----------------------------------------------------------------------
 !
