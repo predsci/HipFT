@@ -169,7 +169,7 @@ def run(args):
           twoD = False
       if twoD:
         fileOut = os.path.basename(file).replace('.h5','.png')
-        plot2d(TITLE,args,file,fileOut)
+        plot2d(TITLE,args,file,fileOut,'')
       elif (args.s):
         if (args.s > dim3):
           print("Slice requested is outside range defaulting to last slice : "+ str(dim3))
