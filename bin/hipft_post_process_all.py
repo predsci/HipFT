@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import glob
 import re
 import os
@@ -9,7 +8,7 @@ import numpy as np
 import pandas as pd
 import shutil
 
-# Version 1.4.0
+# Version 1.5.0
 
 def handle_int(signum, frame):
     print('You pressed Ctrl+C! Stopping!')
@@ -99,12 +98,13 @@ def argParsing():
   parser.add_argument('-history_plot_samples',
     help='Number of points to plot, this helps with larger files (default: 300) (Can set to "all" to plot all points)',
     dest='history_plot_samples',
-    default=300,
+    default=500,
     required=False)
 
   parser.add_argument('-history_plot_samples_markers',
     help='Number of marker points to plot (default: value of -history_plot_samples) (Can set to "all" to plot all points)',
     dest='history_plot_samples_markers',
+    default=20,
     required=False)
   
   parser.add_argument('-serial',
@@ -174,7 +174,7 @@ def run(args):
   print('')
   print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
   print('')
-  print('                         OFT Post Processing                          ')
+  print('                        HipFT Post Processing                         ')
   print('')
   print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 
@@ -215,6 +215,7 @@ def run(args):
 
   ## ~~~~~~ Get xunits to use if not set
   if not args.xunits and (run_all or args.history or args.butterfly):
+    total_time = get_total_time(file_list[0])
     hist_sol = pd.read_table(file_list[0],header=0,sep='\\s+')
     time_list = np.array(hist_sol['TIME'])
     total_time = (time_list[-1] - time_list[0])*3600
@@ -264,8 +265,8 @@ def run(args):
       hist_ind = []
       histories_directory = os.path.join(args.output_dir, "histories")
       for check, file in zip(check_exist, file_list):
-        match = re.search(r'r(\d+)', file)
-        r = match.group() if match else "r000001"
+        match = re.search(r'_r(\d{6})\.', file)
+        r = f"r{match.group(1)}" if match else "r000001"
         check_file = check.replace('hipft_history_sol', 'history').replace('.out', '*.png')
         pattern = os.path.join(histories_directory, r, check_file)
         found_list = glob.glob(pattern)
@@ -334,12 +335,12 @@ def run(args):
         for file in check_exist:
           check_file = file.replace('hipft_history_sol', 'butterfly').replace('.out', '.png')
           butterfly_file = os.path.join(args.output_dir, "butterfly", check_file)
-          match = re.search(r'r(\d+)', butterfly_file)
+          match = re.search(r'_r(\d{6}).', butterfly_file)
           if not os.path.exists(butterfly_file):
             r = int(match.group(1)) if match else -1
             butterfly_plots.append(str(r))
           else:
-            print(f'==>        Found existing butterfly plots for {match.group()}')
+            print(f'==>        Found existing butterfly plots for {f"r{match.group(1)}"}')
       else:
         if not os.path.exists(os.path.join(args.output_dir, "butterfly", 'butterfly.png')):
             butterfly_plots.append('-1')
@@ -379,8 +380,8 @@ def run(args):
       if is3d:
         movies_directory = os.path.join(args.output_dir, "map_plotting")
         for file in check_exist:
-          match = re.search(r'r(\d+)', file)
-          r = match.group() if match else "r000001"
+          match = re.search(r'_r(\d{6}).', file)
+          r = f"r{match.group(1)}" if match else "r000001"
           check_file = file.replace('hipft_history_sol', 'hipft_movie').replace('.out', '*.mov')
           pattern = os.path.join(movies_directory, 'movies', check_file)
           found_list = glob.glob(pattern)
@@ -403,7 +404,7 @@ def run(args):
       if is3d:
         movies_directory = os.path.join(args.output_dir, "map_plotting")
         for file in check_exist:
-          match = re.search(r'r(\d+)', file)
+          match = re.search(r'_r(\d{6}).', file)
           r = int(match.group(1)) if match else -1
           movie_ind.append(str(r))
       else:
@@ -414,6 +415,19 @@ def run(args):
       make_movies(args, movie_ind, isSubset)
     else:
       print("==> All movies and images already exist")
+
+
+def get_total_time(file_path):
+  first_row = pd.read_table(file_path, sep=r'\s+', nrows=1)
+  col_names = list(first_row.columns)
+  with open(file_path) as f:
+    last_line = f.readlines()[-1]
+  last_row = pd.read_table(pd.io.common.StringIO(last_line), sep=r'\s+', names=col_names)
+
+  time_first = first_row['TIME'].values[0]
+  time_last = last_row['TIME'].values[0]
+  total_time = (time_last - time_first) * 3600
+  return total_time
 
 
 def plot_individual_history(args, hist_ind):
@@ -430,15 +444,15 @@ def plot_individual_history(args, hist_ind):
 
   histories_directory = os.path.join(args.output_dir, "histories")
   for file in hist_ind:
-    match = re.search(r'r(\d+)', file)
-    realization = match.group() if match else 'individual'
+    match = re.search(r'_r(\d{6}).', file)
+    realization = f"r{match.group(1)}" if match else 'individual'
     os.chdir(histories_directory)
     os.system(f'{bc_plotHistories} -histfiles {file} -runtag {realization}')
     os.chdir(args.output_dir)
 
   for file in hist_ind:
-    match = re.search(r'r(\d+)', file)
-    r = match.group() if match else "r000001"
+    match = re.search(r'_r(\d{6}).', file)
+    r = f"r{match.group(1)}" if match else "r000001"
     histories_sub_directory = os.path.join(histories_directory, r)
     os.makedirs(histories_sub_directory, exist_ok=True)
     os.system(f'mv {os.path.join(histories_directory,f"*{r}*.png")} {histories_sub_directory}')

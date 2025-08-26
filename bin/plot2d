@@ -14,7 +14,7 @@ import psipals
 import psimath
 
 ################################
-#  PSI_PLOT2D:  Version 1.4.0  #
+#  PSI_PLOT2D:  Version 1.5.0  #
 ################################
 ########################################################################
 #          Predictive Science Inc.
@@ -119,7 +119,7 @@ def argParsing():
   parser.add_argument('-title',
             help='Title to show on plot',
             dest='title',
-            default=' ',
+            default='',
             required=False)
 
   parser.add_argument('-k',
@@ -144,7 +144,7 @@ def argParsing():
             required=False)
 
   parser.add_argument('-noax',
-            help='Turn off axis and display image flush with border.',
+            help='Turn off axis and display image flush with border. If using this, do not set nocb or noscales.',
             dest='noax',
             action='store_true',
             default=False,
@@ -327,6 +327,37 @@ def argParsing():
             type=str,
             required=False)
 
+  parser.add_argument('-circle_x',
+            help='X coordinatate of circles. Use: -circle_x \" x1, x2, ...\"',
+            dest='circle_x',
+            nargs='*',
+            type=float,
+            required=False)
+
+  parser.add_argument('-circle_y',
+            help='Y coordinatate of circles. Use: -circle_y \" y1, y2, ...\"',
+            dest='circle_y',
+            nargs='*',
+            type=float,
+            required=False)
+
+
+  parser.add_argument('-circle_color',
+            help='Specify the circle color. Use: -draw_circle_color \" color\"',
+            dest='circle_color',
+            nargs='*',
+            type=str,
+            default='green',
+            required=False)
+
+  parser.add_argument('-circle_size',
+            help='Specify the circle size. Use: -draw_circle_size \" 15\"',
+            dest='circle_size',
+            nargs='*',
+            type=float,
+            default=15,
+            required=False)
+
   parser.add_argument('-v',
             help='Print details as script runs.',
             dest='verbose',
@@ -344,6 +375,12 @@ def argParsing():
             help='Dimension to slice (1-indexed)',
             dest='slicedim',
             type=int,
+            required=False)
+
+  parser.add_argument('-top_right_title',
+            help='Add a top right title.',
+            dest='top_right_title',
+            type=str,
             required=False)
 
 
@@ -599,12 +636,16 @@ def run(args):
   if (args.draw_square is not None):
     plt.plot(float(square_coords[0]), float(square_coords[1]), color='green', marker='s', markersize=15, zorder=10)
 
+  if (args.circle_x is not None):
+    for i in range (0,len(args.circle_x)):
+      plt.plot(args.circle_x[i], args.circle_y[i], color=args.circle_color[i], marker='o', markersize=args.circle_size[i], zorder=10)
+
   plt.set_cmap(args.cmap)
   plt.clim([cmin, cmax])
 
   plt.xlim(xmin=xmin, xmax=xmax)
   plt.ylim(ymin=ymin, ymax=ymax)
-  
+
   if (args.tp):
     if not args.ll:
       if args.xmin is None:
@@ -731,6 +772,8 @@ def run(args):
     xv = np.double(args.x_vline)
     plt.plot([xv, xv], [ymin, ymax], '--', linewidth=2, color='magenta')
 
+  pos = ax.get_position()
+
   ax_divider = make_axes_locatable(ax)
   if (args.x_cbar):
     cb_ax = ax_divider.append_axes("bottom", size="5%", pad=.8)
@@ -785,6 +828,7 @@ def run(args):
     plot_h.axes.get_yaxis().set_visible(False)
 
   if (args.noax):
+    ax.set_title('')
     ax.set_frame_on(False)
     cb.remove()
     plot_h.axes.get_xaxis().set_visible(False)
@@ -793,6 +837,16 @@ def run(args):
 
   if (args.nocb):
     cb.remove()
+
+  if args.top_right_title:
+    pos = ax.get_position()
+    if (args.nocb or args.noax):
+      top_right_x = pos.x1 - 0.01
+    else:
+      top_right_x = - 5
+    top_right_y = pos.y1 + 0.135
+    plt.annotate(args.top_right_title, xy=(top_right_x, top_right_y), xycoords='axes fraction', fontsize=fsize, color=tc, fontweight='normal')
+
 
   if (args.oFile is None):
     if (args.tp):
@@ -832,4 +886,3 @@ def main():
 
 if __name__ == '__main__':
   main()
-

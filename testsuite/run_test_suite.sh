@@ -198,12 +198,6 @@ ${echo} "Welcome to the HIPFT test suite!"
 #
 ${echo} "Checking file structure..."
 
-if [ ! -e ${epremexe} ]
-  then
-  ${echo} "${cR}!!!> ERROR! HipFT binary executable missing!${cX}"
-  exit 1
-fi
-
 #
 # ****** Test for correct prerequisites and environment ******
 #
