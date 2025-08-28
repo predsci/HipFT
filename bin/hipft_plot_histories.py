@@ -12,7 +12,7 @@ from pathlib import Path
 from packaging import version
 import matplotlib
 
-# Version 1.17.0
+# Version 1.17.1
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFT History Plots.')
@@ -269,11 +269,10 @@ def read_file_ind(h_file_name, args, time_type):
     h_file_name,
     header=0,
     sep=r'\s+',
-    skiprows=lambda x: x > 0 and x not in indices_total
+    skiprows=lambda x: x > 0 and x not in (indices_total+1)
   )
 
-  mpts_i = np.array([np.searchsorted(indices_total, marker) for marker in indices_markers]) - 1
-  
+  mpts_i = np.where(np.isin(indices_total, indices_markers))[0]
 
   if time_type == 'TAI':
     args.timeset = True
@@ -829,60 +828,50 @@ def addLegendGeneric(LW,FLW,fsize,plt,CM,CF,LT1,LT2,LT3):
 
 
 def normalMode(plt,ax,fig,args,llist,xlist,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,CL,mpts_list):
-  if NOTindividual:
-    for run in range(len(xlist)):
-      plothelper1(xlist[run],llist[run],COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
-    addLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
-  else:
-    plt.plot(xlist[0],llist[0],CL,linewidth=LW,markersize=MS, markevery=mpts_list[0])
-
+  for run in range(len(xlist)):
+    plothelper1(xlist[run],llist[run],COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
+    if NOTindividual: 
+      addLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
 
 def normalMode2(plt,ax,fig,args,llist1,llist2,xlist,COLORS,MARKERS,LW,MS,LMS,fsize,NOTindividual,\
                 LABEL_LEN,label_list,lgfsize,CL1,CL2,LegT,mpts_list):
+  firstRun=True
+  for run in range(len(xlist)):
+    if firstRun:
+      h1=plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
+      h2=plothelper4(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
+      firstRun=False
+    else:
+      plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
+      plothelper3(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
   if NOTindividual:
-    firstRun=True
-    for run in range(len(xlist)):
-      if firstRun:
-        h1=plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
-        h2=plothelper4(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
-        firstRun=False
-      else:
-        plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
-        plothelper3(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
     legend1 = plt.legend([h1[0],h2[0]],LegT,loc='upper right',fontsize=fsize, ncol=2)
     addLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
     return legend1
   else:
-    h1 = plt.plot(xlist[0],llist1[0],color=CL1,linewidth=LW,markersize=MS, markevery=mpts_list[0])
-    h2 = plt.plot(xlist[0],llist2[0],color=CL2,linewidth=LW,markersize=MS, markevery=mpts_list[0])
     return plt.legend([h1[0],h2[0]],LegT,loc='upper right',fontsize=fsize, ncol=2)
 
 def normalMode4(plt,ax,fig,args,llist1,llist2,llist3,llist4,xlist,COLORS,MARKERS,LW,MS,LMS,fsize,NOTindividual,\
                 LABEL_LEN,label_list,lgfsize,CL1,CL2,CL3,CL4,LegT,mpts_list):
+  firstRun=True
+  for run in range(len(xlist)):
+    if firstRun:
+      h1=plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
+      h2=plothelper4(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
+      h3=plothelper4(xlist[run],llist3[run],CL3,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
+      h4=plothelper4(xlist[run],llist4[run],CL4,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
+      firstRun=False
+    else:
+      plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
+      plothelper3(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
+      plothelper3(xlist[run],llist3[run],CL3,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
+      plothelper3(xlist[run],llist4[run],CL4,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
   if NOTindividual:
-    firstRun=True
-    for run in range(len(xlist)):
-      if firstRun:
-        h1=plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
-        h2=plothelper4(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
-        h3=plothelper4(xlist[run],llist3[run],CL3,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
-        h4=plothelper4(xlist[run],llist4[run],CL4,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
-        firstRun=False
-      else:
-        plothelper2(xlist[run],llist1[run],CL1,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
-        plothelper3(xlist[run],llist2[run],CL2,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
-        plothelper3(xlist[run],llist3[run],CL3,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
-        plothelper3(xlist[run],llist4[run],CL4,COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
     legend1 = plt.legend([h1[0],h2[0],h3[0],h4[0]],LegT,loc='upper right',fontsize=fsize, ncol=4)
     addLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
     return legend1
   else:
-    h1 = plt.plot(xlist[0],llist1[0],color=CL1,linewidth=LW,markersize=MS, markevery=mpts_list[0])
-    h2 = plt.plot(xlist[0],llist2[0],color=CL2,linewidth=LW,markersize=MS, markevery=mpts_list[0])
-    h3 = plt.plot(xlist[0],llist3[0],color=CL3,linewidth=LW,markersize=MS, markevery=mpts_list[0])
-    h4 = plt.plot(xlist[0],llist4[0],color=CL4,linewidth=LW,markersize=MS, markevery=mpts_list[0])
     return plt.legend([h1[0],h2[0],h3[0],h4[0]],LegT,loc='upper right',fontsize=fsize, ncol=4)
-
 
 def plothelper1(x,l,c,m,LW,MS,mpts):
   plt.plot(x,l,color=c,linewidth=LW,marker=m,markersize=MS,markeredgewidth=0.0,fillstyle='full',markeredgecolor=c, markevery=mpts)

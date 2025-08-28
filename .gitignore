@@ -42,6 +42,4 @@
 /src/build.err
 /src/build.log
 /src/hipft_gcc.f90
-/*.sh
-
 
