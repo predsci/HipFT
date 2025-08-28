@@ -251,17 +251,14 @@ def read_file_ind(h_file_name, args, time_type):
     number_of_data_points = sum(1 for _ in f) - 1
 
   samples = args.samples
-  samples_markers = samples if not args.samples_markers else args.samples_markers
+  samples_markers = samples if args.samples_markers is None else args.samples_markers
 
   if samples > 1:
     indices = np.linspace(0, number_of_data_points - 1, samples, endpoint=True, dtype=int)
   else:
     indices = np.arange(number_of_data_points)
 
-  if samples_markers > 1:
-    indices_markers = np.linspace(0, number_of_data_points - 1, samples_markers, endpoint=True, dtype=int)
-  else:
-    indices_markers = np.arange(number_of_data_points)
+  indices_markers = np.linspace(0, number_of_data_points - 1, samples_markers, endpoint=True, dtype=int)
 
   indices_total = np.unique(np.concatenate((indices, indices_markers)))
 
@@ -272,7 +269,10 @@ def read_file_ind(h_file_name, args, time_type):
     skiprows=lambda x: x > 0 and x not in (indices_total+1)
   )
 
-  mpts_i = np.where(np.isin(indices_total, indices_markers))[0]
+  if samples_markers > 1:
+    mpts_i = np.where(np.isin(indices_total, indices_markers))[0]
+  else:
+    mpts_i = []
 
   if time_type == 'TAI':
     args.timeset = True
@@ -478,8 +478,6 @@ def run(args):
       print('WARNING: Summary mode only works for multiple histories.  Switching to standard mode.')
       args.summary = False
 
-  print("==> Reading history files...")
-  
   ###### PLOTTING ######
 
   fsize = args.fsize
@@ -508,6 +506,8 @@ def run(args):
   MARKERS = ['o','v','^','<','>','8','s','p','*','h','H','D','d','P','X']
   MARKERS=MARKERS*int(np.ceil(LABEL_LEN/len(MARKERS)))
 
+  print("==> Reading history files...")
+
 #
 # ****** Create needed parameters and lists.
 #  
@@ -519,6 +519,8 @@ def run(args):
 
   if not args.no_r_annotation and len(rList) == 1:
     r_annotate = f"r{str(int(rList[0])).zfill(6)}"
+
+  print("==> Plotting...")
 
 #
 # ****** Total flux imbalance.
@@ -535,7 +537,6 @@ def run(args):
   ymin = -ymax 
 
   plt.title('Relative Flux Imbalance', {'fontsize': fsize, 'color': tc})
-  print(rList)
   if not args.no_r_annotation and len(rList) == 1:
     plt.annotate(r_annotate, xy=(0.89, 1.01), xycoords='axes fraction', fontsize=fsize, color=tc, fontweight='normal')
   plt.ylabel('%', {'fontsize': fsize, 'color': tc})
@@ -767,6 +768,9 @@ def run(args):
     fig.tight_layout()  
     fig.savefig('history_'+args.runtag+'_val.png', bbox_inches="tight", dpi=args.dpi, facecolor=fig.get_facecolor(), edgecolor=None)
     plt.close('all')
+
+  print("==> Done!")
+
 #
 # ****** Helper Functions
 #
