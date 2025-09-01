@@ -12,7 +12,7 @@ from pathlib import Path
 from packaging import version
 import matplotlib
 
-# Version 1.17.1
+# Version 1.17.2
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFT History Plots.')
@@ -228,6 +228,12 @@ def argParsing():
     action='store_true',
     default=False,
     required=False)
+    
+  parser.add_argument('-time_hr_stop',
+    help='Time in hours to stop plot (default is full data) [Implementation is not complete]',
+    dest='time_hr_stop',
+    type=float,
+    required=False)
 
   return parser.parse_args()
 
@@ -387,6 +393,10 @@ def get_lists(args, hist_list, time_type, flux_fac, tfac):
 
   xmn = np.amin([np.amin(arr) for arr in time_tfac])
   xmx = np.amax([np.amax(arr) for arr in time_tfac])
+  
+  if args.time_hr_stop is not None:
+    xmx = args.time_hr_stop
+  
   flux_tot_un_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in flux_tot_un_list]
   fluxm_FF = [np.abs(np.array(arr, dtype=np.float64)) * flux_fac for arr in fluxm_list]
   fluxp_FF = [np.array(arr, dtype=np.float64) * flux_fac for arr in fluxp_list]
@@ -832,10 +842,15 @@ def addLegendGeneric(LW,FLW,fsize,plt,CM,CF,LT1,LT2,LT3):
 
 
 def normalMode(plt,ax,fig,args,llist,xlist,COLORS,MARKERS,LW,MS,LMS,NOTindividual,LABEL_LEN,label_list,lgfsize,CL,mpts_list):
+  firstRun=True
   for run in range(len(xlist)):
-    plothelper1(xlist[run],llist[run],COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
-    if NOTindividual: 
-      addLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
+    if firstRun:
+      h1=plothelper1(xlist[run],llist[run],COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
+      firstRun=False
+    else:
+      plothelper1(xlist[run],llist[run],COLORS[run],MARKERS[run],LW,MS,mpts_list[run])
+  if NOTindividual: 
+    addLegend(args,LABEL_LEN,LMS,label_list,lgfsize,ax,fig)
 
 def normalMode2(plt,ax,fig,args,llist1,llist2,xlist,COLORS,MARKERS,LW,MS,LMS,fsize,NOTindividual,\
                 LABEL_LEN,label_list,lgfsize,CL1,CL2,LegT,mpts_list):
