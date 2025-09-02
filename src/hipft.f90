@@ -5956,7 +5956,7 @@ subroutine rdh5 (fname,s,ierr)
 !
           allocate (s%scales(i)%f(s_dims_i(1)))
 !
-! ****** Get the floating-point precision of the scale.
+! ****** Open type and get floating-point precision of the scale.
 !
           call h5Dget_type_f (dim_id,datatype_id,ierr)
           call h5Tget_precision_f (datatype_id,prec,ierr)
@@ -5979,8 +5979,9 @@ subroutine rdh5 (fname,s,ierr)
             deallocate (f8dim)
           end if
 !
-! ****** Close the scale dataset.
+! ****** Close the type and scale dataset.
 !
+          call h5Tclose_f (datatype_id,ierr)
           call h5Dclose_f (dim_id,ierr)
 !
         enddo
