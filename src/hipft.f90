@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT_WACCPD'
-      character(*), parameter :: cvers='1.19.2'
-      character(*), parameter :: cdate='05/06/2025'
+      character(*), parameter :: cvers='1.19.3'
+      character(*), parameter :: cdate='09/02/2025'
 !
 end module
 !#######################################################################
@@ -3597,20 +3597,19 @@ subroutine add_flow_from_files
        endif
        call MPI_Bcast (new_flow_t,flow_t_size,ntype_real,0,MPI_COMM_WORLD,ierr)
        wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
-!$omp target enter data map(to:new_flow_t)
 !
 ! ****** copy, transpose, and convert units.
 !
+!$omp target enter data map(to:new_flow_t)
        do concurrent (k=1:nr,j=1:npm1,i=1:nt)
          flow_from_files_current_vt(i,j,k) = m_s_to_rs_hr*new_flow_t(j,i)
        enddo
+!$omp target exit data map(delete:new_flow_t)
+       deallocate(new_flow_t)
 !
 ! ****** Ensure periodicity.
 !
        call set_periodic_bc_3d (flow_from_files_current_vt,nt,npm,nr)
-!
-!$omp target exit data map(delete:new_flow_t)
-       deallocate(new_flow_t)
 !
 ! ****** VP (NTM,NP)
 !
@@ -3628,20 +3627,19 @@ subroutine add_flow_from_files
        endif
        call MPI_Bcast (new_flow_p,flow_p_size,ntype_real,0,MPI_COMM_WORLD,ierr)
        wtime_mpi_overhead = wtime_mpi_overhead + MPI_Wtime() - wtime_tmp_mpi
-!$omp target enter data map(to:new_flow_p)
 !
 ! ****** copy, transpose, and convert units.
 !.
+!$omp target enter data map(to:new_flow_p)
        do concurrent (k=1:nr,j=1:np,i=1:ntm)
          flow_from_files_current_vp(i,j,k) = m_s_to_rs_hr*new_flow_p(j,i)
        enddo
+!$omp target exit data map(delete:new_flow_p)
+       deallocate(new_flow_p)
 !
 ! ****** Ensure periodicity.
 !
        call set_periodic_bc_3d (flow_from_files_current_vp,ntm,np,nr)
-!
-!$omp target exit data map(delete:new_flow_p)
-       deallocate(new_flow_p)
 !
 ! ****** Update next map time.
 !
@@ -5585,10 +5583,11 @@ subroutine read_2d_file (fname,ln1,ln2,fin,s1,s2,ierr)
 !
       fin(:,:) = s%f(:,:,1)
 !
-! ****** Free up memory.
+! ****** Free up memory (three scales are always allocated in rdh5).
 !
       deallocate (s%scales(1)%f)
       deallocate (s%scales(2)%f)
+      deallocate (s%scales(3)%f)
       deallocate (s%f)
 !
       wtime_io = wtime_io + (MPI_Wtime() - t1)
@@ -5978,7 +5977,7 @@ subroutine rdh5 (fname,s,ierr)
 !
           allocate (s%scales(i)%f(s_dims_i(1)))
 !
-! ****** Get the floating-point precision of the scale.
+! ****** Open type and get floating-point precision of the scale.
 !
           call h5Dget_type_f (dim_id,datatype_id,ierr)
           call h5Tget_precision_f (datatype_id,prec,ierr)
@@ -6001,8 +6000,9 @@ subroutine rdh5 (fname,s,ierr)
             deallocate (f8dim)
           end if
 !
-! ****** Close the scale dataset.
+! ****** Close the type and scale dataset.
 !
+          call h5Tclose_f (datatype_id,ierr)
           call h5Dclose_f (dim_id,ierr)
 !
         enddo
@@ -6535,7 +6535,7 @@ subroutine set_mesh
 !
 ! ****** Tolerance for precision of coordinates.
 !
-      real(r_typ), parameter :: eps=1.e-6_r_typ
+      real(r_typ), parameter :: eps=1.e-5_r_typ
 !
 !-----------------------------------------------------------------------
 !
@@ -9472,6 +9472,9 @@ end subroutine generate_rfe
 ! 05/06/2025, RC, Version 1.19.2:
 !   - Namelist is now written out after processing input so it reflects
 !     the "actual" parameters used in the run.
+!
+! 09/02/2025, RC, Version 1.19.3:
+!   - Fixed tiny memory leak.
 !
 !-----------------------------------------------------------------------
 !

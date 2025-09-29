@@ -1,4 +1,4 @@
-<img width=500 src="hipft_logo.png" alt="HipFT" />  
+<img width=500 src="doc/hipft_logo.png" alt="HipFT" />  
   
 # HipFT: High-performance Flux Transport
     
@@ -7,7 +7,7 @@
 --------------------------------  
   
 ## OVERVIEW ##
-<img align="right" src="hipft_example.gif" alt="HipFT Example">
+<img align="right" src="doc/hipft_example.gif" alt="HipFT Example">
 
 HipFT is a flux transport model written in modern Fortran that is used as the computational core of the [Open-source Flux Transport (OFT)](https://github.com/predsci/oft) software suite.  OFT is a complete system for generating full-Sun magnetograms through acquiring & processing observational data, generating realistic convective flows, and running the flux transport model.  
   
@@ -24,14 +24,18 @@ It is recommended to use the latest compiler version available.
 
 HipFT requires the [HDF5](https://www.hdfgroup.org/solutions/hdf5) library.  
 When building for GPUs, the library must be compiled by the same compiler HipFT is using (e.g. nvfortran).  
-Often, this requires building the library from source.  Instructions on how to do this will be added to this README in an upcoming update.
+Often, this requires building the library from source. 
   
-1. Find the build script from the `build_examples` folder that is closest to your setup and copy it into the top-level directory.  
-2. Modify the script to set the `HDF5` library paths/flags and compiler flags compatible with your system environment.  
-3. Modify the script to set the compiler options to reflect your setup.  
-4. If running HipFT on CPUs, set your `OMP_NUM_THREADS` (and `ACC_NUM_CORES` if using `nvfortran`) environment variable to the number of threads per MPI rank you want to run with.  
-5. Run the build script (for example, `./my_build.sh`).  
-6. It is recommended to add the `bin` folder to your system path.  
+The included `build.sh` script will take a configuration file, generate a Makefile, and build the code.  
+The folder `conf` contains example configuration files for various compilers and systems.  
+We recommend copying the configuration file closest to your setup and then modifying it to conform to your compiler and system (such as `HDF5` library paths/flags, compiler flags, etc.).  
+  
+Given a configure script `conf/my_custom_build.conf`, the build script is invoked as:  
+```
+> ./build.sh ./conf/my_custom_build.conf
+```  
+
+GCC:  If you are using the GCC compiler (`gfortran`), you must set the  environment variable `OMP_NUM_THREADS` to the derised number of CPU threads to use per MPI process before building the code.
   
 ### RUN THE HIPFT TESTSUITE ###
   
@@ -40,7 +44,7 @@ To do this, enter the `testsuite/` directory and run:
   
 `./run_test_suite.sh`  
   
-This will run the tests with `bin/hipft` using 1 MPI rank.  
+This will run the tests using 1 MPI rank.  
   
 IMPORTANT:  If you are building/running HipFT on a multi-core CPU, you will most likely need to  
 use the `-mpicall` option to the `run_test_suite.sh` script to set the proper thread affinity.  
@@ -52,7 +56,7 @@ For example:  For OpenMPI, one would likely want to use `-mpicall="mpirun --bind
   
 ### Setting Input Options  
   
-`HIPFT` uses a namelist in an input text file.  The default name for the input is `hipft.in`  
+HipFT uses a namelist in an input text file.  The default name for the input is `hipft.in`  
   
 A full working input file with all the default parameter options is provided in the file:  
   
@@ -64,7 +68,7 @@ We have also provided example input files for use cases in the `examples/` folde
   
 ### Launching the Code ###
     
-To run `HIPFT`, set the desired run parameters in a file (e.g. `hipft.in`), then copy or link the `hipft` executable into the same directory as the input file and run the command:  
+To run HipFT, set the desired run parameters in a file (e.g. `hipft.in`), then copy or link the `hipft` executable into the same directory as the input file and run the command:  
   
 `<MPI_LAUNCHER> <MPI_OPTIONS> -np <N> ./hipft <input_file>`  
   
@@ -78,7 +82,7 @@ The number of ranks cannot be larger than the number of realizations.
   
 The code is parallelized with Fortran `do concurrent` and OpenMP Target data directives within each MPI rank.  
   
-### Running HIPFT on CPUs ###
+### Running HipFT on CPUs ###
   
 On CPUs, the code is multi-threaded for each MPI rank.  This can require proper setting of the `OMP_NUM_THREADS` and `ACC_NUM_CORES` environment variables (and for GCC, setting them before compilation).  
 It also requires properly setting the thread affinity in the launch of MPI as shown above.  
@@ -92,7 +96,7 @@ A simpler example of running on a single desktop (1 socket), with `OMP_NUM_THREA
   
 Depending on the system setup, it may be difficult to actualize the full possibly performance on CPU nodes.  We therefore highly recommend running HipFT on GPUs.  
   
-### Running HIPFT on GPUs ###
+### Running HipFT on GPUs ###
   
 For standard cases, the code should be launched with the number of MPI ranks per node being equal to the number of GPUs per node (assuming you are running at least that many realizations). 
 e.g.  

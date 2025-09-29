@@ -1,12 +1,18 @@
 FC = <FC>
 
-FFLAGS = <FFLAGS> -I<HDF5_INCLUDE_DIR>
+FFLAGS = <FRTFLAGS> -I<HDF5_INCLUDE_DIR>
 
 OBJS = hipft.o
 
 LDFLAGS = -L<HDF5_LIB_DIR> <HDF5_LIB_FLAGS>
 
-SRCFILE = <SRCFILE>
+USING_GCC = <USING_GCC>
+
+ifeq ($(USING_GCC),1)
+  SRCFILE = "hipft_gcc.f90"
+else
+  SRCFILE = "hipft.f90"
+endif
 
 all: $(OBJS)
 	$(FC) $(FFLAGS) $(OBJS) $(LDFLAGS) -o hipft
@@ -18,7 +24,7 @@ clean:
 	rm -f hipft_gcc.f90 2>/dev/null
 
 install:
-	cp hipft ../bin/
+	mv hipft ../bin/
 
 hipft.o: hipft.f90
 	sed -e 's/ reduce(.*$$/ /' hipft.f90 > hipft_gcc.f90  

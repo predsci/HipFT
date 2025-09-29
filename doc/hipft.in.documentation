@@ -123,6 +123,11 @@
 !       -----> or, output a 3D HDF5 file (as is done with multiple realizations)
 !       -----> yielding a file with dimensions (1,np,nt).
 !
+  output_map_flux_balance = .false.
+!
+!       -----> Toggle to flux balance (multiplicitive) the output maps. 
+!       -----> This does not balance the flux in the simulation, just the output.
+!
   output_history_time_cadence = 0.0
 !
 !       -----> Set a time cadence for writing out diagnostics into the history files.
