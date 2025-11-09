@@ -259,17 +259,17 @@ def run(args):
     xlabel=args.xlabel
   else:
     if 'AdvPhG' in testtype:
-      xlabel='$\Delta \phi$'
+      xlabel=r'$\Delta \phi$'
     elif 'AdvPhSc' in testtype:
-      xlabel='$\Delta \phi$'
+      xlabel=r'$\Delta \phi$'
     elif 'AdvThG' in testtype:
-      xlabel='$\Delta \\theta$'
+      xlabel=r'$\Delta \theta$'
     elif 'AdvPhThG' in testtype:
-      xlabel='$\Delta \\theta,\Delta \phi$'
+      xlabel=r'$\Delta \theta,\Delta \phi$'
     elif 'DiffSc' in testtype:
-      xlabel='$\Delta \\theta,\Delta \phi$'
+      xlabel=r'$\Delta \theta,\Delta \phi$'
     elif 'DiffAdvPhSc' in testtype:
-      xlabel='$\Delta \\theta,\Delta \phi$'
+      xlabel=r'$\Delta \theta,\Delta \phi$'
 
   if args.ylabel:
     ylabel=args.ylabel
@@ -300,7 +300,7 @@ def run(args):
   ax.grid(zorder=0)
 
   xfirst=int(1/ ((dsize/nxl[0])/np.pi) )
-  np_list=['$\\frac{\pi}{'+str(xfirst * 2 ** (n - 1))+'}$' for n in range(1, len(nxl) + 1)]
+  np_list=[r'$\frac{\pi}{'+str(xfirst * 2 ** (n - 1))+'}$' for n in range(1, len(nxl) + 1)]
 
   plt.xticks(xvec,np_list)
   plt.minorticks_off()

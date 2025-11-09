@@ -106,7 +106,7 @@ def run(args):
       rList.append(r)
 
       h_file_name = dire
-      hist_sol = pd.read_table(h_file_name,header=0,sep='\s+')
+      hist_sol = pd.read_table(h_file_name,header=0,sep=r'\s+')
 
       time  = np.array(hist_sol['TIME'])
       fluxp = np.array(hist_sol['FLUX_POSITIVE'])
