@@ -51,13 +51,13 @@ def compare_files(file1, file2, precision, verbose):
       num2p=num2[0:precision+3]+num1[-5:]
 
       if (num1p != num2p):
-        if (float(num1) > 1e-64):
+        if (np.abs(float(num1)) > 1e-64):
           print('FAIL in '+first_line1.split()[i]+':')
           print('        '+num1)
           print('        '+num2)
           PASS=False
         else:
-          print('WARNING: PASSED A FAIL (value <1e-64) in '+first_line1.split()[i]+':')
+          print('WARNING: PASSED A FAIL (|value| <1e-64) in '+first_line1.split()[i]+':')
           print('        '+num1)
           print('        '+num2)
 
