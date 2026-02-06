@@ -12,7 +12,7 @@ from pathlib import Path
 from packaging import version
 import matplotlib
 
-# Version 1.17.2
+# Version 1.18.0
 
 def argParsing():
   parser = argparse.ArgumentParser(description='HipFT History Plots.')
@@ -29,7 +29,8 @@ def argParsing():
     type=int)
 
   parser.add_argument('-samples_markers',
-    help='Number of marker points to plot, (default: value of -samples)',
+    help='Number of marker points to plot, (default: 50)',
+    default=50,
     type=int)
   
   parser.add_argument('-histfiles',
@@ -257,7 +258,10 @@ def read_file_ind(h_file_name, args, time_type):
     number_of_data_points = sum(1 for _ in f) - 1
 
   samples = args.samples
-  samples_markers = samples if args.samples_markers is None else args.samples_markers
+  if samples < 1:
+    samples = number_of_data_points
+
+  samples_markers = args.samples_markers
 
   if samples > 1:
     indices = np.linspace(0, number_of_data_points - 1, samples, endpoint=True, dtype=int)
@@ -510,6 +514,8 @@ def run(args):
     tfac = float(args.tfac)
 
   ######################
+
+  if len(rList)==1: args.no_r_annotation=True
 
   cmap = plt.get_cmap('turbo',LABEL_LEN)
   COLORS = [mpl.colors.rgb2hex(cmap(i)) for i in range(cmap.N)]

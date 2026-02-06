@@ -51,9 +51,9 @@ def argParsing():
         default='hipft_history_sol.out',
         required=False)
 
-    
+
     return parser.parse_args()
-    
+
 
 # hipft_analysis_step
 #
@@ -67,7 +67,7 @@ def write_file(args, out_filename, file_ending, folder):
     cadence = float(args.cadence)
 
     #Calculation constants
-    
+
     pole_flux_lat_limit = 30.  # Make this an input parameter!
     d2r = 0.017453292519943295
     pi = 3.1415926535897932
@@ -89,7 +89,7 @@ def write_file(args, out_filename, file_ending, folder):
     #Loop through files in folder from start to stop time.
     for idx in range(int(args.t0),int(args.tf)+1):
         filename=folder+"/"+args.bfile+"{:06d}".format(idx)+file_ending
-    
+
         #Initialize variables
         h_minbr = 3.40282347e38
         h_maxbr = 1.17549435e-38
@@ -134,7 +134,7 @@ def write_file(args, out_filename, file_ending, folder):
             for i in range(0,npm-1):
                 dp[i] = ph[i+1] - ph[i]
             dp[npm-1] = dp[1]
-            
+
             first_file = False
             print('First step done - grid calculated.')
         else:
@@ -178,19 +178,19 @@ def write_file(args, out_filename, file_ending, folder):
                     sn_t = np.sin(tav)
                     cs_t = np.cos(tav)
                     d_t = dth[ntm-1]
-                    da_t=0.25*sn_t*d_t    
+                    da_t=0.25*sn_t*d_t
                 else:
                     sn_t = np.sin(t[j])
                     cs_t = np.cos(t[j])
                     d_t = dt[j]
-                    da_t = sn_t*d_t    
+                    da_t = sn_t*d_t
 
                 if i==0:
                     da_p=0.5*dph[0]
                 elif i==npm-2:
                     da_p=0.5*dph[npm-2]
                 else:
-                    da_p=dp[i]  
+                    da_p=dp[i]
 
                 cs_p = np.cos(p[i])
                 sn_p = np.sin(p[i])
@@ -231,7 +231,7 @@ def write_file(args, out_filename, file_ending, folder):
 
         #Set axial dipole strength
         h_ax_dipole = 0.75*pi_i*h_ax_dipole
-        
+
         #Set fluxes to be in units of Mx
         h_fluxp    = rsun_cm2*h_fluxp
         h_fluxm    = rsun_cm2*h_fluxm
@@ -248,9 +248,9 @@ def write_file(args, out_filename, file_ending, folder):
         hist_sol='         %.0f %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e \n' %(\
                 ntime, time, h_minbr, h_maxbr, h_minabsbr, h_fluxp, h_fluxm, h_fluxp_pn, \
                 h_fluxm_pn, h_fluxp_ps, h_fluxm_ps, h_area_pn, h_area_ps, h_eq_dipole,h_ax_dipole, h_valerr)
-                
+
         f_out.write(hist_sol)
-        
+
     f_out.close()
 
 
@@ -280,7 +280,7 @@ def run(args):
 
         output_maps_pattern_temp = os.path.join(get_histories_temp_folder, f'{args.bfile}*.h5')
         output_maps_temp_list = sorted(glob.glob(output_maps_pattern_temp))
-        
+
         r_list = sorted({match.group(0) for f in output_maps_temp_list if (match := re.search(r'_r(\d+)', f))})
 
         folder = get_histories_temp_folder
