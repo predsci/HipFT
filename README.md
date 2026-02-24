@@ -19,7 +19,8 @@ HipFT can be used with MacOS, Linux, and Windows (through WSL) on CPUs and GPUs 
    
 ## HOW TO BUILD HIPFT ##
   
-HipFT has been tested to work using GCC's `gfortran` (>8), Intel's `ifx` (>21), or NVIDIA's `nvfortran` (>21.5) compilers.  Note that it is NOT compatible with the older Intel `ifort` compiler.  
+HipFT has been tested to work using GCC's `gfortran` (>8), Intel's `ifx` (>21), or NVIDIA's `nvfortran` (>26.1) compilers.  
+Note that it is NOT compatible with the older Intel `ifort` compiler.  
 It is recommended to use the latest compiler version available.  
 
 HipFT requires the [HDF5](https://www.hdfgroup.org/solutions/hdf5) library.  
@@ -35,7 +36,9 @@ Given a configure script `conf/my_custom_build.conf`, the build script is invoke
 > ./build.sh ./conf/my_custom_build.conf
 ```  
 
-GCC:  If you are using the GCC compiler (`gfortran`), you must set the  environment variable `OMP_NUM_THREADS` to the derised number of CPU threads to use per MPI process before building the code.
+GCC:  If you are using the GCC compiler (`gfortran`), you must set the environment  
+variable `OMP_NUM_THREADS` to the desired number of CPU threads to use per MPI   
+process before building the code.
   
 ### RUN THE HIPFT TESTSUITE ###
   
