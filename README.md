@@ -9,6 +9,12 @@
 ## OVERVIEW ##
 <img align="right" src="doc/hipft_example.gif" alt="HipFT Example">
 
+===================================================================
+
+NOTE:  This branch uses a non-conforming "hack" to improve performance on Intel GPUs with the Intel 2024 and 2025 compilers.  It WILL NOT WORK for NVIDIA, AMD, or when using Intel 2026 and beyond.  
+
+===================================================================
+
 HipFT is a flux transport model written in modern Fortran that is used as the computational core of the [Open-source Flux Transport (OFT)](https://github.com/predsci/oft) software suite.  OFT is a complete system for generating full-Sun magnetograms through acquiring & processing observational data, generating realistic convective flows, and running the flux transport model.  
   
 HipFT implements advection, diffusion, and data assimilation on the solar surface on a logically rectangular nonuniform spherical grid.  It is parallelized for use with multi-core CPUs and GPUs using a combination of Fortran's standard parallel `do concurrent` (DC), OpenMP Target data directives, and MPI.  It uses high-order numerical methods such as SSPRK(4,3), Strang splitting, WENO3-CS(h), and the super time-stepping scheme RKG2.  The code is designed to be modular, incorporating various differential rotation, meridional flow, super granular convective flow, and data assimilation models.  It can also compute multiple realizations in a single run spanning multiple choices of parameters.  
