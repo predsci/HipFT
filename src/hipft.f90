@@ -46,8 +46,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname='HipFT'
-      character(*), parameter :: cvers='1.19.3'
-      character(*), parameter :: cdate='09/02/2025'
+      character(*), parameter :: cvers='1.19.4'
+      character(*), parameter :: cdate='07/09/2026'
 !
 end module
 !#######################################################################
@@ -2343,7 +2343,7 @@ subroutine set_realization_parameters
 !
       end if
 !
-      if (iamp0 .and. n_realizations .gt. 1) then
+      if (iamp0) then
 !
 ! ****** Write realization meta data file.
 !
@@ -9437,6 +9437,10 @@ end subroutine generate_rfe
 !
 ! 09/02/2025, RC, Version 1.19.3:
 !   - Fixed tiny memory leak.
+!
+! 07/09/2026, RC, Version 1.19.4:
+!   - Changed code to always write out realization table file even in 
+!     the case of a single realization.
 !
 !-----------------------------------------------------------------------
 !
