@@ -9,7 +9,7 @@
                | |
                |_|
  
-      Version: 1.14.0 of 09/24/2024
+      Version: 1.19.5 of 10/26/2026
  
   ****** HipFT: High Performance Flux Transport.
  
@@ -22,9 +22,13 @@
          www.predsci.com
          San Diego, California, USA 92121
  
+ 
+ Number of MPI ranks total:                 1
+ Number of MPI ranks per node:              1
+ 
  Run started at: 
  
- 24 September 2024   6:49:56.511 PM      
+ 26 October   2026   4:08:44.058 PM      
  --> Reading input file...
  --> Initializing realization parameters...
   
@@ -2085,7 +2089,7 @@ Completed step:        672  Time:        672.000 /        672.000  dt:     1.000
  Final data written out to hipft_brmap_final.h5
  
  Run completed at:
- 24 September 2024   6:49:57.022 PM      
+ 26 October   2026   4:08:45.595 PM      
  
 ----------------------------------------
  
@@ -2094,17 +2098,17 @@ Completed step:        672  Time:        672.000 /        672.000  dt:     1.000
  
                                   Avg         Min         Max      S. Dev
                                   ---         ---         ---      ------
- Wall clock time:               0.597       0.597       0.597       0.000
- --> Setup:                     0.016       0.016       0.016       0.000
+ Wall clock time:               1.618       1.618       1.618       0.000
+ --> Setup:                     0.025       0.025       0.025       0.000
  --> Update:                    0.001       0.001       0.001       0.000
  --> Data Assimilation:         0.000       0.000       0.000       0.000
- --> Flux transport:            0.365       0.365       0.365       0.000
-     --> Advecton:              0.365       0.365       0.365       0.000
+ --> Flux transport:            0.405       0.405       0.405       0.000
+     --> Advecton:              0.405       0.405       0.405       0.000
      --> Diffusion              0.000       0.000       0.000       0.000
      --> Source:                0.000       0.000       0.000       0.000
- --> Analysis:                  0.121       0.121       0.121       0.000
- --> I/O:                       0.010       0.010       0.010       0.000
- --> MPI overhead:              0.085       0.085       0.085       0.000
+ --> Analysis:                  1.093       1.093       1.093       0.000
+ --> I/O:                       0.014       0.014       0.014       0.000
+ --> MPI overhead:              0.081       0.081       0.081       0.000
  
 ----------------------------------------
  

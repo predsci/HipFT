@@ -9,7 +9,7 @@
                | |
                |_|
  
-      Version: 1.14.0 of 09/24/2024
+      Version: 1.19.5 of 10/26/2026
  
   ****** HipFT: High Performance Flux Transport.
  
@@ -22,9 +22,13 @@
          www.predsci.com
          San Diego, California, USA 92121
  
+ 
+ Number of MPI ranks total:                 1
+ Number of MPI ranks per node:              1
+ 
  Run started at: 
  
- 24 September 2024   6:50:01.005 PM      
+ 26 October   2026   4:08:51.582 PM      
  --> Reading input file...
  --> Initializing realization parameters...
   
@@ -12830,7 +12834,7 @@ Completed step:        672  Time:        672.000 /        672.000  dt:     1.000
  Final data written out to hipft_brmap_final.h5
  
  Run completed at:
- 24 September 2024   6:50:04.206 PM      
+ 26 October   2026   4:08:55.163 PM      
  
 ----------------------------------------
  
@@ -12839,17 +12843,17 @@ Completed step:        672  Time:        672.000 /        672.000  dt:     1.000
  
                                   Avg         Min         Max      S. Dev
                                   ---         ---         ---      ------
- Wall clock time:               3.290       3.290       3.290       0.000
- --> Setup:                     0.034       0.034       0.034       0.000
- --> Update:                    0.001       0.001       0.001       0.000
+ Wall clock time:               3.661       3.661       3.661       0.000
+ --> Setup:                     0.048       0.048       0.048       0.000
+ --> Update:                    0.002       0.002       0.002       0.000
  --> Data Assimilation:         0.000       0.000       0.000       0.000
- --> Flux transport:            2.722       2.722       2.722       0.000
-     --> Advecton:              0.872       0.872       0.872       0.000
-     --> Diffusion              1.850       1.850       1.850       0.000
+ --> Flux transport:            3.005       3.005       3.005       0.000
+     --> Advecton:              0.944       0.944       0.944       0.000
+     --> Diffusion              2.061       2.061       2.061       0.000
      --> Source:                0.000       0.000       0.000       0.000
- --> Analysis:                  0.832       0.832       0.832       0.000
- --> I/O:                       0.025       0.025       0.025       0.000
- --> MPI overhead:              0.093       0.093       0.093       0.000
+ --> Analysis:                  0.978       0.978       0.978       0.000
+ --> I/O:                       0.037       0.037       0.037       0.000
+ --> MPI overhead:              0.092       0.092       0.092       0.000
  
 ----------------------------------------
  

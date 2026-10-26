@@ -3,18 +3,18 @@
  Processor id =             0
  
 ----------------------------------------
- Wall clock time:                   2.40
+ Wall clock time:                   2.66
 ----------------------------------------
- --> Setup:                         0.03
+ --> Setup:                         0.04
  --> Update:                        0.00
  --> Data Assim:                    0.00
- --> Flux transport:                1.84
+ --> Flux transport:                2.02
      --> Advecton:                  0.00
-     --> Diffusion                  1.84
+     --> Diffusion                  2.02
      --> Source:                    0.00
- --> Analysis:                      0.83
- --> I/O:                           0.02
- --> MPI overhead:                  0.09
+ --> Analysis:                      0.95
+ --> I/O:                           0.04
+ --> MPI overhead:                  0.10
 ----------------------------------------
  
  Run time summary:
@@ -22,17 +22,17 @@
  
                                   Avg         Min         Max      S. Dev
                                   ---         ---         ---      ------
- Wall clock time:               2.403       2.403       2.403       0.000
- --> Setup:                     0.031       0.031       0.031       0.000
+ Wall clock time:               2.665       2.665       2.665       0.000
+ --> Setup:                     0.044       0.044       0.044       0.000
  --> Update:                    0.001       0.001       0.001       0.000
  --> Data Assimilation:         0.000       0.000       0.000       0.000
- --> Flux transport:            1.838       1.838       1.838       0.000
+ --> Flux transport:            2.020       2.020       2.020       0.000
      --> Advecton:              0.000       0.000       0.000       0.000
-     --> Diffusion              1.838       1.838       1.838       0.000
+     --> Diffusion              2.020       2.020       2.020       0.000
      --> Source:                0.000       0.000       0.000       0.000
- --> Analysis:                  0.830       0.830       0.830       0.000
- --> I/O:                       0.025       0.025       0.025       0.000
- --> MPI overhead:              0.094       0.094       0.094       0.000
+ --> Analysis:                  0.949       0.949       0.949       0.000
+ --> I/O:                       0.037       0.037       0.037       0.000
+ --> MPI overhead:              0.097       0.097       0.097       0.000
  
 ----------------------------------------
  
