@@ -48,8 +48,8 @@ module ident
 !-----------------------------------------------------------------------
 !
       character(*), parameter :: cname="HipFT"
-      character(*), parameter :: cvers="1.19.5"
-      character(*), parameter :: cdate="10/26/2026"
+      character(*), parameter :: cvers="1.19.6"
+      character(*), parameter :: cdate="11/06/2026"
 !
 end module ident
 !#######################################################################
@@ -5724,7 +5724,7 @@ subroutine rdh5 (fname,s,ierr)
 !
 ! ****** Read a 1D, 2D, or 3D scientific data set from an HDF5 file.
 ! ****** The HDF5 file is currently assumed to contain only one
-! ****** dataset (1D,2d,3D), with or without scales, in group "/",
+! ****** dataset (1D,2D,or 3D), with or without scales, in group "/",
 ! ****** and has no other data members.
 !
 !-----------------------------------------------------------------------
@@ -5817,7 +5817,7 @@ subroutine rdh5 (fname,s,ierr)
 !
       integer(SIZE_T) :: prec
 !
-      integer(HSIZE_T),dimension(:), allocatable :: s_dims,maxpts
+      integer(HSIZE_T),dimension(3) :: s_dims,maxpts
       integer(HSIZE_T),dimension(1) :: s_dims_i
 !
       real(r4), dimension(:,:,:), allocatable :: f4
@@ -5832,12 +5832,14 @@ subroutine rdh5 (fname,s,ierr)
 !
 !-----------------------------------------------------------------------
 !
-      ierr=0
+      ierr = 0
 !
 ! ****** Initialize dimension count and arrays.
 !
-      s%ndim=0
-      s%dims(:)=1
+      s%ndim = 0
+      s%dims(:) = 1
+      s_dims(:) = 1
+      maxpts(:) = 1
 !
 ! ****** Initialize hdf5 interface.
 !
@@ -5858,7 +5860,7 @@ subroutine rdh5 (fname,s,ierr)
         write (*,*) "### ERROR in ",cname,":"
         write (*,*) "### Input file contains too few/many datasets."
         write (*,*) "File name: ",trim(fname)
-        ierr=1
+        ierr = 1
         return
       end if
 !
@@ -5878,7 +5880,7 @@ subroutine rdh5 (fname,s,ierr)
         write (*,*) "### ERROR in ",cname,":"
         write (*,*) "### Input file Dataset at index 0 is a scale."
         write (*,*) "File name: ",trim(fname)
-        ierr=2
+        ierr = 2
         return
       end if
 !
@@ -5896,14 +5898,10 @@ subroutine rdh5 (fname,s,ierr)
         return
       end if
 !
-      allocate(s_dims(s%ndim))
-!
-      allocate(maxpts(s%ndim))
       call h5Sget_simple_extent_dims_f (dspace_id,s_dims,maxpts,ierr)
-      deallocate(maxpts)
 !
       do j=1,s%ndim
-        s%dims(j)=INT(s_dims(j))
+        s%dims(j) = INT(s_dims(j))
       end do
 !
 ! ****** Get the floating-point precision of the data and set flag.
@@ -5940,7 +5938,7 @@ subroutine rdh5 (fname,s,ierr)
         do k=1,s%dims(3)
           do j=1,s%dims(2)
             do i=1,s%dims(1)
-              s%f(i,j,k)=REAL(f4(i,j,k),r_typ)
+              s%f(i,j,k) = REAL(f4(i,j,k),r_typ)
             enddo
           enddo
         enddo
@@ -5948,11 +5946,9 @@ subroutine rdh5 (fname,s,ierr)
       else
         allocate (f8(s%dims(1),s%dims(2),s%dims(3)))
         call h5Dread_f (dset_id,H5T_NATIVE_DOUBLE,f8,s_dims,ierr)
-        s%f(:,:,:)=f8(:,:,:)
+        s%f(:,:,:) = f8(:,:,:)
         deallocate (f8)
       end if
-!
-      deallocate(s_dims)
 !
       if (ierr/=0) then
         write (*,*)
@@ -5960,7 +5956,7 @@ subroutine rdh5 (fname,s,ierr)
         write (*,*) "### Error while reading the dataset."
         write (*,*) "File name: ",trim(fname)
         write (*,*) "[Error return (from H5DREAD_F) = ",ierr,"]"
-        ierr=5
+        ierr = 5
         return
       end if
 !
@@ -5979,7 +5975,7 @@ subroutine rdh5 (fname,s,ierr)
           write (*,*) "### ERROR in RDH5:"
           write (*,*) "### # scales does not match # dims."
           write (*,*) "File name: ",trim(fname)
-          ierr=6
+          ierr = 6
           return
         end if
 !
@@ -6006,13 +6002,13 @@ subroutine rdh5 (fname,s,ierr)
             write (*,*) "### ERROR in RDH5:"
             write (*,*) "### Scale is not a scale."
             write (*,*) "File name: ",trim(fname)
-            ierr=7
+            ierr = 7
             return
           end if
 !
 ! ****** Get dimension of scale.
 !
-          s_dims_i=s%dims(i)
+          s_dims_i = s%dims(i)
 !
 ! ****** Allocate scale.
 !
@@ -6039,13 +6035,13 @@ subroutine rdh5 (fname,s,ierr)
             allocate (f4dim(s_dims_i(1)))
             call h5Dread_f (dim_id,H5T_NATIVE_REAL,f4dim,s_dims_i,ierr)
             do j=1,s%dims(i)
-              s%scales(i)%f(j)=REAL(f4dim(j),r_typ)
+              s%scales(i)%f(j) = REAL(f4dim(j),r_typ)
             end do
             deallocate (f4dim)
           else if (prec==64) then
             allocate (f8dim(s_dims_i(1)))
             call h5Dread_f (dim_id,H5T_NATIVE_DOUBLE,f8dim,s_dims_i,ierr)
-            s%scales(i)%f(:)=f8dim(:)
+            s%scales(i)%f(:) = f8dim(:)
             deallocate (f8dim)
           end if
 !
@@ -6067,7 +6063,7 @@ subroutine rdh5 (fname,s,ierr)
 ! ****** scales (of length 1) so that the pointers to the scales
 ! ****** are valid.
 !
-        s%scale=.false.
+        s%scale = .false.
 !
         allocate (s%scales(1)%f(1))
         allocate (s%scales(2)%f(1))
@@ -6235,7 +6231,7 @@ subroutine wrh5 (fname,s,ierr)
 ! ****** Input arguments:
 !
 !          FNAME   : [character(*)]
-!                    File name to write to.
+!                    HDF5 data file name to write to.
 !
 !          S       : [structure of type DS]
 !                    A structure that holds the field, its
@@ -6262,8 +6258,8 @@ subroutine wrh5 (fname,s,ierr)
 !
 !-----------------------------------------------------------------------
 !
-      character(*), intent(in) :: fname
-      type(ds), intent(in) :: s
+      character(*),intent(in) :: fname
+      type(ds),intent(in) :: s
       integer, intent(out) :: ierr
 !
 !-----------------------------------------------------------------------
@@ -6329,13 +6325,7 @@ subroutine wrh5 (fname,s,ierr)
         deallocate (f4)
       else
         allocate (f8(s_dims(1),s_dims(2),s_dims(3)))
-        do k=1,s%dims(3)
-          do j=1,s%dims(2)
-            do i=1,s%dims(1)
-              f8(i,j,k) = REAL(s%f(i,j,k),r_typ)
-            enddo
-          enddo
-        enddo
+        f8(:,:,:) = s%f(:,:,:)
         call h5Dcreate_f (file_id,"Data",H5T_NATIVE_DOUBLE, &
                           dspace_id,dset_id,ierr)
         call h5Dwrite_f (dset_id,H5T_NATIVE_DOUBLE,f8,s_dims,ierr)
@@ -6376,11 +6366,9 @@ subroutine wrh5 (fname,s,ierr)
             deallocate (f4dim)
           else
             allocate (f8dim(s_dims_i(1)))
-            do j=1,s%dims(i)
-              f8dim(j) = REAL(s%scales(i)%f(j),r_typ)
-            enddo
+            f8dim(:) = s%scales(i)%f(:)
             call h5Dcreate_f (file_id,dimname,H5T_NATIVE_DOUBLE, &
-                             dspacedim_id,dim_id,ierr)
+                              dspacedim_id,dim_id,ierr)
             call h5Dwrite_f (dim_id,H5T_NATIVE_DOUBLE, &
                              f8dim,s_dims_i,ierr)
             deallocate (f8dim)
@@ -9516,6 +9504,9 @@ end subroutine generate_rfe
 ! 10/26/2026, RC, Version 1.19.5:
 !   - Multiple formatting updates after scan with Fortitude.
 !   - Updated hdf5 reader to be more robust.
+!
+! 11/06/2026, RC, Version 1.19.6:
+!   - Small fix to hdf5 reader.
 !
 !-----------------------------------------------------------------------
 !
